@@ -1,3 +1,9 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,11 +13,49 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { signIn } from "@/lib/auth-client";
+
+const loginSchema = z.object({
+  email: z.email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const router = useRouter();
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
+    const { error } = await signIn.email({
+      email: data.email,
+      password: data.password,
+    });
+
+    if (error) {
+      setError("root", { message: error.message ?? "An error occurred" });
+      return;
+    }
+
+    router.push("/");
+    router.refresh();
+  };
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <div className="flex flex-col gap-1">
@@ -21,7 +65,7 @@ export function LoginForm({
         </p>
       </div>
 
-      <form>
+      <form onSubmit={handleSubmit(onSubmit)}>
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -29,8 +73,11 @@ export function LoginForm({
               id="email"
               type="email"
               placeholder="hello@ephraimduncan.com"
-              required
+              {...register("email")}
             />
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email.message}</p>
+            )}
           </Field>
           <Field>
             <div className="flex items-center">
@@ -46,11 +93,19 @@ export function LoginForm({
               id="password"
               type="password"
               placeholder="********"
-              required
+              {...register("password")}
             />
+            {errors.password && (
+              <p className="text-sm text-red-500">{errors.password.message}</p>
+            )}
           </Field>
+          {errors.root && (
+            <p className="text-sm text-red-500">{errors.root.message}</p>
+          )}
           <Field>
-            <Button type="submit">Login</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Loading..." : "Login"}
+            </Button>
 
             <FieldDescription className="text-center">
               Don&apos;t have an account? <a href="/signup">Sign up</a>

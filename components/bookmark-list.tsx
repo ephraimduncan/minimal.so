@@ -22,7 +22,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn, parseColor } from "@/lib/utils";
-import type { Bookmark, Group } from "@/lib/types";
+import type { Bookmark, Group } from "@/lib/schema";
 
 interface BookmarkListProps {
   bookmarks: Bookmark[];

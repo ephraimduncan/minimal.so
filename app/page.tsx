@@ -4,13 +4,34 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Header } from "@/components/header";
 import { BookmarkInput } from "@/components/bookmark-input";
 import { BookmarkList } from "@/components/bookmark-list";
-import type { Bookmark, Group } from "@/lib/types";
+import type { Bookmark, Group } from "@/lib/schema";
 import { parseColor, isUrl, normalizeUrl } from "@/lib/utils";
 
 const initialGroups: Group[] = [
-  { id: "1", name: "Bookmarks", color: "#74B06F" },
-  { id: "2", name: "Work", color: "#4A90D9" },
-  { id: "3", name: "Personal", color: "#E6A23C" },
+  {
+    id: "1",
+    name: "Bookmarks",
+    color: "#74B06F",
+    userId: "demo",
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
+  },
+  {
+    id: "2",
+    name: "Work",
+    color: "#4A90D9",
+    userId: "demo",
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
+  },
+  {
+    id: "3",
+    name: "Personal",
+    color: "#E6A23C",
+    userId: "demo",
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
+  },
 ];
 
 const initialBookmarks: Bookmark[] = [
@@ -20,7 +41,9 @@ const initialBookmarks: Bookmark[] = [
     url: "https://x.com",
     favicon: "https://abs.twimg.com/favicons/twitter.3.ico",
     createdAt: new Date("2024-11-20"),
+    updatedAt: new Date("2024-11-20"),
     groupId: "1",
+    userId: "demo",
     type: "link",
   },
   {
@@ -30,7 +53,9 @@ const initialBookmarks: Bookmark[] = [
     favicon:
       "https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06b.png",
     createdAt: new Date("2024-11-20"),
+    updatedAt: new Date("2024-11-20"),
     groupId: "1",
+    userId: "demo",
     type: "link",
   },
   {
@@ -39,7 +64,9 @@ const initialBookmarks: Bookmark[] = [
     url: "https://claude.ai",
     favicon: "https://claude.ai/favicon.ico",
     createdAt: new Date("2024-11-20"),
+    updatedAt: new Date("2024-11-20"),
     groupId: "1",
+    userId: "demo",
     type: "link",
   },
   {
@@ -48,7 +75,9 @@ const initialBookmarks: Bookmark[] = [
     url: "https://documenso.com",
     favicon: "https://documenso.com/favicon.ico",
     createdAt: new Date("2024-11-20"),
+    updatedAt: new Date("2024-11-20"),
     groupId: "1",
+    userId: "demo",
     type: "link",
   },
   {
@@ -57,7 +86,9 @@ const initialBookmarks: Bookmark[] = [
     url: "https://google.com",
     favicon: "https://www.google.com/favicon.ico",
     createdAt: new Date("2024-11-20"),
+    updatedAt: new Date("2024-11-20"),
     groupId: "1",
+    userId: "demo",
     type: "link",
   },
   {
@@ -65,7 +96,9 @@ const initialBookmarks: Bookmark[] = [
     title: "sample",
     url: "",
     createdAt: new Date("2024-11-20"),
+    updatedAt: new Date("2024-11-20"),
     groupId: "1",
+    userId: "demo",
     type: "text",
   },
   {
@@ -74,7 +107,9 @@ const initialBookmarks: Bookmark[] = [
     url: "https://x.com",
     favicon: "https://abs.twimg.com/favicons/twitter.3.ico",
     createdAt: new Date("2024-06-11"),
+    updatedAt: new Date("2024-06-11"),
     groupId: "1",
+    userId: "demo",
     type: "link",
   },
   {
@@ -82,7 +117,9 @@ const initialBookmarks: Bookmark[] = [
     title: "christabel, maybe. chances are 90%",
     url: "",
     createdAt: new Date("2024-02-22"),
+    updatedAt: new Date("2024-02-22"),
     groupId: "1",
+    userId: "demo",
     type: "text",
   },
   {
@@ -90,7 +127,9 @@ const initialBookmarks: Bookmark[] = [
     title: "#FF5733",
     url: "",
     createdAt: new Date("2024-11-20"),
+    updatedAt: new Date("2024-11-20"),
     groupId: "1",
+    userId: "demo",
     type: "color",
     color: "#FF5733",
   },
@@ -210,14 +249,17 @@ export default function Home() {
         .filter(Boolean);
 
       const newBookmarks: Bookmark[] = lines.map((line) => {
+        const now = new Date();
         const colorResult = parseColor(line);
         if (colorResult.isColor) {
           return {
             id: Date.now().toString() + Math.random(),
             title: colorResult.original || line,
             url: "",
-            createdAt: new Date(),
+            createdAt: now,
+            updatedAt: now,
             groupId: selectedGroupId,
+            userId: "demo",
             type: "color" as const,
             color: colorResult.hex,
           };
@@ -229,8 +271,10 @@ export default function Home() {
             id: Date.now().toString() + Math.random(),
             title: new URL(url).hostname.replace("www.", ""),
             url,
-            createdAt: new Date(),
+            createdAt: now,
+            updatedAt: now,
             groupId: selectedGroupId,
+            userId: "demo",
             type: "link" as const,
           };
         }
@@ -239,8 +283,10 @@ export default function Home() {
           id: Date.now().toString() + Math.random(),
           title: line,
           url: "",
-          createdAt: new Date(),
+          createdAt: now,
+          updatedAt: now,
           groupId: selectedGroupId,
+          userId: "demo",
           type: "text" as const,
         };
       });
@@ -254,10 +300,14 @@ export default function Home() {
 
   const handleCreateGroup = useCallback((name: string) => {
     const colors = ["#74B06F", "#4A90D9", "#E6A23C", "#9B59B6", "#E74C3C"];
+    const now = new Date();
     const newGroup: Group = {
       id: Date.now().toString(),
       name,
       color: colors[Math.floor(Math.random() * colors.length)],
+      userId: "demo",
+      createdAt: now,
+      updatedAt: now,
     };
     setGroups((prev) => [...prev, newGroup]);
     setSelectedGroupId(newGroup.id);

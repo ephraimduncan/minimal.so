@@ -10,7 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronsUpDown, Plus, Check, Trash2 } from "lucide-react";
-import type { Group } from "@/lib/types";
+import type { Group } from "@/lib/schema";
+import { authClient } from "@/lib/auth-client";
 import {
   Dialog,
   DialogContent,
@@ -210,7 +211,12 @@ export function Header({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="rounded-2xl">
           <DropdownMenuItem className="rounded-lg">Settings</DropdownMenuItem>
-          <DropdownMenuItem className="rounded-lg">Sign out</DropdownMenuItem>
+          <DropdownMenuItem
+            className="rounded-lg"
+            onClick={() => authClient.signOut()}
+          >
+            Sign out
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

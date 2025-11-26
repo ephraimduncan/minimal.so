@@ -43,6 +43,7 @@ export const groupItemSchema = z.object({
   id: z.string(),
   name: z.string(),
   color: z.string(),
+  bookmarkCount: z.number().optional(),
 });
 
 export const bookmarkSchema = z.object({

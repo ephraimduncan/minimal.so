@@ -28,7 +28,6 @@ interface HeaderProps {
   onSelectGroup: (id: string) => void;
   onCreateGroup: (name: string) => void;
   onDeleteGroup?: (id: string) => void;
-  bookmarkCounts: Record<string, number>;
   userName: string;
 }
 
@@ -38,7 +37,6 @@ export function Header({
   onSelectGroup,
   onCreateGroup,
   onDeleteGroup,
-  bookmarkCounts,
   userName,
 }: HeaderProps) {
   const router = useRouter();
@@ -142,24 +140,24 @@ export function Header({
                   <Check className="h-4 w-4" />
                 ) : (
                   <span className="text-xs text-muted-foreground">
-                    {bookmarkCounts[group.id] || 0}
+                    {group.bookmarkCount ?? 0}
                   </span>
                 )}
               </DropdownMenuItem>
             ))}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger>
+              <DialogTrigger asChild>
                 <DropdownMenuItem
                   onSelect={(e) => e.preventDefault()}
-                  className="rounded-lg"
+                  className="rounded-lg w-full"
                 >
                   <Plus className="h-4 w-4 mr-0" />
-                  New Group
+                  Create Group
                 </DropdownMenuItem>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create new group</DialogTitle>
+                  <DialogTitle>Create Group</DialogTitle>
                 </DialogHeader>
                 <form
                   onSubmit={(e) => {
@@ -169,7 +167,7 @@ export function Header({
                   className="flex flex-col gap-4"
                 >
                   <Input
-                    placeholder="Group name"
+                    placeholder="Enter group name"
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
                     autoFocus

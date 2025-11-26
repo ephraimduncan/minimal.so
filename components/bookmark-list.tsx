@@ -119,7 +119,7 @@ export function BookmarkList({
     <div>
       <div className="mb-2 flex items-center justify-between border-b border-border px-1 pb-2 text-sm text-muted-foreground">
         <span>Title</span>
-        <span>Created at</span>
+        <span>Created At</span>
       </div>
       <div className="flex flex-col gap-0.5 -mx-3">
         {bookmarks.map((bookmark, index) => (
@@ -184,23 +184,17 @@ export function BookmarkList({
                   )}
                 </div>
                 <div className="relative w-[90px] h-5 flex items-center justify-end">
-                  {!(
-                    (selectedIndex === index || hoveredIndex === index) &&
-                    bookmark.url &&
-                    !renamingId
-                  ) && (
+                  {!((selectedIndex === index || hoveredIndex === index) && !renamingId) && (
                     <span className="text-[13px] text-muted-foreground whitespace-nowrap">
                       {formatDate(bookmark.createdAt)}
                     </span>
                   )}
-                  {(selectedIndex === index || hoveredIndex === index) &&
-                    bookmark.url &&
-                    !renamingId && (
-                      <KbdGroup>
-                        <Kbd>⌘</Kbd>
-                        <Kbd>Enter</Kbd>
-                      </KbdGroup>
-                    )}
+                  {(selectedIndex === index || hoveredIndex === index) && !renamingId && (
+                    <KbdGroup>
+                      <Kbd>⌘</Kbd>
+                      <Kbd>Enter</Kbd>
+                    </KbdGroup>
+                  )}
                 </div>
               </Button>
             </ContextMenuTrigger>
@@ -238,28 +232,30 @@ export function BookmarkList({
                   <span>Refetch</span>
                 </ContextMenuItem>
               )}
-              <ContextMenuSub>
-                <ContextMenuSubTrigger>
-                  <ChevronsRight className="mr-2 h-4 w-4" />
-                  <span>Move To...</span>
-                </ContextMenuSubTrigger>
-                <ContextMenuSubContent className="w-40">
-                  {groups
-                    .filter((g) => g.id !== currentGroupId)
-                    .map((group) => (
-                      <ContextMenuItem
-                        key={group.id}
-                        onClick={() => onMove(bookmark.id, group.id)}
-                      >
-                        <span
-                          className="mr-2 h-2 w-2 rounded-full"
-                          style={{ backgroundColor: group.color }}
-                        />
-                        {group.name}
-                      </ContextMenuItem>
-                    ))}
-                </ContextMenuSubContent>
-              </ContextMenuSub>
+              {groups.length > 1 && (
+                <ContextMenuSub>
+                  <ContextMenuSubTrigger>
+                    <ChevronsRight className="mr-2 h-4 w-4" />
+                    <span>Move To...</span>
+                  </ContextMenuSubTrigger>
+                  <ContextMenuSubContent className="w-40">
+                    {groups
+                      .filter((g) => g.id !== currentGroupId)
+                      .map((group) => (
+                        <ContextMenuItem
+                          key={group.id}
+                          onClick={() => onMove(bookmark.id, group.id)}
+                        >
+                          <span
+                            className="mr-2 h-2 w-2 rounded-full"
+                            style={{ backgroundColor: group.color }}
+                          />
+                          {group.name}
+                        </ContextMenuItem>
+                      ))}
+                  </ContextMenuSubContent>
+                </ContextMenuSub>
+              )}
             </ContextMenuContent>
           </ContextMenu>
         ))}

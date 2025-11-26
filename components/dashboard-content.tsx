@@ -2,13 +2,19 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Header } from "@/components/header";
 import { BookmarkInput } from "@/components/bookmark-input";
 import { BookmarkList } from "@/components/bookmark-list";
 import { BookmarkListSkeleton } from "@/components/dashboard-skeleton";
 import { parseColor, isUrl, normalizeUrl } from "@/lib/utils";
 import { client } from "@/lib/orpc";
-import type { BookmarkType, GroupItem, BookmarkItem, Session } from "@/lib/schema";
+import type {
+  BookmarkType,
+  GroupItem,
+  BookmarkItem,
+  Session,
+} from "@/lib/schema";
 
 interface DashboardContentProps {
   session: NonNullable<Session>;
@@ -45,7 +51,8 @@ export function DashboardContent({
     queryKey: ["bookmarks", currentGroupId],
     queryFn: () =>
       client.bookmark.list({ groupId: currentGroupId ?? undefined }),
-    initialData: currentGroupId === initialGroups[0]?.id ? initialBookmarks : undefined,
+    initialData:
+      currentGroupId === initialGroups[0]?.id ? initialBookmarks : undefined,
     enabled: !!currentGroupId,
     staleTime: 60 * 1000,
   });
@@ -63,8 +70,47 @@ export function DashboardContent({
       color?: string;
       groupId: string;
     }) => client.bookmark.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+    onMutate: async (newBookmark) => {
+      await queryClient.cancelQueries({
+        queryKey: ["bookmarks", newBookmark.groupId],
+      });
+
+      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>([
+        "bookmarks",
+        newBookmark.groupId,
+      ]);
+
+      const optimisticBookmark: BookmarkItem = {
+        id: `temp-${Date.now()}`,
+        title: newBookmark.title,
+        url: newBookmark.url || null,
+        favicon: null,
+        type: newBookmark.type,
+        color: newBookmark.color || null,
+        groupId: newBookmark.groupId,
+        createdAt: new Date().toISOString(),
+      };
+
+      queryClient.setQueryData<BookmarkItem[]>(
+        ["bookmarks", newBookmark.groupId],
+        (old) => [optimisticBookmark, ...(old || [])]
+      );
+
+      return { previousBookmarks, groupId: newBookmark.groupId };
+    },
+    onError: (_err, _newBookmark, context) => {
+      if (context?.previousBookmarks) {
+        queryClient.setQueryData(
+          ["bookmarks", context.groupId],
+          context.previousBookmarks
+        );
+      }
+      toast.error("Failed to create bookmark");
+    },
+    onSettled: (_data, _error, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["bookmarks", variables.groupId],
+      });
     },
   });
 
@@ -104,6 +150,17 @@ export function DashboardContent({
     },
   });
 
+  const refetchBookmarkMutation = useMutation({
+    mutationFn: (data: { id: string }) => client.bookmark.refetch(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+      toast.success("Metadata refreshed");
+    },
+    onError: () => {
+      toast.error("Failed to refresh metadata");
+    },
+  });
+
   const selectedGroup =
     groups.find((g) => g.id === currentGroupId) || groups[0];
 
@@ -132,14 +189,6 @@ export function DashboardContent({
     });
   }, [bookmarks, searchQuery]);
 
-  const bookmarkCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    bookmarks.forEach((b) => {
-      counts[b.groupId] = (counts[b.groupId] || 0) + 1;
-    });
-    return counts;
-  }, [bookmarks]);
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (renamingId) return;
@@ -162,13 +211,14 @@ export function DashboardContent({
       const activeBookmark = filteredBookmarks[activeIndex];
       if (!activeBookmark) return;
 
-      if (
-        e.key === "Enter" &&
-        activeBookmark.url &&
-        document.activeElement !== inputRef.current
-      ) {
+      if (e.key === "Enter" && document.activeElement !== inputRef.current) {
         e.preventDefault();
-        window.open(activeBookmark.url, "_blank");
+        if (activeBookmark.url) {
+          window.open(activeBookmark.url, "_blank");
+        } else {
+          const textToCopy = activeBookmark.color || activeBookmark.title;
+          navigator.clipboard.writeText(textToCopy ?? "");
+        }
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === "c") {
@@ -307,9 +357,12 @@ export function DashboardContent({
     [updateBookmarkMutation]
   );
 
-  const handleRefetchBookmark = useCallback((id: string) => {
-    console.log("Refetching bookmark:", id);
-  }, []);
+  const handleRefetchBookmark = useCallback(
+    (id: string) => {
+      refetchBookmarkMutation.mutate({ id });
+    },
+    [refetchBookmarkMutation]
+  );
 
   if (!selectedGroup) {
     return null;
@@ -323,10 +376,9 @@ export function DashboardContent({
         onSelectGroup={handleSelectGroup}
         onCreateGroup={handleCreateGroup}
         onDeleteGroup={handleDeleteGroup}
-        bookmarkCounts={bookmarkCounts}
         userName={session.user.name}
       />
-      <main className="mx-auto max-w-3xl px-5 py-20">
+      <main className="mx-auto w-full max-w-2xl px-5 py-20">
         <BookmarkInput
           ref={inputRef}
           value={searchQuery}

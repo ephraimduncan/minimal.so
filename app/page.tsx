@@ -13,13 +13,19 @@ export default async function DashboardPage() {
 
   const groups = await db.group.findMany({
     where: { userId: session.user.id },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "asc" },
+    include: {
+      _count: {
+        select: { bookmarks: true },
+      },
+    },
   });
 
   const groupItems: GroupItem[] = groups.map((g) => ({
     id: g.id,
     name: g.name,
     color: g.color,
+    bookmarkCount: g._count.bookmarks,
   }));
 
   const defaultGroupId = groups[0]?.id;

@@ -138,7 +138,7 @@ export const refetchBookmark = authed
       throw new Error("Bookmark not found or has no URL");
     }
 
-    const metadata = await getUrlMetadata(existing.url, { bypassCache: true });
+    const metadata = await getUrlMetadata(existing.url);
 
     const bookmark = await db.bookmark.update({
       where: { id: input.id, userId: context.user.id },

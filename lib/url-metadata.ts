@@ -1,20 +1,8 @@
-import { z } from "zod";
-import { redis } from "./redis";
-
 export interface UrlMetadata {
   title: string | null;
   favicon: string | null;
   fetchedAt: number;
 }
-
-const urlMetadataSchema = z.object({
-  title: z.string().nullable(),
-  favicon: z.string().nullable(),
-  fetchedAt: z.number(),
-});
-
-const CACHE_TTL_SUCCESS = 60 * 60 * 24 * 7;
-const CACHE_TTL_FAILURE = 60 * 5;
 
 function isAllowedUrl(url: string): boolean {
   try {
@@ -49,36 +37,6 @@ function isAllowedUrl(url: string): boolean {
   } catch {
     return false;
   }
-}
-
-export function normalizeUrlForCache(url: string): string {
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
-    const path = parsed.pathname.replace(/\/+$/, "") || "/";
-    return `${parsed.protocol}//${host}${path}${parsed.search}`;
-  } catch {
-    return url.toLowerCase();
-  }
-}
-
-async function getCachedMetadata(url: string): Promise<UrlMetadata | null> {
-  const cacheKey = `url:metadata:${normalizeUrlForCache(url)}`;
-  const cached = await redis.get(cacheKey);
-  if (!cached) {
-    return null;
-  }
-  const parsed = urlMetadataSchema.safeParse(JSON.parse(cached));
-  return parsed.success ? parsed.data : null;
-}
-
-async function cacheMetadata(
-  url: string,
-  metadata: UrlMetadata,
-  ttl: number = CACHE_TTL_SUCCESS
-): Promise<void> {
-  const cacheKey = `url:metadata:${normalizeUrlForCache(url)}`;
-  await redis.set(cacheKey, JSON.stringify(metadata), "EX", ttl);
 }
 
 interface FetchResult {
@@ -203,21 +161,7 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&nbsp;/g, " ");
 }
 
-export async function getUrlMetadata(
-  url: string,
-  options: { bypassCache?: boolean } = {}
-): Promise<UrlMetadata> {
-  if (!options.bypassCache) {
-    const cached = await getCachedMetadata(url);
-    if (cached) {
-      return cached;
-    }
-  }
-
-  const { metadata, success } = await fetchUrlMetadata(url);
-
-  const ttl = success ? CACHE_TTL_SUCCESS : CACHE_TTL_FAILURE;
-  await cacheMetadata(url, metadata, ttl);
-
+export async function getUrlMetadata(url: string): Promise<UrlMetadata> {
+  const { metadata } = await fetchUrlMetadata(url);
   return metadata;
 }

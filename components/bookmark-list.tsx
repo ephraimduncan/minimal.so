@@ -129,22 +129,25 @@ export function BookmarkList({
               setContextMenuOpenId(open ? bookmark.id : null)
             }
           >
-            <ContextMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                onClick={() => handleClick(bookmark)}
-                onMouseEnter={() => onHoverChange(index)}
-                onMouseLeave={() => onHoverChange(-1)}
-                className={cn(
-                  "group flex h-auto items-center justify-between rounded-xl px-4 py-3 text-left",
-                  selectedIndex === index || contextMenuOpenId === bookmark.id
-                    ? "bg-muted"
-                    : "hover:bg-muted/50",
-                  renamingId &&
-                    renamingId !== bookmark.id &&
-                    "blur-[1.5px] opacity-50 pointer-events-none"
-                )}
-              >
+            <ContextMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  onClick={() => handleClick(bookmark)}
+                  onMouseEnter={() => onHoverChange(index)}
+                  onMouseLeave={() => onHoverChange(-1)}
+                  className={cn(
+                    "group flex h-auto items-center justify-between rounded-xl px-4 py-3 text-left",
+                    selectedIndex === index || contextMenuOpenId === bookmark.id
+                      ? "bg-muted"
+                      : "hover:bg-muted/50",
+                    renamingId &&
+                      renamingId !== bookmark.id &&
+                      "blur-[1.5px] opacity-50 pointer-events-none"
+                  )}
+                />
+              }
+            >
                 <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
                   <BookmarkIcon
                     bookmark={bookmark}
@@ -196,7 +199,6 @@ export function BookmarkList({
                     </KbdGroup>
                   )}
                 </div>
-              </Button>
             </ContextMenuTrigger>
             <ContextMenuContent className="w-48">
               <ContextMenuItem onClick={() => handleCopy(bookmark)}>

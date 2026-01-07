@@ -193,6 +193,19 @@ export function DashboardContent({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (renamingId) return;
 
+      // Allow all keyboard events when focus is on the search input
+      if (document.activeElement === inputRef.current) {
+        return;
+      }
+
+      // Allow standard text editing shortcuts when focus is on any input/textarea
+      const isInputFocused =
+        document.activeElement instanceof HTMLInputElement ||
+        document.activeElement instanceof HTMLTextAreaElement;
+      if (isInputFocused && (e.metaKey || e.ctrlKey)) {
+        return; // Let the browser handle Ctrl+A, Ctrl+C, etc.
+      }
+
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedIndex((prev) =>

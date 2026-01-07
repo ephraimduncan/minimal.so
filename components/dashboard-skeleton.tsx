@@ -5,11 +5,11 @@ export function DashboardSkeleton() {
   return (
     <div className="min-h-screen bg-background">
       <HeaderSkeleton />
-      <main className="mx-auto max-w-3xl px-5 py-20">
-        <Skeleton className="h-10 w-full mb-6 rounded-xl" />
-        <div className="space-y-2">
+      <main className="mx-auto w-full max-w-2xl px-5 py-20">
+        <Skeleton className="h-8 w-full mb-8 rounded-lg" />
+        <div className="space-y-1">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            <Skeleton key={i} className="h-[46px] w-full rounded-xl" />
           ))}
         </div>
       </main>
@@ -19,9 +19,9 @@ export function DashboardSkeleton() {
 
 export function BookmarkListSkeleton() {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {Array.from({ length: 5 }).map((_, i) => (
-        <Skeleton key={i} className="h-12 w-full rounded-lg" />
+        <Skeleton key={i} className="h-[46px] w-full rounded-xl" />
       ))}
     </div>
   );

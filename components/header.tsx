@@ -14,11 +14,16 @@ import { ChevronsUpDown, Plus, Check, Trash2 } from "lucide-react";
 import { signOut } from "@/lib/auth-client";
 import {
   Dialog,
-  DialogContent,
+  DialogClose,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
+  DialogPanel,
+  DialogPopup,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Form } from "@/components/ui/form";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { type GroupItem } from "@/lib/schema";
 
@@ -106,15 +111,16 @@ export function Header({
         <BmrksLogo />
         <span className="text-muted-foreground">/</span>
         <DropdownMenu>
-          <DropdownMenuTrigger className="rounded-xl" asChild>
-            <Button variant="ghost" className="gap-2 px-2">
-              <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: selectedGroup.color }}
-              />
-              <span>{selectedGroup.name}</span>
-              <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-            </Button>
+          <DropdownMenuTrigger
+            className="rounded-xl"
+            render={<Button variant="ghost" className="gap-2 px-2" />}
+          >
+            <span
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: selectedGroup.color }}
+            />
+            <span>{selectedGroup.name}</span>
+            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
@@ -145,39 +151,13 @@ export function Header({
                 )}
               </DropdownMenuItem>
             ))}
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <DropdownMenuItem
-                  onSelect={(e) => e.preventDefault()}
-                  className="rounded-lg w-full"
-                >
-                  <Plus className="h-4 w-4 mr-0" />
-                  Create Group
-                </DropdownMenuItem>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create Group</DialogTitle>
-                </DialogHeader>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleCreateGroup();
-                  }}
-                  className="flex flex-col gap-4"
-                >
-                  <Input
-                    placeholder="Enter group name"
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    autoFocus
-                  />
-                  <Button type="submit" disabled={!newGroupName.trim()}>
-                    Create
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <DropdownMenuItem
+              onClick={() => setDialogOpen(true)}
+              className="rounded-lg w-full"
+            >
+              <Plus className="h-4 w-4 mr-0" />
+              Create Group
+            </DropdownMenuItem>
             {groups.length > 1 && (
               <DropdownMenuItem
                 onSelect={(e) => e.preventDefault()}
@@ -204,15 +184,53 @@ export function Header({
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogPopup className="sm:max-w-sm">
+            <Form
+              className="contents"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleCreateGroup();
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle>Create Group</DialogTitle>
+                <DialogDescription>
+                  Create a new group to organize your bookmarks.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogPanel>
+                <Field>
+                  <FieldLabel>Name</FieldLabel>
+                  <Input
+                    placeholder="Enter group name"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    autoFocus
+                  />
+                </Field>
+              </DialogPanel>
+              <DialogFooter variant="bare">
+                <DialogClose render={<Button variant="ghost" />}>
+                  Cancel
+                </DialogClose>
+                <Button type="submit" disabled={!newGroupName.trim()}>
+                  Create
+                </Button>
+              </DialogFooter>
+            </Form>
+          </DialogPopup>
+        </Dialog>
       </div>
 
       <DropdownMenu>
-        <DropdownMenuTrigger className="rounded-xl" asChild>
-          <Button variant="ghost" className="gap-2 px-2">
-            <UserAvatar name={userName} />
-            <span>{userName}</span>
-            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-          </Button>
+        <DropdownMenuTrigger
+          className="rounded-xl"
+          render={<Button variant="ghost" className="gap-2 px-2" />}
+        >
+          <UserAvatar name={userName} />
+          <span>{userName}</span>
+          <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="rounded-2xl">
           <DropdownMenuItem className="rounded-lg">Settings</DropdownMenuItem>

@@ -9,6 +9,7 @@ import { BookmarkList } from "@/components/bookmark-list";
 import { BookmarkListSkeleton } from "@/components/dashboard-skeleton";
 import { parseColor, isUrl, normalizeUrl } from "@/lib/utils";
 import { client } from "@/lib/orpc";
+import { useDebounce } from "@/hooks/use-debounce";
 import type {
   BookmarkType,
   GroupItem,
@@ -31,6 +32,7 @@ export function DashboardContent({
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [hoveredIndex, setHoveredIndex] = useState<number>(-1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -181,13 +183,13 @@ export function DashboardContent({
 
   const filteredBookmarks = useMemo(() => {
     return bookmarks.filter((b) => {
-      if (!searchQuery) return true;
+      if (!debouncedSearchQuery) return true;
       return (
-        b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.url?.toLowerCase().includes(searchQuery.toLowerCase())
+        b.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        b.url?.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
       );
     });
-  }, [bookmarks, searchQuery]);
+  }, [bookmarks, debouncedSearchQuery]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

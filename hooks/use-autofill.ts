@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, type RefObject } from "react";
 import type { UseFormSetValue, FieldValues, Path } from "react-hook-form";
 
 interface FieldConfig<T extends FieldValues> {
@@ -15,11 +15,12 @@ interface FieldConfig<T extends FieldValues> {
  *
  * @param setValue - react-hook-form's setValue function
  * @param fields - Array of field configs with name (form field) and id (DOM id)
+ * @returns Ref to attach to the form element
  */
 export function useAutofill<T extends FieldValues>(
   setValue: UseFormSetValue<T>,
   fields: FieldConfig<T>[]
-) {
+): RefObject<HTMLFormElement | null> {
   const formRef = useRef<HTMLFormElement>(null);
 
   const handleAutofill = useCallback(

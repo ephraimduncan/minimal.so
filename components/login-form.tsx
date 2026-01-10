@@ -14,8 +14,14 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { OAuthButton } from "@/components/oauth-button";
+import { useAutofill } from "@/hooks/use-autofill";
 import { signIn } from "@/lib/auth-client";
 import { loginSchema, type LoginFormData } from "@/lib/schema";
+
+const LOGIN_FIELDS = [
+  { name: "email", id: "email" },
+  { name: "password", id: "password" },
+] as const;
 
 export function LoginForm({
   className,
@@ -27,6 +33,7 @@ export function LoginForm({
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -35,6 +42,9 @@ export function LoginForm({
       password: "",
     },
   });
+
+  // Detect password manager autofill via CSS animation
+  const formRef = useAutofill(setValue, LOGIN_FIELDS);
 
   const onSubmit = async (data: LoginFormData) => {
     const { error } = await signIn.email({
@@ -72,7 +82,7 @@ export function LoginForm({
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)}>
         <FieldGroup className="gap-4">
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -80,6 +90,7 @@ export function LoginForm({
               id="email"
               type="email"
               placeholder="hello@ephraimduncan.com"
+              autoComplete="email"
               {...register("email")}
             />
             {errors.email && (
@@ -100,6 +111,7 @@ export function LoginForm({
               id="password"
               type="password"
               placeholder="********"
+              autoComplete="current-password"
               {...register("password")}
             />
             {errors.password && (

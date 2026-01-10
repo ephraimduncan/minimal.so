@@ -14,8 +14,16 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { OAuthButton } from "@/components/oauth-button";
+import { useAutofill } from "@/hooks/use-autofill";
 import { signUp } from "@/lib/auth-client";
 import { signupSchema, type SignupFormData } from "@/lib/schema";
+
+const SIGNUP_FIELDS = [
+  { name: "name", id: "name" },
+  { name: "email", id: "email" },
+  { name: "password", id: "password" },
+  { name: "confirmPassword", id: "confirm-password" },
+] as const;
 
 export function SignupForm({
   className,
@@ -27,6 +35,7 @@ export function SignupForm({
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -37,6 +46,9 @@ export function SignupForm({
       confirmPassword: "",
     },
   });
+
+  // Detect password manager autofill via CSS animation
+  const formRef = useAutofill(setValue, SIGNUP_FIELDS);
 
   const onSubmit = async (data: SignupFormData) => {
     const { error } = await signUp.email({
@@ -75,7 +87,7 @@ export function SignupForm({
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)}>
         <FieldGroup className="gap-4">
           <Field>
             <FieldLabel htmlFor="name">Name</FieldLabel>
@@ -83,6 +95,7 @@ export function SignupForm({
               id="name"
               type="text"
               placeholder="Ephraim Duncan"
+              autoComplete="name"
               {...register("name")}
             />
             {errors.name && (
@@ -95,6 +108,7 @@ export function SignupForm({
               id="email"
               type="email"
               placeholder="hello@ephraimduncan.com"
+              autoComplete="email"
               {...register("email")}
             />
             {errors.email && (
@@ -107,6 +121,7 @@ export function SignupForm({
               id="password"
               type="password"
               placeholder="********"
+              autoComplete="new-password"
               {...register("password")}
             />
             {errors.password && (
@@ -119,6 +134,7 @@ export function SignupForm({
               id="confirm-password"
               type="password"
               placeholder="********"
+              autoComplete="new-password"
               {...register("confirmPassword")}
             />
             {errors.confirmPassword && (

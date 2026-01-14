@@ -3,51 +3,41 @@ import { createAuthMiddleware } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { db } from "./db";
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, CHROME_EXTENSION_ID } =
+  process.env;
 const googleOAuthEnabled = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
 
-const extensionId = process.env.CHROME_EXTENSION_ID;
+async function ensureDefaultGroup(userId: string): Promise<void> {
+  const existingGroups = await db.group.count({ where: { userId } });
+  if (existingGroups > 0) return;
+
+  await db.group.create({
+    data: { name: "Bookmarks", color: "#74B06F", userId },
+  });
+}
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
-  database: prismaAdapter(db, {
-    provider: "sqlite",
-  }),
-  trustedOrigins: extensionId ? [`chrome-extension://${extensionId}`] : [],
-  emailAndPassword: {
-    enabled: true,
-  },
-  socialProviders: googleOAuthEnabled
-    ? {
-        google: {
-          clientId: GOOGLE_CLIENT_ID!,
-          clientSecret: GOOGLE_CLIENT_SECRET!,
-        },
-      }
-    : undefined,
-  account: {
-    accountLinking: {
-      enabled: true,
-      trustedProviders: ["google"],
+  database: prismaAdapter(db, { provider: "sqlite" }),
+  trustedOrigins: CHROME_EXTENSION_ID
+    ? [`chrome-extension://${CHROME_EXTENSION_ID}`]
+    : [],
+  emailAndPassword: { enabled: true },
+  ...(googleOAuthEnabled && {
+    socialProviders: {
+      google: {
+        clientId: GOOGLE_CLIENT_ID!,
+        clientSecret: GOOGLE_CLIENT_SECRET!,
+      },
     },
+  }),
+  account: {
+    accountLinking: { enabled: true, trustedProviders: ["google"] },
   },
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
       if (ctx.context.newSession) {
-        const userId = ctx.context.newSession.user.id;
-        const existingGroups = await db.group.count({
-          where: { userId },
-        });
-        if (existingGroups === 0) {
-          await db.group.create({
-            data: {
-              name: "Bookmarks",
-              color: "#74B06F",
-              userId,
-            },
-          });
-        }
+        await ensureDefaultGroup(ctx.context.newSession.user.id);
       }
     }),
   },

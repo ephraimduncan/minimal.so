@@ -1,24 +1,22 @@
-const DEFAULT_BASE_URL = "http://localhost:3000";
+const baseUrlInput = document.getElementById("baseUrl");
+const statusEl = document.getElementById("status");
+const saveBtn = document.getElementById("save");
 
 async function loadSettings() {
-  const result = await chrome.storage.sync.get(["baseUrl"]);
-  document.getElementById("baseUrl").value = result.baseUrl || DEFAULT_BASE_URL;
+  const { baseUrl } = await chrome.storage.sync.get(["baseUrl"]);
+  baseUrlInput.value = baseUrl || DEFAULT_BASE_URL;
 }
 
 async function saveSettings() {
-  const baseUrl =
-    document.getElementById("baseUrl").value.trim() || DEFAULT_BASE_URL;
+  const baseUrl = baseUrlInput.value.trim() || DEFAULT_BASE_URL;
   const normalizedUrl = baseUrl.replace(/\/+$/, "");
 
   await chrome.storage.sync.set({ baseUrl: normalizedUrl });
-  document.getElementById("baseUrl").value = normalizedUrl;
+  baseUrlInput.value = normalizedUrl;
 
-  const status = document.getElementById("status");
-  status.classList.add("visible");
-  setTimeout(() => {
-    status.classList.remove("visible");
-  }, 2000);
+  statusEl.classList.add("visible");
+  setTimeout(() => statusEl.classList.remove("visible"), 2000);
 }
 
 document.addEventListener("DOMContentLoaded", loadSettings);
-document.getElementById("save").addEventListener("click", saveSettings);
+saveBtn.addEventListener("click", saveSettings);

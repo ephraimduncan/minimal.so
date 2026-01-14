@@ -1,61 +1,38 @@
-const DEFAULT_BASE_URL = "http://localhost:3000";
+importScripts("constants.js");
 
 async function getBaseUrl() {
-  const result = await chrome.storage.sync.get(["baseUrl"]);
-  return result.baseUrl || DEFAULT_BASE_URL;
+  const { baseUrl } = await chrome.storage.sync.get(["baseUrl"]);
+  return baseUrl || DEFAULT_BASE_URL;
 }
 
-function showBadge(text, color, tabId) {
+function showBadge(type, tabId) {
+  const { text, color } = BADGE[type];
   chrome.action.setBadgeText({ text, tabId });
   chrome.action.setBadgeBackgroundColor({ color, tabId });
-  setTimeout(() => {
-    chrome.action.setBadgeText({ text: "", tabId });
-  }, 2500);
+  setTimeout(() => chrome.action.setBadgeText({ text: "", tabId }), 2500);
 }
 
-function showNotification(title, message) {
+function showNotification(title, message, onClick) {
   return new Promise((resolve) => {
     chrome.notifications.create(
-      {
-        type: "basic",
-        iconUrl: "icons/icon128.png",
-        title,
-        message,
-      },
-      resolve
-    );
-  });
-}
-
-function showLoginNotification(baseUrl, tabId) {
-  return new Promise((resolve) => {
-    chrome.notifications.create(
-      {
-        type: "basic",
-        iconUrl: "icons/icon128.png",
-        title: "Login Required",
-        message: "Please log in to save bookmarks. Opening login page...",
-      },
-      (notificationId) => {
-        chrome.tabs.create({ url: `${baseUrl}/login` });
-        setTimeout(() => {
-          chrome.notifications.clear(notificationId, resolve);
-        }, 3000);
-      }
+      { type: "basic", iconUrl: "icons/icon128.png", title, message },
+      onClick
+        ? (id) => {
+            onClick();
+            setTimeout(() => chrome.notifications.clear(id, resolve), 3000);
+          }
+        : resolve
     );
   });
 }
 
 async function saveBookmark(url, title, tabId) {
   const baseUrl = await getBaseUrl();
-  const endpoint = `${baseUrl}/api/extension/bookmark`;
 
   try {
-    const response = await fetch(endpoint, {
+    const response = await fetch(`${baseUrl}/api/extension/bookmark`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ url, title }),
     });
@@ -63,14 +40,18 @@ async function saveBookmark(url, title, tabId) {
     const data = await response.json();
 
     if (response.status === 401) {
-      showBadge("!", "#f59e0b", tabId);
-      await showLoginNotification(baseUrl, tabId);
+      showBadge("login", tabId);
+      await showNotification(
+        "Login Required",
+        "Please log in to save bookmarks. Opening login page...",
+        () => chrome.tabs.create({ url: `${baseUrl}/login` })
+      );
       return;
     }
 
     if (!response.ok) {
       console.error("Save failed:", data);
-      showBadge("✗", "#ef4444", tabId);
+      showBadge("error", tabId);
       await showNotification(
         "Error",
         data.message || "Failed to save bookmark"
@@ -78,48 +59,42 @@ async function saveBookmark(url, title, tabId) {
       return;
     }
 
-    showBadge("✓", "#22c55e", tabId);
+    showBadge("success", tabId);
     await showNotification("Bookmark Saved", data.bookmark?.title || title);
   } catch (error) {
     console.error("Network error:", error);
-    showBadge("✗", "#ef4444", tabId);
+    showBadge("error", tabId);
     await showNotification("Error", "Network error. Please try again.");
   }
 }
 
+function isInvalidUrl(url) {
+  return (
+    !url || url.startsWith("chrome://") || url.startsWith("chrome-extension://")
+  );
+}
+
 chrome.action.onClicked.addListener(async (tab) => {
-  if (
-    !tab.url ||
-    tab.url.startsWith("chrome://") ||
-    tab.url.startsWith("chrome-extension://")
-  ) {
-    showBadge("✗", "#ef4444", tab.id);
+  if (isInvalidUrl(tab.url)) {
+    showBadge("error", tab.id);
     return;
   }
   await saveBookmark(tab.url, tab.title, tab.id);
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "save-page",
-    title: "Save to Minimal",
-    contexts: ["page"],
-  });
-  chrome.contextMenus.create({
-    id: "save-link",
-    title: "Save to Minimal",
-    contexts: ["link"],
+  [
+    { id: "save-page", contexts: ["page"] },
+    { id: "save-link", contexts: ["link"] },
+  ].forEach(({ id, contexts }) => {
+    chrome.contextMenus.create({ id, title: "Save to Minimal", contexts });
   });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId === "save-page") {
-    if (tab.url && !tab.url.startsWith("chrome://")) {
-      await saveBookmark(tab.url, tab.title, tab.id);
-    }
-  } else if (info.menuItemId === "save-link") {
-    if (info.linkUrl) {
-      await saveBookmark(info.linkUrl, info.linkUrl, tab.id);
-    }
+  if (info.menuItemId === "save-page" && !isInvalidUrl(tab.url)) {
+    await saveBookmark(tab.url, tab.title, tab.id);
+  } else if (info.menuItemId === "save-link" && info.linkUrl) {
+    await saveBookmark(info.linkUrl, info.linkUrl, tab.id);
   }
 });

@@ -6,7 +6,7 @@ import { normalizeUrl } from "@/lib/utils";
 import { z } from "zod";
 
 const createBookmarkSchema = z.object({
-  url: z.string().url(),
+  url: z.url(),
   title: z.string().optional(),
 });
 
@@ -14,79 +14,63 @@ const extensionId = process.env.CHROME_EXTENSION_ID;
 
 function getAllowedOrigins(): string[] {
   const origins: string[] = [];
-  if (extensionId) {
-    origins.push(`chrome-extension://${extensionId}`);
-  }
-  if (process.env.NODE_ENV === "development") {
+  if (extensionId) origins.push(`chrome-extension://${extensionId}`);
+  if (process.env.NODE_ENV === "development")
     origins.push("http://localhost:3000");
-  }
   return origins;
 }
 
-function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) return false;
-  return getAllowedOrigins().includes(origin);
-}
-
-function corsHeaders(origin: string | null) {
-  const allowed = isAllowedOrigin(origin);
+function corsHeaders(origin: string | null): HeadersInit {
+  const allowedOrigins = getAllowedOrigins();
+  const allowed = origin && allowedOrigins.includes(origin);
   return {
-    "Access-Control-Allow-Origin": allowed ? origin! : "",
+    "Access-Control-Allow-Origin": allowed ? origin : "",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Credentials": "true",
   };
 }
 
-export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  console.log("[Extension API] OPTIONS request from origin:", origin);
+function jsonError(
+  message: string,
+  error: string,
+  status: number,
+  headers: HeadersInit
+) {
+  return NextResponse.json({ error, message }, { status, headers });
+}
+
+export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
   return new NextResponse(null, {
     status: 204,
-    headers: corsHeaders(origin),
+    headers: corsHeaders(request.headers.get("origin")),
   });
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   const origin = request.headers.get("origin");
   const headers = corsHeaders(origin);
+  const allowedOrigins = getAllowedOrigins();
 
-  console.log("[Extension API] POST request received");
-  console.log("[Extension API] Origin:", origin);
-  console.log("[Extension API] Allowed origins:", getAllowedOrigins());
-  console.log("[Extension API] Is allowed:", isAllowedOrigin(origin));
-
-  if (!isAllowedOrigin(origin)) {
-    console.log("[Extension API] Rejected - origin not allowed");
-    return NextResponse.json(
-      { error: "Forbidden", message: "Origin not allowed" },
-      { status: 403, headers }
-    );
+  if (!origin || !allowedOrigins.includes(origin)) {
+    return jsonError("Origin not allowed", "Forbidden", 403, headers);
   }
 
   try {
     const session = await getSession();
-    console.log("[Extension API] Session user:", session?.user?.email ?? "none");
-
     if (!session?.user) {
-      console.log("[Extension API] Rejected - not authenticated");
-      return NextResponse.json(
-        { error: "Unauthorized", message: "Please log in to save bookmarks" },
-        { status: 401, headers }
+      return jsonError(
+        "Please log in to save bookmarks",
+        "Unauthorized",
+        401,
+        headers
       );
     }
 
     const body = await request.json();
-    console.log("[Extension API] Request body:", body);
-
     const parsed = createBookmarkSchema.safeParse(body);
-
     if (!parsed.success) {
-      console.log("[Extension API] Rejected - invalid body:", parsed.error);
-      return NextResponse.json(
-        { error: "Bad Request", message: "Invalid URL provided" },
-        { status: 400, headers }
-      );
+      return jsonError("Invalid URL provided", "Bad Request", 400, headers);
     }
 
     const { url, title: providedTitle } = parsed.data;
@@ -97,21 +81,17 @@ export async function POST(request: NextRequest) {
     });
 
     if (!defaultGroup) {
-      console.log("[Extension API] Rejected - no group found for user");
-      return NextResponse.json(
-        {
-          error: "No Group",
-          message: "No bookmark group found. Please create one first.",
-        },
-        { status: 400, headers }
+      return jsonError(
+        "No bookmark group found. Please create one first.",
+        "No Group",
+        400,
+        headers
       );
     }
 
     const normalizedUrl = normalizeUrl(url);
     const metadata = await getUrlMetadata(normalizedUrl);
     const title = providedTitle || metadata.title || normalizedUrl;
-
-    console.log("[Extension API] Creating bookmark:", { title, url: normalizedUrl, groupId: defaultGroup.id });
 
     const bookmark = await db.bookmark.create({
       data: {
@@ -123,8 +103,6 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
       },
     });
-
-    console.log("[Extension API] Bookmark created:", bookmark.id);
 
     return NextResponse.json(
       {
@@ -140,9 +118,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("[Extension API] Error:", error);
-    return NextResponse.json(
-      { error: "Server Error", message: "Failed to save bookmark" },
-      { status: 500, headers }
-    );
+    return jsonError("Failed to save bookmark", "Server Error", 500, headers);
   }
 }

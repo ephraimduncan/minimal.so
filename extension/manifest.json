@@ -7,12 +7,10 @@
     "activeTab",
     "contextMenus",
     "storage",
-    "notifications"
+    "notifications",
+    "management"
   ],
-  "host_permissions": [
-    "https://minimal.so/*",
-    "http://localhost:3000/*"
-  ],
+  "host_permissions": ["https://minimal.so/*", "http://localhost:3000/*"],
   "action": {
     "default_icon": {
       "16": "icons/icon16.png",

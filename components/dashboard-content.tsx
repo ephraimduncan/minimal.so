@@ -9,6 +9,7 @@ import { BookmarkList } from "@/components/bookmark-list";
 import { BookmarkListSkeleton } from "@/components/dashboard-skeleton";
 import { parseColor, isUrl, normalizeUrl } from "@/lib/utils";
 import { client } from "@/lib/orpc";
+import { useDebounce } from "@/hooks/use-debounce";
 import type {
   BookmarkType,
   GroupItem,
@@ -31,6 +32,7 @@ export function DashboardContent({
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [hoveredIndex, setHoveredIndex] = useState<number>(-1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -181,17 +183,30 @@ export function DashboardContent({
 
   const filteredBookmarks = useMemo(() => {
     return bookmarks.filter((b) => {
-      if (!searchQuery) return true;
+      if (!debouncedSearchQuery) return true;
       return (
-        b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.url?.toLowerCase().includes(searchQuery.toLowerCase())
+        b.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        b.url?.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
       );
     });
-  }, [bookmarks, searchQuery]);
+  }, [bookmarks, debouncedSearchQuery]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (renamingId) return;
+
+      // Allow all keyboard events when focus is on the search input
+      if (document.activeElement === inputRef.current) {
+        return;
+      }
+
+      // Allow standard text editing shortcuts when focus is on any input/textarea
+      const isInputFocused =
+        document.activeElement instanceof HTMLInputElement ||
+        document.activeElement instanceof HTMLTextAreaElement;
+      if (isInputFocused && (e.metaKey || e.ctrlKey)) {
+        return; // Let the browser handle Ctrl+A, Ctrl+C, etc.
+      }
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -263,42 +278,35 @@ export function DashboardContent({
     (value: string) => {
       if (!currentGroupId) return;
 
-      const lines = value
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean);
+      const trimmedValue = value.trim();
+      if (!trimmedValue) return;
 
-      lines.forEach((line) => {
-        const colorResult = parseColor(line);
-        if (colorResult.isColor) {
-          createBookmarkMutation.mutate({
-            title: colorResult.original || line,
-            url: "",
-            type: "color",
-            color: colorResult.hex,
-            groupId: currentGroupId,
-          });
-          return;
-        }
+      const colorResult = parseColor(trimmedValue);
 
-        if (isUrl(line)) {
-          const url = normalizeUrl(line);
-          createBookmarkMutation.mutate({
-            title: new URL(url).hostname.replace("www.", ""),
-            url,
-            type: "link",
-            groupId: currentGroupId,
-          });
-          return;
-        }
-
+      if (colorResult.isColor) {
         createBookmarkMutation.mutate({
-          title: line,
+          title: colorResult.original || trimmedValue,
+          url: "",
+          type: "color",
+          color: colorResult.hex,
+          groupId: currentGroupId,
+        });
+      } else if (!trimmedValue.includes("\n") && isUrl(trimmedValue)) {
+        const url = normalizeUrl(trimmedValue);
+        createBookmarkMutation.mutate({
+          title: new URL(url).hostname.replace("www.", ""),
+          url,
+          type: "link",
+          groupId: currentGroupId,
+        });
+      } else {
+        createBookmarkMutation.mutate({
+          title: trimmedValue,
           url: "",
           type: "text",
           groupId: currentGroupId,
         });
-      });
+      }
 
       setSearchQuery("");
       setSelectedIndex(-1);

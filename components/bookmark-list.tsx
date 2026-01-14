@@ -20,7 +20,14 @@ import {
   RefreshCw,
   ChevronsRight,
   Check,
+  Bookmark,
 } from "lucide-react";
+import {
+  Empty,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
 import { cn, parseColor } from "@/lib/utils";
 import { type BookmarkItem, type GroupItem } from "@/lib/schema";
 
@@ -115,6 +122,18 @@ export function BookmarkList({
     setEditValue("");
   };
 
+  if (bookmarks.length === 0) {
+    return (
+      <Empty className="border-none py-16">
+        <EmptyMedia>
+          <Bookmark className="size-5 text-muted-foreground fill-muted-foreground" />
+        </EmptyMedia>
+        <EmptyTitle>No bookmarks here</EmptyTitle>
+        <EmptyDescription>Add some cool links to get started</EmptyDescription>
+      </Empty>
+    );
+  }
+
   return (
     <div>
       <div className="mb-2 flex items-center justify-between border-b border-border px-1 pb-2 text-sm text-muted-foreground">
@@ -129,22 +148,25 @@ export function BookmarkList({
               setContextMenuOpenId(open ? bookmark.id : null)
             }
           >
-            <ContextMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                onClick={() => handleClick(bookmark)}
-                onMouseEnter={() => onHoverChange(index)}
-                onMouseLeave={() => onHoverChange(-1)}
-                className={cn(
-                  "group flex h-auto items-center justify-between rounded-xl px-4 py-3 text-left",
-                  selectedIndex === index || contextMenuOpenId === bookmark.id
-                    ? "bg-muted"
-                    : "hover:bg-muted/50",
-                  renamingId &&
-                    renamingId !== bookmark.id &&
-                    "blur-[1.5px] opacity-50 pointer-events-none"
-                )}
-              >
+            <ContextMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  onClick={() => handleClick(bookmark)}
+                  onMouseEnter={() => onHoverChange(index)}
+                  onMouseLeave={() => onHoverChange(-1)}
+                  className={cn(
+                    "group flex h-auto items-center justify-between rounded-xl px-4 py-3 text-left",
+                    selectedIndex === index || contextMenuOpenId === bookmark.id
+                      ? "bg-muted"
+                      : "hover:bg-muted/50",
+                    renamingId &&
+                      renamingId !== bookmark.id &&
+                      "blur-[1.5px] opacity-50 pointer-events-none"
+                  )}
+                />
+              }
+            >
                 <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
                   <BookmarkIcon
                     bookmark={bookmark}
@@ -173,7 +195,7 @@ export function BookmarkList({
                       }}
                     />
                   ) : (
-                    <span className="text-sm font-normal">
+                    <span className="text-sm font-normal truncate">
                       {copiedId === bookmark.id ? "Copied" : bookmark.title}
                     </span>
                   )}
@@ -196,7 +218,6 @@ export function BookmarkList({
                     </KbdGroup>
                   )}
                 </div>
-              </Button>
             </ContextMenuTrigger>
             <ContextMenuContent className="w-48">
               <ContextMenuItem onClick={() => handleCopy(bookmark)}>
@@ -271,6 +292,8 @@ function BookmarkIcon({
   bookmark: BookmarkItem;
   isCopied?: boolean;
 }) {
+  const [faviconError, setFaviconError] = useState(false);
+
   if (isCopied) {
     return (
       <div className="flex h-5 w-5 items-center justify-center">
@@ -300,16 +323,14 @@ function BookmarkIcon({
     }
   }
 
-  if (bookmark.favicon) {
+  if (bookmark.favicon && !faviconError) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={bookmark.favicon || "/placeholder.svg"}
+        src={bookmark.favicon}
         alt=""
         className="h-5 w-5 rounded object-contain"
-        onError={(e) => {
-          e.currentTarget.style.display = "none";
-        }}
+        onError={() => setFaviconError(true)}
       />
     );
   }

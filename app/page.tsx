@@ -1,14 +1,15 @@
-import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { getSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
+import { Landing } from "@/components/landing";
 import { DashboardContent } from "@/components/dashboard-content";
 import type { GroupItem, BookmarkItem } from "@/lib/schema";
 
-export default async function DashboardPage() {
+async function HomeContent() {
   const session = await getSession();
 
   if (!session) {
-    redirect("/login");
+    return <Landing />;
   }
 
   const groups = await db.group.findMany({
@@ -58,5 +59,13 @@ export default async function DashboardPage() {
       initialGroups={groupItems}
       initialBookmarks={initialBookmarks}
     />
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
   );
 }

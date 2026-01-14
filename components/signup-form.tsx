@@ -13,8 +13,17 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { OAuthButton } from "@/components/oauth-button";
+import { useAutofill } from "@/hooks/use-autofill";
 import { signUp } from "@/lib/auth-client";
 import { signupSchema, type SignupFormData } from "@/lib/schema";
+
+const SIGNUP_FIELDS = [
+  { name: "name", id: "name" },
+  { name: "email", id: "email" },
+  { name: "password", id: "password" },
+  { name: "confirmPassword", id: "confirm-password" },
+] as const;
 
 export function SignupForm({
   className,
@@ -26,6 +35,7 @@ export function SignupForm({
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -36,6 +46,9 @@ export function SignupForm({
       confirmPassword: "",
     },
   });
+
+  // Detect password manager autofill via CSS animation
+  const formRef = useAutofill(setValue, SIGNUP_FIELDS);
 
   const onSubmit = async (data: SignupFormData) => {
     const { error } = await signUp.email({
@@ -53,7 +66,7 @@ export function SignupForm({
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
+    <div className={cn("flex flex-col gap-2", className)} {...props}>
       <div className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold">Sign up</h1>
         <p className="text-sm text-muted-foreground">
@@ -61,14 +74,28 @@ export function SignupForm({
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <FieldGroup>
+      <OAuthButton provider="google" mode="signup" />
+
+      <div className="relative my-3">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">
+            or continue with email
+          </span>
+        </div>
+      </div>
+
+      <form ref={formRef} onSubmit={handleSubmit(onSubmit)}>
+        <FieldGroup className="gap-4">
           <Field>
             <FieldLabel htmlFor="name">Name</FieldLabel>
             <Input
               id="name"
               type="text"
-              placeholder="John Doe"
+              placeholder="Ephraim Duncan"
+              autoComplete="name"
               {...register("name")}
             />
             {errors.name && (
@@ -81,6 +108,7 @@ export function SignupForm({
               id="email"
               type="email"
               placeholder="hello@ephraimduncan.com"
+              autoComplete="email"
               {...register("email")}
             />
             {errors.email && (
@@ -93,6 +121,7 @@ export function SignupForm({
               id="password"
               type="password"
               placeholder="********"
+              autoComplete="new-password"
               {...register("password")}
             />
             {errors.password && (
@@ -105,6 +134,7 @@ export function SignupForm({
               id="confirm-password"
               type="password"
               placeholder="********"
+              autoComplete="new-password"
               {...register("confirmPassword")}
             />
             {errors.confirmPassword && (

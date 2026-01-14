@@ -7,7 +7,12 @@
       "Bash(npx prisma db push:*)",
       "Bash(bun install:*)",
       "Bash(convert:*)",
-      "Bash(bunx next build:*)"
+      "Bash(bunx next build:*)",
+      "Bash(bun install:*)",
+      "Bash(bun add:*)",
+      "mcp__context7__query-docs",
+      "Bash(git rm:*)",
+      "WebFetch(domain:www.better-auth.com)"
     ],
     "deny": [],
     "ask": []

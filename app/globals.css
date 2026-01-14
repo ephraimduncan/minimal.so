@@ -157,3 +157,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Autofill detection animation - triggers animationstart event when browser autofills */
+@keyframes onAutoFillStart {
+  from { /* empty */ }
+  to { /* empty */ }
+}
+
+@keyframes onAutoFillCancel {
+  from { /* empty */ }
+  to { /* empty */ }
+}
+
+input:-webkit-autofill {
+  animation-name: onAutoFillStart;
+}
+
+input:not(:-webkit-autofill) {
+  animation-name: onAutoFillCancel;
+}

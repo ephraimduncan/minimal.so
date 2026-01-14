@@ -1,20 +1,8 @@
-import { z } from "zod";
-import { redis } from "./redis";
-
 export interface UrlMetadata {
   title: string | null;
   favicon: string | null;
   fetchedAt: number;
 }
-
-const urlMetadataSchema = z.object({
-  title: z.string().nullable(),
-  favicon: z.string().nullable(),
-  fetchedAt: z.number(),
-});
-
-const CACHE_TTL_SUCCESS = 60 * 60 * 24 * 7;
-const CACHE_TTL_FAILURE = 60 * 5;
 
 function isAllowedUrl(url: string): boolean {
   try {
@@ -30,6 +18,7 @@ function isAllowedUrl(url: string): boolean {
       hostname === "localhost" ||
       hostname === "127.0.0.1" ||
       hostname === "::1" ||
+      hostname === "::" ||
       hostname === "0.0.0.0"
     ) {
       return false;
@@ -37,7 +26,9 @@ function isAllowedUrl(url: string): boolean {
 
     const ipMatch = hostname.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
     if (ipMatch) {
-      const [, a, b] = ipMatch.map(Number);
+      const a = Number(ipMatch[1]);
+      const b = Number(ipMatch[2]);
+
       if (a === 10) return false;
       if (a === 172 && b >= 16 && b <= 31) return false;
       if (a === 192 && b === 168) return false;
@@ -49,36 +40,6 @@ function isAllowedUrl(url: string): boolean {
   } catch {
     return false;
   }
-}
-
-export function normalizeUrlForCache(url: string): string {
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
-    const path = parsed.pathname.replace(/\/+$/, "") || "/";
-    return `${parsed.protocol}//${host}${path}${parsed.search}`;
-  } catch {
-    return url.toLowerCase();
-  }
-}
-
-async function getCachedMetadata(url: string): Promise<UrlMetadata | null> {
-  const cacheKey = `url:metadata:${normalizeUrlForCache(url)}`;
-  const cached = await redis.get(cacheKey);
-  if (!cached) {
-    return null;
-  }
-  const parsed = urlMetadataSchema.safeParse(JSON.parse(cached));
-  return parsed.success ? parsed.data : null;
-}
-
-async function cacheMetadata(
-  url: string,
-  metadata: UrlMetadata,
-  ttl: number = CACHE_TTL_SUCCESS
-): Promise<void> {
-  const cacheKey = `url:metadata:${normalizeUrlForCache(url)}`;
-  await redis.set(cacheKey, JSON.stringify(metadata), "EX", ttl);
 }
 
 interface FetchResult {
@@ -94,36 +55,64 @@ async function fetchUrlMetadata(url: string): Promise<FetchResult> {
     };
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const headers = {
+      "User-Agent": "Mozilla/5.0 (compatible; minimal/1.0)",
+      Accept: "text/html,application/xhtml+xml",
+    };
 
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; minimal/1.0)",
-        Accept: "text/html,application/xhtml+xml",
-      },
-    });
+    let currentUrl = url;
+    const maxRedirects = 5;
 
-    clearTimeout(timeoutId);
+    for (let i = 0; i <= maxRedirects; i++) {
+      const response = await fetch(currentUrl, {
+        signal: controller.signal,
+        headers,
+        redirect: "manual",
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        const nextUrl = location ? resolveUrl(location, currentUrl) : null;
+
+        if (!nextUrl || !isAllowedUrl(nextUrl)) {
+          return {
+            metadata: { title: null, favicon: null, fetchedAt: Date.now() },
+            success: false,
+          };
+        }
+
+        currentUrl = nextUrl;
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const html = await response.text();
+      const metadata = parseHtmlMetadata(html, currentUrl);
+
+      return {
+        metadata: { ...metadata, fetchedAt: Date.now() },
+        success: true,
+      };
     }
 
-    const html = await response.text();
-    const metadata = parseHtmlMetadata(html, url);
-
     return {
-      metadata: { ...metadata, fetchedAt: Date.now() },
-      success: true,
+      metadata: { title: null, favicon: null, fetchedAt: Date.now() },
+      success: false,
     };
   } catch {
     return {
       metadata: { title: null, favicon: null, fetchedAt: Date.now() },
       success: false,
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -203,21 +192,7 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&nbsp;/g, " ");
 }
 
-export async function getUrlMetadata(
-  url: string,
-  options: { bypassCache?: boolean } = {}
-): Promise<UrlMetadata> {
-  if (!options.bypassCache) {
-    const cached = await getCachedMetadata(url);
-    if (cached) {
-      return cached;
-    }
-  }
-
-  const { metadata, success } = await fetchUrlMetadata(url);
-
-  const ttl = success ? CACHE_TTL_SUCCESS : CACHE_TTL_FAILURE;
-  await cacheMetadata(url, metadata, ttl);
-
+export async function getUrlMetadata(url: string): Promise<UrlMetadata> {
+  const { metadata } = await fetchUrlMetadata(url);
   return metadata;
 }

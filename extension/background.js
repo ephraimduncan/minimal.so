@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = "https://minimal.so";
+const DEFAULT_BASE_URL = "http://localhost:3000";
 
 async function getBaseUrl() {
   const result = await chrome.storage.sync.get(["baseUrl"]);
@@ -71,13 +71,15 @@ async function saveBookmark(url, title, tabId) {
     if (!response.ok) {
       console.error("Save failed:", data);
       showBadge("✗", "#ef4444", tabId);
-      await showNotification("Error", data.message || "Failed to save bookmark");
+      await showNotification(
+        "Error",
+        data.message || "Failed to save bookmark"
+      );
       return;
     }
 
     showBadge("✓", "#22c55e", tabId);
     await showNotification("Bookmark Saved", data.bookmark?.title || title);
-
   } catch (error) {
     console.error("Network error:", error);
     showBadge("✗", "#ef4444", tabId);
@@ -86,7 +88,11 @@ async function saveBookmark(url, title, tabId) {
 }
 
 chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.url || tab.url.startsWith("chrome://") || tab.url.startsWith("chrome-extension://")) {
+  if (
+    !tab.url ||
+    tab.url.startsWith("chrome://") ||
+    tab.url.startsWith("chrome-extension://")
+  ) {
     showBadge("✗", "#ef4444", tab.id);
     return;
   }

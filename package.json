@@ -13,7 +13,7 @@
     "lint": "eslint",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "ext:dev": "web-ext run -s extension -t chromium --chromium-profile=./extension-profile --keep-profile-changes",
+    "ext:dev": "web-ext run -s extension -t chromium --chromium-binary=/Applications/Helium.app/Contents/MacOS/Helium --chromium-profile=./extension-profile --keep-profile-changes",
     "ext:build": "web-ext build -s extension -a extension-dist --overwrite-dest"
   },
   "dependencies": {

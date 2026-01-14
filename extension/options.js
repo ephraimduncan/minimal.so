@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = "https://minimal.so";
+const DEFAULT_BASE_URL = "http://localhost:3000";
 
 async function loadSettings() {
   const result = await chrome.storage.sync.get(["baseUrl"]);
@@ -6,7 +6,8 @@ async function loadSettings() {
 }
 
 async function saveSettings() {
-  const baseUrl = document.getElementById("baseUrl").value.trim() || DEFAULT_BASE_URL;
+  const baseUrl =
+    document.getElementById("baseUrl").value.trim() || DEFAULT_BASE_URL;
   const normalizedUrl = baseUrl.replace(/\/+$/, "");
 
   await chrome.storage.sync.set({ baseUrl: normalizedUrl });

@@ -40,6 +40,7 @@ function corsHeaders(origin: string | null) {
 
 export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get("origin");
+  console.log("[Extension API] OPTIONS request from origin:", origin);
   return new NextResponse(null, {
     status: 204,
     headers: corsHeaders(origin),
@@ -50,7 +51,13 @@ export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   const headers = corsHeaders(origin);
 
+  console.log("[Extension API] POST request received");
+  console.log("[Extension API] Origin:", origin);
+  console.log("[Extension API] Allowed origins:", getAllowedOrigins());
+  console.log("[Extension API] Is allowed:", isAllowedOrigin(origin));
+
   if (!isAllowedOrigin(origin)) {
+    console.log("[Extension API] Rejected - origin not allowed");
     return NextResponse.json(
       { error: "Forbidden", message: "Origin not allowed" },
       { status: 403, headers }
@@ -59,8 +66,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const session = await getSession();
+    console.log("[Extension API] Session user:", session?.user?.email ?? "none");
 
     if (!session?.user) {
+      console.log("[Extension API] Rejected - not authenticated");
       return NextResponse.json(
         { error: "Unauthorized", message: "Please log in to save bookmarks" },
         { status: 401, headers }
@@ -68,9 +77,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("[Extension API] Request body:", body);
+
     const parsed = createBookmarkSchema.safeParse(body);
 
     if (!parsed.success) {
+      console.log("[Extension API] Rejected - invalid body:", parsed.error);
       return NextResponse.json(
         { error: "Bad Request", message: "Invalid URL provided" },
         { status: 400, headers }
@@ -85,6 +97,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!defaultGroup) {
+      console.log("[Extension API] Rejected - no group found for user");
       return NextResponse.json(
         {
           error: "No Group",
@@ -94,12 +107,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize URL and fetch metadata
     const normalizedUrl = normalizeUrl(url);
     const metadata = await getUrlMetadata(normalizedUrl);
-
-    // Use provided title, fetched title, or fallback to URL
     const title = providedTitle || metadata.title || normalizedUrl;
+
+    console.log("[Extension API] Creating bookmark:", { title, url: normalizedUrl, groupId: defaultGroup.id });
 
     const bookmark = await db.bookmark.create({
       data: {
@@ -111,6 +123,8 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
       },
     });
+
+    console.log("[Extension API] Bookmark created:", bookmark.id);
 
     return NextResponse.json(
       {
@@ -125,7 +139,7 @@ export async function POST(request: NextRequest) {
       { status: 200, headers }
     );
   } catch (error) {
-    console.error("Extension bookmark error:", error);
+    console.error("[Extension API] Error:", error);
     return NextResponse.json(
       { error: "Server Error", message: "Failed to save bookmark" },
       { status: 500, headers }

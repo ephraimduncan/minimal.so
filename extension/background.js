@@ -41,10 +41,10 @@ async function saveBookmark(url, title, tabId) {
 
     if (response.status === 401) {
       showBadge("login", tabId);
+      chrome.tabs.create({ url: `${baseUrl}/login` });
       await showNotification(
         "Login Required",
-        "Please log in to save bookmarks. Opening login page...",
-        () => chrome.tabs.create({ url: `${baseUrl}/login` })
+        "Please log in to save bookmarks."
       );
       return;
     }

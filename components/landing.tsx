@@ -1066,7 +1066,10 @@ export function Landing() {
               Privacy Policy
             </a>
           </div>
-          <p>© {new Date().getFullYear()} minimal.so - Save and organize your bookmarks beautifully</p>
+          <p>
+            © {new Date().getFullYear()} minimal.so - Save and organize your
+            bookmarks beautifully
+          </p>
         </footer>
       </div>
     </div>

@@ -20,7 +20,7 @@ export const listBookmarks = authed
         userId: context.user.id,
         ...(input.groupId && { groupId: input.groupId }),
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { updatedAt: "desc" },
     });
     return bookmarks;
   });
@@ -35,6 +35,27 @@ export const createBookmark = authed
     if (input.type === "link" && input.url) {
       const normalizedUrl = normalizeUrl(input.url);
       url = normalizedUrl;
+
+      const existing = await db.bookmark.findFirst({
+        where: {
+          userId: context.user.id,
+          groupId: input.groupId,
+          url: normalizedUrl,
+        },
+      });
+
+      if (existing) {
+        const metadata = await getUrlMetadata(normalizedUrl);
+        const bookmark = await db.bookmark.update({
+          where: { id: existing.id },
+          data: {
+            title: metadata.title || existing.title,
+            favicon: metadata.favicon || existing.favicon,
+            updatedAt: new Date(),
+          },
+        });
+        return bookmark;
+      }
 
       const metadata = await getUrlMetadata(normalizedUrl);
       if (metadata.title) {
@@ -71,7 +92,7 @@ export const updateBookmark = authed
 export const deleteBookmark = authed
   .input(deleteByIdSchema)
   .handler(async ({ context, input }) => {
-    await db.bookmark.delete({
+    await db.bookmark.deleteMany({
       where: { id: input.id, userId: context.user.id },
     });
     return { success: true };
@@ -121,7 +142,7 @@ export const updateGroup = authed
 export const deleteGroup = authed
   .input(deleteByIdSchema)
   .handler(async ({ context, input }) => {
-    await db.group.delete({
+    await db.group.deleteMany({
       where: { id: input.id, userId: context.user.id },
     });
     return { success: true };

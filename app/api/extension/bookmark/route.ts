@@ -90,6 +90,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const normalizedUrl = normalizeUrl(url);
+
+    const existing = await db.bookmark.findFirst({
+      where: {
+        userId: session.user.id,
+        groupId: defaultGroup.id,
+        url: normalizedUrl,
+      },
+    });
+
+    if (existing) {
+      const metadata = await getUrlMetadata(normalizedUrl);
+      const bookmark = await db.bookmark.update({
+        where: { id: existing.id },
+        data: {
+          title: metadata.title || existing.title,
+          favicon: metadata.favicon || existing.favicon,
+          updatedAt: new Date(),
+        },
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          bookmark: {
+            id: bookmark.id,
+            title: bookmark.title,
+            url: bookmark.url,
+            groupName: defaultGroup.name,
+          },
+        },
+        { status: 200, headers }
+      );
+    }
+
     const metadata = await getUrlMetadata(normalizedUrl);
     const title = providedTitle || metadata.title || normalizedUrl;
 

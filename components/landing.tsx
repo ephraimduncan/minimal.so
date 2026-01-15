@@ -39,6 +39,31 @@ export function Landing() {
             >
               Sign Up
             </Link>
+            <a
+              href="/chrome"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-zinc-200 p-2 text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+              title="Chrome Extension"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="4" />
+                <line x1="21.17" y1="8" x2="12" y2="8" />
+                <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
+                <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
+              </svg>
+            </a>
           </div>
         </header>
         <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">

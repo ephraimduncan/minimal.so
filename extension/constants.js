@@ -1,4 +1,5 @@
-const DEFAULT_BASE_URL = "http://localhost:3000";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+const DEFAULT_BASE_URL = "https://minimal.so";
 
 const BADGE = {
   login: { text: "!", color: "#f59e0b" },

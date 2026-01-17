@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -285,7 +285,7 @@ export function BookmarkList({
   );
 }
 
-function BookmarkIcon({
+const BookmarkIcon = memo(function BookmarkIcon({
   bookmark,
   isCopied,
 }: {
@@ -353,4 +353,4 @@ function BookmarkIcon({
       </svg>
     </div>
   );
-}
+});

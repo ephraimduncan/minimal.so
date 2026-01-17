@@ -446,7 +446,7 @@ useEffect(() => {
 
 **Acceptance Criteria**:
 - [x] Keyboard handler recreates less frequently
-- [ ] BookmarkIcon renders only when props change
+- [x] BookmarkIcon renders only when props change
 - [ ] React DevTools shows fewer re-renders
 
 ### Phase 5: Verification & Rollout (Day 3-4)

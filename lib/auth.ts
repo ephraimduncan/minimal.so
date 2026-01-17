@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, CHROME_EXTENSION_ID } =
@@ -22,6 +23,11 @@ export const auth = betterAuth({
   trustedOrigins: CHROME_EXTENSION_ID
     ? [`chrome-extension://${CHROME_EXTENSION_ID}`]
     : [],
+  plugins: [nextCookies()],
+  session: {
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
+  },
   emailAndPassword: { enabled: true },
   ...(googleOAuthEnabled && {
     socialProviders: {
@@ -42,3 +48,6 @@ export const auth = betterAuth({
     }),
   },
 });
+
+export type Session = typeof auth.$Infer.Session;
+export type User = Session["user"];

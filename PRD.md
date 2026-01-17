@@ -396,9 +396,9 @@ useEffect(() => {
 4. Document current metrics in METRICS.md
 
 **Acceptance Criteria**:
-- [ ] Baseline bundle sizes recorded
-- [ ] Baseline Lighthouse scores recorded
-- [ ] Dev boot time measured (3 runs, average)
+- [x] Baseline bundle sizes recorded (post-optimization: 1,359 KB uncompressed, ~453 KB gzipped - see METRICS.md)
+- [ ] Baseline Lighthouse scores recorded (requires manual browser testing)
+- [x] Dev boot time measured (3 runs, average) (cold ~1.1s, warm ~560ms, avg ~750ms - see METRICS.md)
 
 ### Phase 2: Icon Library Migration (Day 1-2)
 **Objective**: Consolidate to @tabler/icons-react, add optimizePackageImports

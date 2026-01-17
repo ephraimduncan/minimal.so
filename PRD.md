@@ -460,7 +460,7 @@ useEffect(() => {
 5. Document improvements in METRICS.md
 
 **Acceptance Criteria**:
-- [ ] All tests pass: `bun test` (if applicable)
+- [x] All tests pass: `bun test` (if applicable)
 - [ ] Bundle size reduced by 15-25KB gzipped
 - [ ] Dev boot time improved by 15-70%
 - [ ] Lighthouse Performance score 95+

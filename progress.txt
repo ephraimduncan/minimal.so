@@ -62,7 +62,7 @@
 
 ### Remaining Phase 4 Tasks:
 - [x] Wrap BookmarkIcon with React.memo() (Rule 5.2)
-- [ ] Use explicit conditional rendering - ternary instead of && (Rule 6.7)
+- [x] Use explicit conditional rendering - ternary instead of && (Rule 6.7)
 
 ## Phase 4: BookmarkIcon Memoization - COMPLETED
 
@@ -79,3 +79,23 @@
 - TypeScript: No errors
 - ESLint: No new errors (3 pre-existing warnings unrelated to changes)
 - Build: Successful
+
+## Phase 4/5: Explicit Conditional Rendering - COMPLETED
+
+### Changes Made:
+1. Converted 5 `&&` conditional rendering patterns to ternary expressions in `components/bookmark-list.tsx`:
+   - Line 202-206: URL hostname display
+   - Line 209-213: Date display (when not selected/hovered)
+   - Line 214-219: Keyboard hint display (when selected/hovered)
+   - Line 250-255: Refetch context menu item
+   - Line 256-279: Move To submenu
+
+### Implementation Notes:
+- Rule 6.7 (Explicit Conditional Rendering) applied to avoid React 18 auto-stringification edge cases
+- Using `? ... : null` instead of `&&` makes rendering intent explicit
+- Prevents potential issues when left operand could be falsy values like 0 or ""
+- dashboard-content.tsx already used ternary for its conditional rendering (line 702)
+
+### Verification:
+- TypeScript: No errors
+- ESLint: No new errors (3 pre-existing warnings unrelated to changes)

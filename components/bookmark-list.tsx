@@ -199,24 +199,24 @@ export function BookmarkList({
                       {copiedId === bookmark.id ? "Copied" : bookmark.title}
                     </span>
                   )}
-                  {bookmark.url && !renamingId && copiedId !== bookmark.id && (
+                  {bookmark.url && !renamingId && copiedId !== bookmark.id ? (
                     <span className="text-[13px] text-muted-foreground">
                       {new URL(bookmark.url).hostname.replace("www.", "")}
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <div className="relative w-[90px] h-5 flex items-center justify-end">
-                  {!((selectedIndex === index || hoveredIndex === index) && !renamingId) && (
+                  {!((selectedIndex === index || hoveredIndex === index) && !renamingId) ? (
                     <span className="text-[13px] text-muted-foreground whitespace-nowrap">
                       {formatDate(bookmark.createdAt)}
                     </span>
-                  )}
-                  {(selectedIndex === index || hoveredIndex === index) && !renamingId && (
+                  ) : null}
+                  {(selectedIndex === index || hoveredIndex === index) && !renamingId ? (
                     <KbdGroup>
                       <Kbd>⌘</Kbd>
                       <Kbd>Enter</Kbd>
                     </KbdGroup>
-                  )}
+                  ) : null}
                 </div>
             </ContextMenuTrigger>
             <ContextMenuContent className="w-48">
@@ -247,13 +247,13 @@ export function BookmarkList({
                   <Kbd>⌫</Kbd>
                 </KbdGroup>
               </ContextMenuItem>
-              {bookmark.url && (
+              {bookmark.url ? (
                 <ContextMenuItem onClick={() => onRefetch(bookmark.id)}>
                   <IconRefresh className="mr-2 h-4 w-4" />
                   <span>Refetch</span>
                 </ContextMenuItem>
-              )}
-              {groups.length > 1 && (
+              ) : null}
+              {groups.length > 1 ? (
                 <ContextMenuSub>
                   <ContextMenuSubTrigger>
                     <IconChevronsRight className="mr-2 h-4 w-4" />
@@ -276,7 +276,7 @@ export function BookmarkList({
                       ))}
                   </ContextMenuSubContent>
                 </ContextMenuSub>
-              )}
+              ) : null}
             </ContextMenuContent>
           </ContextMenu>
         ))}

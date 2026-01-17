@@ -14,14 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
-  Copy,
-  Pencil,
-  Trash2,
-  RefreshCw,
-  ChevronsRight,
-  Check,
-  Bookmark,
-} from "lucide-react";
+  IconCopy,
+  IconPencil,
+  IconTrash,
+  IconRefresh,
+  IconChevronsRight,
+  IconCheck,
+  IconBookmark,
+} from "@tabler/icons-react";
 import {
   Empty,
   EmptyMedia,
@@ -126,7 +126,7 @@ export function BookmarkList({
     return (
       <Empty className="border-none py-16">
         <EmptyMedia>
-          <Bookmark className="size-5 text-muted-foreground fill-muted-foreground" />
+          <IconBookmark className="size-5 text-muted-foreground fill-muted-foreground" />
         </EmptyMedia>
         <EmptyTitle>No bookmarks here</EmptyTitle>
         <EmptyDescription>Add some cool links to get started</EmptyDescription>
@@ -221,7 +221,7 @@ export function BookmarkList({
             </ContextMenuTrigger>
             <ContextMenuContent className="w-48">
               <ContextMenuItem onClick={() => handleCopy(bookmark)}>
-                <Copy className="mr-2 h-4 w-4" />
+                <IconCopy className="mr-2 h-4 w-4" />
                 <span>Copy</span>
                 <KbdGroup className="ml-auto">
                   <Kbd>⌘</Kbd>
@@ -229,7 +229,7 @@ export function BookmarkList({
                 </KbdGroup>
               </ContextMenuItem>
               <ContextMenuItem onClick={() => handleStartRename(bookmark)}>
-                <Pencil className="mr-2 h-4 w-4" />
+                <IconPencil className="mr-2 h-4 w-4" />
                 <span>Rename</span>
                 <KbdGroup className="ml-auto">
                   <Kbd>⌘</Kbd>
@@ -240,7 +240,7 @@ export function BookmarkList({
                 onClick={() => onDelete(bookmark.id)}
                 variant="destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <IconTrash className="mr-2 h-4 w-4" />
                 <span>Delete</span>
                 <KbdGroup className="ml-auto">
                   <Kbd>⌘</Kbd>
@@ -249,14 +249,14 @@ export function BookmarkList({
               </ContextMenuItem>
               {bookmark.url && (
                 <ContextMenuItem onClick={() => onRefetch(bookmark.id)}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <IconRefresh className="mr-2 h-4 w-4" />
                   <span>Refetch</span>
                 </ContextMenuItem>
               )}
               {groups.length > 1 && (
                 <ContextMenuSub>
                   <ContextMenuSubTrigger>
-                    <ChevronsRight className="mr-2 h-4 w-4" />
+                    <IconChevronsRight className="mr-2 h-4 w-4" />
                     <span>Move To...</span>
                   </ContextMenuSubTrigger>
                   <ContextMenuSubContent className="w-40">
@@ -297,7 +297,7 @@ function BookmarkIcon({
   if (isCopied) {
     return (
       <div className="flex h-5 w-5 items-center justify-center">
-        <Check className="h-4 w-4 text-foreground" />
+        <IconCheck className="h-4 w-4 text-foreground" />
       </div>
     );
   }

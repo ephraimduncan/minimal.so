@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronsUpDown, Plus, Check, Trash2 } from "lucide-react";
+import { IconSelector, IconPlus, IconCheck, IconTrash } from "@tabler/icons-react";
 import { signOut } from "@/lib/auth-client";
 import {
   Dialog,
@@ -120,7 +120,7 @@ export function Header({
               style={{ backgroundColor: selectedGroup.color }}
             />
             <span>{selectedGroup.name}</span>
-            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+            <IconSelector className="h-4 w-4 text-muted-foreground" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
@@ -143,7 +143,7 @@ export function Header({
                   <span>{group.name}</span>
                 </div>
                 {group.id === selectedGroup.id ? (
-                  <Check className="h-4 w-4" />
+                  <IconCheck className="h-4 w-4" />
                 ) : (
                   <span className="text-xs text-muted-foreground">
                     {group.bookmarkCount ?? 0}
@@ -155,7 +155,7 @@ export function Header({
               onClick={() => setDialogOpen(true)}
               className="rounded-lg w-full"
             >
-              <Plus className="h-4 w-4 mr-0" />
+              <IconPlus className="h-4 w-4 mr-0" />
               Create Group
             </DropdownMenuItem>
             {groups.length > 1 && (
@@ -175,7 +175,7 @@ export function Header({
                   />
                 )}
                 <span className="relative z-10 flex items-center gap-2">
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <IconTrash className="h-4 w-4 text-destructive" />
                   {holdingGroupId === selectedGroup.id
                     ? "Hold to delete..."
                     : "Delete Group"}
@@ -230,7 +230,7 @@ export function Header({
         >
           <UserAvatar name={userName} />
           <span>{userName}</span>
-          <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+          <IconSelector className="h-4 w-4 text-muted-foreground" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="rounded-2xl">
           <DropdownMenuItem className="rounded-lg">Settings</DropdownMenuItem>

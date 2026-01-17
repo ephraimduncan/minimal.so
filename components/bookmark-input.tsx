@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { forwardRef, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 import { Input } from "@/components/ui/input";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 
@@ -60,7 +60,7 @@ export const BookmarkInput = forwardRef<HTMLInputElement, BookmarkInputProps>(
           placeholder="Insert a link, color, or just plain text..."
         />
         <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
-          <Plus size={16} />
+          <IconPlus size={16} />
         </div>
         <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-3 text-muted-foreground/80 peer-disabled:opacity-50">
           <KbdGroup>

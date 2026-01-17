@@ -31,6 +31,16 @@ import {
 import { cn, parseColor } from "@/lib/utils";
 import { type BookmarkItem, type GroupItem } from "@/lib/schema";
 
+const EMPTY_STATE = (
+  <Empty className="border-none py-16">
+    <EmptyMedia>
+      <IconBookmark className="size-5 text-muted-foreground fill-muted-foreground" />
+    </EmptyMedia>
+    <EmptyTitle>No bookmarks here</EmptyTitle>
+    <EmptyDescription>Add some cool links to get started</EmptyDescription>
+  </Empty>
+);
+
 interface BookmarkListProps {
   bookmarks: BookmarkItem[];
   groups: GroupItem[];
@@ -123,15 +133,7 @@ export function BookmarkList({
   };
 
   if (bookmarks.length === 0) {
-    return (
-      <Empty className="border-none py-16">
-        <EmptyMedia>
-          <IconBookmark className="size-5 text-muted-foreground fill-muted-foreground" />
-        </EmptyMedia>
-        <EmptyTitle>No bookmarks here</EmptyTitle>
-        <EmptyDescription>Add some cool links to get started</EmptyDescription>
-      </Empty>
-    );
+    return EMPTY_STATE;
   }
 
   return (

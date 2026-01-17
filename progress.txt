@@ -99,3 +99,18 @@
 ### Verification:
 - TypeScript: No errors
 - ESLint: No new errors (3 pre-existing warnings unrelated to changes)
+
+## Phase 5: Hoist Static JSX - COMPLETED
+
+### Changes Made:
+1. Extracted empty state JSX to module-level constant `EMPTY_STATE` in `components/bookmark-list.tsx`
+2. Updated component to return `EMPTY_STATE` instead of inline JSX
+
+### Implementation Notes:
+- Rule 6.3 (Hoist Static JSX) applied to prevent recreating identical JSX objects
+- Module-level constant ensures React reuses the same object reference across renders
+- Enables faster reconciliation via referential equality checks
+
+### Verification:
+- TypeScript: No errors
+- ESLint: No new errors (3 pre-existing warnings unrelated to changes)

@@ -591,7 +591,7 @@ bun dev                    # Verify app works
 - **Rule 5.1**: Defer State Reads → Keyboard handler ref optimization
 - **Rule 5.2**: Extract Memoized Components → React.memo(BookmarkIcon)
 - **Rule 5.6**: Lazy State Initialization → Already implemented ✓
-- **Rule 6.3**: Hoist Static JSX → Empty state optimization
+- **Rule 6.3**: Hoist Static JSX → Empty state optimization ✓
 - **Rule 6.7**: Explicit Conditional Rendering → Ternary instead of &&
 
 ### Rules Skipped (Not Applicable)

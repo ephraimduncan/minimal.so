@@ -51,3 +51,5 @@ prisma/generated
 # extension
 /extension-profile
 /extension-dist
+
+.ami/

@@ -1078,18 +1078,24 @@ export function Landing() {
 
         <footer className="mb-10 mt-10 text-center text-sm text-zinc-500 sm:mb-16 sm:mt-16">
           <div className="mb-4 flex flex-wrap flex-row items-center justify-center">
-            <a
+            <Link
               href="/terms"
               className="rounded-full px-3 py-1 transition-colors hover:bg-zinc-900 hover:text-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
             >
               Terms of Service
-            </a>
-            <a
+            </Link>
+            <Link
               href="/privacy"
               className="rounded-full px-3 py-1 transition-colors hover:bg-zinc-900 hover:text-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
             >
               Privacy Policy
-            </a>
+            </Link>
+            <Link
+              href="/changelog"
+              className="rounded-full px-3 py-1 transition-colors hover:bg-zinc-900 hover:text-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
+            >
+              Changelog
+            </Link>
           </div>
           <p>
             © {new Date().getFullYear()} minimal.so - Save and organize your

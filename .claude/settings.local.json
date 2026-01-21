@@ -13,7 +13,9 @@
       "mcp__context7__query-docs",
       "Bash(git rm:*)",
       "WebFetch(domain:www.better-auth.com)",
-      "WebFetch(domain:docs.turso.tech)"
+      "WebFetch(domain:docs.turso.tech)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs"
     ],
     "deny": [],
     "ask": []

@@ -120,11 +120,7 @@ export function ExportDialog({
   };
 
   const handleSelectAllGroups = (checked: boolean) => {
-    if (checked) {
-      setSelectedGroupIds(new Set(groups.map((g) => g.id)));
-    } else {
-      setSelectedGroupIds(new Set());
-    }
+    setSelectedGroupIds(checked ? new Set(groups.map((g) => g.id)) : new Set());
   };
 
   const selectedGroupsDisplay = useMemo(() => {

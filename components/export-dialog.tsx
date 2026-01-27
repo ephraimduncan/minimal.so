@@ -242,9 +242,15 @@ export function ExportDialog({
             </RadioGroup>
           </div>
 
-          <p className="text-sm text-muted-foreground">
-            {exportCount} bookmark{exportCount !== 1 ? "s" : ""} will be exported
-          </p>
+          {exportCount > 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Export {exportCount} bookmark{exportCount !== 1 ? "s" : ""}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Select at least one group with bookmarks to export
+            </p>
+          )}
 
           <DialogFooter>
             <DialogClose render={<Button variant="ghost" />}>

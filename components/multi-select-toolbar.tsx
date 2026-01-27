@@ -40,7 +40,7 @@ export function MultiSelectToolbar({
           variant="ghost"
           size="sm"
           onClick={onSelectAll}
-          className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-sm hover:bg-accent hover:text-accent-foreground"
+          className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-[13px] hover:bg-accent hover:text-accent-foreground"
         >
           <IconListCheck className="h-4 w-4" />
           Select All
@@ -50,7 +50,7 @@ export function MultiSelectToolbar({
           variant="ghost"
           size="sm"
           onClick={onMove}
-          className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-sm hover:bg-accent hover:text-accent-foreground"
+          className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-[13px] hover:bg-accent hover:text-accent-foreground"
         >
           <IconDragDrop className="h-4 w-4" />
           Move
@@ -59,7 +59,7 @@ export function MultiSelectToolbar({
           variant="ghost"
           size="sm"
           onClick={onCopyUrls}
-          className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-sm hover:bg-accent hover:text-accent-foreground"
+          className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-[13px] hover:bg-accent hover:text-accent-foreground"
         >
           <IconCopyCheckFilled className="h-4 w-4" />
           Copy URLs
@@ -68,7 +68,7 @@ export function MultiSelectToolbar({
           variant="ghost"
           size="sm"
           onClick={onDelete}
-          className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-sm text-destructive hover:bg-destructive/10 hover:text-destructive"
+          className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-[13px] text-destructive hover:bg-destructive/10 hover:text-destructive"
         >
           <IconTrash className="h-4 w-4" />
           Delete
@@ -78,7 +78,7 @@ export function MultiSelectToolbar({
           variant="ghost"
           size="sm"
           onClick={onClose}
-          className="rounded-md p-1.5 h-auto hover:bg-accent hover:text-accent-foreground"
+          className="rounded-md p-1 h-auto hover:bg-accent hover:text-accent-foreground"
         >
           <IconX className="h-4 w-4" />
         </Button>

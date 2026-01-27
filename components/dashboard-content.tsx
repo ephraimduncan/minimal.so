@@ -14,6 +14,7 @@ import { parseColor, isUrl, normalizeUrl } from "@/lib/utils";
 import { client } from "@/lib/orpc";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useFocusRefetch } from "@/hooks/use-focus-refetch";
+import { useLatestRef } from "@/lib/hooks/use-latest-ref";
 import type { BookmarkType, GroupItem, BookmarkItem } from "@/lib/schema";
 import type { Session } from "@/lib/auth";
 
@@ -41,16 +42,6 @@ export function DashboardContent({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  // Refs to store latest values for stable keyboard handler
-  const filteredBookmarksRef = useRef<BookmarkItem[]>([]);
-  const selectedIndexRef = useRef<number>(-1);
-  const hoveredIndexRef = useRef<number>(-1);
-  const renamingIdRef = useRef<string | null>(null);
-  const handleDeleteBookmarkRef = useRef<(id: string) => void>(() => {});
-  const handleStartRenameRef = useRef<(id: string) => void>(() => {});
-  const selectionModeRef = useRef(false);
-  const selectedIdsRef = useRef(new Set<string>());
 
   const groupsQuery = useQuery({
     queryKey: ["groups"],
@@ -286,63 +277,6 @@ export function DashboardContent({
     },
   });
 
-  const deleteBookmarkMutation = useMutation({
-    mutationFn: async (data: { id: string; _groupId?: string }) => {
-      if (data.id.startsWith("temp-")) {
-        return { success: true };
-      }
-      const { _groupId, ...deleteData } = data;
-      return client.bookmark.delete(deleteData);
-    },
-    onMutate: async (data) => {
-      const groupId = data._groupId ?? currentGroupId;
-
-      await queryClient.cancelQueries({ queryKey: ["bookmarks", groupId] });
-      await queryClient.cancelQueries({ queryKey: ["groups"] });
-
-      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>([
-        "bookmarks",
-        groupId,
-      ]);
-      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
-
-      queryClient.setQueryData<BookmarkItem[]>(
-        ["bookmarks", groupId],
-        (old) => old?.filter((b) => b.id !== data.id) ?? []
-      );
-
-      queryClient.setQueryData<GroupItem[]>(["groups"], (old) =>
-        old?.map((g) =>
-          g.id === groupId
-            ? { ...g, bookmarkCount: Math.max(0, (g.bookmarkCount ?? 0) - 1) }
-            : g
-        )
-      );
-
-      return { previousBookmarks, previousGroups, groupId };
-    },
-    onError: (_err, _data, context) => {
-      if (context?.previousBookmarks) {
-        queryClient.setQueryData(
-          ["bookmarks", context.groupId],
-          context.previousBookmarks
-        );
-      }
-      if (context?.previousGroups) {
-        queryClient.setQueryData(["groups"], context.previousGroups);
-      }
-      toast.error("Failed to delete bookmark");
-    },
-    onSettled: (_data, _error, _variables, context) => {
-      if (context?.groupId) {
-        queryClient.invalidateQueries({
-          queryKey: ["bookmarks", context.groupId],
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
-    },
-  });
-
   const createGroupMutation = useMutation({
     mutationFn: (data: {
       name: string;
@@ -441,9 +375,13 @@ export function DashboardContent({
   });
 
   const bulkDeleteMutation = useMutation({
-    mutationFn: (data: { ids: string[]; _groupId?: string }) => {
+    mutationFn: async (data: { ids: string[]; _groupId?: string }) => {
       const { _groupId, ...deleteData } = data;
-      return client.bookmark.bulkDelete(deleteData);
+      const realIds = deleteData.ids.filter((id) => !id.startsWith("temp-"));
+      if (realIds.length === 0) {
+        return { success: true };
+      }
+      return client.bookmark.bulkDelete({ ids: realIds });
     },
     onMutate: async (data) => {
       const groupId = data._groupId ?? currentGroupId;
@@ -611,12 +549,12 @@ export function DashboardContent({
 
   const handleDeleteBookmark = useCallback(
     (id: string) => {
-      deleteBookmarkMutation.mutate({
-        id,
+      bulkDeleteMutation.mutate({
+        ids: [id],
         _groupId: currentGroupId ?? undefined,
       });
     },
-    [deleteBookmarkMutation, currentGroupId]
+    [bulkDeleteMutation, currentGroupId]
   );
 
   const filteredBookmarks = useMemo(() => {
@@ -693,38 +631,15 @@ export function DashboardContent({
     toast.success(`Deleted ${selectedIds.size} bookmarks`);
   }, [bulkDeleteMutation, selectedIds, currentGroupId, handleExitSelectionMode]);
 
-  // Sync refs with state for stable keyboard handler
-  useEffect(() => {
-    filteredBookmarksRef.current = filteredBookmarks;
-  }, [filteredBookmarks]);
-
-  useEffect(() => {
-    selectedIndexRef.current = selectedIndex;
-  }, [selectedIndex]);
-
-  useEffect(() => {
-    hoveredIndexRef.current = hoveredIndex;
-  }, [hoveredIndex]);
-
-  useEffect(() => {
-    renamingIdRef.current = renamingId;
-  }, [renamingId]);
-
-  useEffect(() => {
-    handleDeleteBookmarkRef.current = handleDeleteBookmark;
-  }, [handleDeleteBookmark]);
-
-  useEffect(() => {
-    handleStartRenameRef.current = handleStartRename;
-  }, [handleStartRename]);
-
-  useEffect(() => {
-    selectionModeRef.current = selectionMode;
-  }, [selectionMode]);
-
-  useEffect(() => {
-    selectedIdsRef.current = selectedIds;
-  }, [selectedIds]);
+  // Refs to store latest values for stable keyboard handler
+  const filteredBookmarksRef = useLatestRef(filteredBookmarks);
+  const selectedIndexRef = useLatestRef(selectedIndex);
+  const hoveredIndexRef = useLatestRef(hoveredIndex);
+  const renamingIdRef = useLatestRef(renamingId);
+  const handleDeleteBookmarkRef = useLatestRef(handleDeleteBookmark);
+  const handleStartRenameRef = useLatestRef(handleStartRename);
+  const selectionModeRef = useLatestRef(selectionMode);
+  const selectedIdsRef = useLatestRef(selectedIds);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);

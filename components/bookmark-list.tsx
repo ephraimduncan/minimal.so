@@ -237,17 +237,19 @@ export function BookmarkList({
                   ) : null}
                 </div>
                 <div className="relative w-[90px] h-5 flex items-center justify-end">
-                  {!((selectedIndex === index || hoveredIndex === index) && !renamingId) ? (
-                    <span className="text-[13px] text-muted-foreground whitespace-nowrap">
-                      {formatDate(bookmark.createdAt)}
-                    </span>
-                  ) : null}
-                  {(selectedIndex === index || hoveredIndex === index) && !renamingId ? (
-                    <KbdGroup>
-                      <Kbd>⌘</Kbd>
-                      <Kbd>Enter</Kbd>
-                    </KbdGroup>
-                  ) : null}
+                  {(() => {
+                    const isActive = (selectedIndex === index || hoveredIndex === index) && !renamingId;
+                    return isActive ? (
+                      <KbdGroup>
+                        <Kbd>⌘</Kbd>
+                        <Kbd>Enter</Kbd>
+                      </KbdGroup>
+                    ) : (
+                      <span className="text-[13px] text-muted-foreground whitespace-nowrap">
+                        {formatDate(bookmark.createdAt)}
+                      </span>
+                    );
+                  })()}
                 </div>
             </ContextMenuTrigger>
             <ContextMenuContent className="w-48">

@@ -7,10 +7,14 @@ import { Header } from "@/components/header";
 import { BookmarkInput } from "@/components/bookmark-input";
 import { BookmarkList } from "@/components/bookmark-list";
 import { BookmarkListSkeleton } from "@/components/dashboard-skeleton";
+import { MultiSelectToolbar } from "@/components/multi-select-toolbar";
+import { BulkMoveDialog } from "@/components/bulk-move-dialog";
+import { BulkDeleteDialog } from "@/components/bulk-delete-dialog";
 import { parseColor, isUrl, normalizeUrl } from "@/lib/utils";
 import { client } from "@/lib/orpc";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useFocusRefetch } from "@/hooks/use-focus-refetch";
+import { useLatestRef } from "@/lib/hooks/use-latest-ref";
 import type { BookmarkType, GroupItem, BookmarkItem } from "@/lib/schema";
 import type { Session } from "@/lib/auth";
 
@@ -34,14 +38,10 @@ export function DashboardContent({
   const [hoveredIndex, setHoveredIndex] = useState<number>(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
-
-  // Refs to store latest values for stable keyboard handler
-  const filteredBookmarksRef = useRef<BookmarkItem[]>([]);
-  const selectedIndexRef = useRef<number>(-1);
-  const hoveredIndexRef = useRef<number>(-1);
-  const renamingIdRef = useRef<string | null>(null);
-  const handleDeleteBookmarkRef = useRef<(id: string) => void>(() => {});
-  const handleStartRenameRef = useRef<(id: string) => void>(() => {});
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const groupsQuery = useQuery({
     queryKey: ["groups"],
@@ -70,6 +70,11 @@ export function DashboardContent({
     () => bookmarksQuery.data ?? [],
     [bookmarksQuery.data]
   );
+
+  useEffect(() => {
+    setSelectedIndex(-1);
+    setHoveredIndex(-1);
+  }, [bookmarks, currentGroupId]);
 
   const createBookmarkMutation = useMutation({
     mutationFn: (data: {
@@ -277,63 +282,6 @@ export function DashboardContent({
     },
   });
 
-  const deleteBookmarkMutation = useMutation({
-    mutationFn: async (data: { id: string; _groupId?: string }) => {
-      if (data.id.startsWith("temp-")) {
-        return { success: true };
-      }
-      const { _groupId, ...deleteData } = data;
-      return client.bookmark.delete(deleteData);
-    },
-    onMutate: async (data) => {
-      const groupId = data._groupId ?? currentGroupId;
-
-      await queryClient.cancelQueries({ queryKey: ["bookmarks", groupId] });
-      await queryClient.cancelQueries({ queryKey: ["groups"] });
-
-      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>([
-        "bookmarks",
-        groupId,
-      ]);
-      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
-
-      queryClient.setQueryData<BookmarkItem[]>(
-        ["bookmarks", groupId],
-        (old) => old?.filter((b) => b.id !== data.id) ?? []
-      );
-
-      queryClient.setQueryData<GroupItem[]>(["groups"], (old) =>
-        old?.map((g) =>
-          g.id === groupId
-            ? { ...g, bookmarkCount: Math.max(0, (g.bookmarkCount ?? 0) - 1) }
-            : g
-        )
-      );
-
-      return { previousBookmarks, previousGroups, groupId };
-    },
-    onError: (_err, _data, context) => {
-      if (context?.previousBookmarks) {
-        queryClient.setQueryData(
-          ["bookmarks", context.groupId],
-          context.previousBookmarks
-        );
-      }
-      if (context?.previousGroups) {
-        queryClient.setQueryData(["groups"], context.previousGroups);
-      }
-      toast.error("Failed to delete bookmark");
-    },
-    onSettled: (_data, _error, _variables, context) => {
-      if (context?.groupId) {
-        queryClient.invalidateQueries({
-          queryKey: ["bookmarks", context.groupId],
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
-    },
-  });
-
   const createGroupMutation = useMutation({
     mutationFn: (data: {
       name: string;
@@ -431,6 +379,168 @@ export function DashboardContent({
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (data: { ids: string[]; _groupId?: string }) => {
+      const { _groupId, ...deleteData } = data;
+      const realIds = deleteData.ids.filter((id) => !id.startsWith("temp-"));
+      if (realIds.length === 0) {
+        return { success: true };
+      }
+      return client.bookmark.bulkDelete({ ids: realIds });
+    },
+    onMutate: async (data) => {
+      const groupId = data._groupId ?? currentGroupId;
+
+      await queryClient.cancelQueries({ queryKey: ["bookmarks", groupId] });
+      await queryClient.cancelQueries({ queryKey: ["groups"] });
+
+      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>([
+        "bookmarks",
+        groupId,
+      ]);
+      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
+
+      queryClient.setQueryData<BookmarkItem[]>(
+        ["bookmarks", groupId],
+        (old) => old?.filter((b) => !data.ids.includes(b.id)) ?? []
+      );
+
+      queryClient.setQueryData<GroupItem[]>(["groups"], (old) =>
+        old?.map((g) =>
+          g.id === groupId
+            ? {
+                ...g,
+                bookmarkCount: Math.max(0, (g.bookmarkCount ?? 0) - data.ids.length),
+              }
+            : g
+        )
+      );
+
+      return { previousBookmarks, previousGroups, groupId };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previousBookmarks) {
+        queryClient.setQueryData(
+          ["bookmarks", context.groupId],
+          context.previousBookmarks
+        );
+      }
+      if (context?.previousGroups) {
+        queryClient.setQueryData(["groups"], context.previousGroups);
+      }
+      toast.error("Failed to delete bookmarks");
+    },
+    onSettled: (_data, _error, _variables, context) => {
+      if (context?.groupId) {
+        queryClient.invalidateQueries({
+          queryKey: ["bookmarks", context.groupId],
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    },
+  });
+
+  const bulkMoveMutation = useMutation({
+    mutationFn: (data: {
+      ids: string[];
+      targetGroupId: string;
+      _sourceGroupId?: string;
+    }) => {
+      const { _sourceGroupId, ...moveData } = data;
+      return client.bookmark.bulkMove(moveData);
+    },
+    onMutate: async (data) => {
+      const { ids, targetGroupId, _sourceGroupId } = data;
+      const sourceGroupId = _sourceGroupId ?? currentGroupId;
+
+      await queryClient.cancelQueries({ queryKey: ["bookmarks"] });
+      await queryClient.cancelQueries({ queryKey: ["groups"] });
+
+      const previousSourceBookmarks = queryClient.getQueryData<BookmarkItem[]>([
+        "bookmarks",
+        sourceGroupId,
+      ]);
+      const previousTargetBookmarks = queryClient.getQueryData<BookmarkItem[]>([
+        "bookmarks",
+        targetGroupId,
+      ]);
+      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
+
+      const movedBookmarks = previousSourceBookmarks?.filter((b) =>
+        ids.includes(b.id)
+      );
+
+      if (movedBookmarks) {
+        queryClient.setQueryData<BookmarkItem[]>(
+          ["bookmarks", sourceGroupId],
+          (old) => old?.filter((b) => !ids.includes(b.id)) ?? []
+        );
+
+        queryClient.setQueryData<BookmarkItem[]>(
+          ["bookmarks", targetGroupId],
+          (old) => [
+            ...movedBookmarks.map((b) => ({ ...b, groupId: targetGroupId })),
+            ...(old ?? []),
+          ]
+        );
+
+        queryClient.setQueryData<GroupItem[]>(["groups"], (old) =>
+          old?.map((g) => {
+            if (g.id === sourceGroupId) {
+              return {
+                ...g,
+                bookmarkCount: Math.max(0, (g.bookmarkCount ?? 0) - ids.length),
+              };
+            }
+            if (g.id === targetGroupId) {
+              return { ...g, bookmarkCount: (g.bookmarkCount ?? 0) + ids.length };
+            }
+            return g;
+          })
+        );
+      }
+
+      return {
+        previousSourceBookmarks,
+        previousTargetBookmarks,
+        previousGroups,
+        sourceGroupId,
+        targetGroupId,
+      };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previousSourceBookmarks && context?.sourceGroupId) {
+        queryClient.setQueryData(
+          ["bookmarks", context.sourceGroupId],
+          context.previousSourceBookmarks
+        );
+      }
+      if (context?.previousTargetBookmarks && context?.targetGroupId) {
+        queryClient.setQueryData(
+          ["bookmarks", context.targetGroupId],
+          context.previousTargetBookmarks
+        );
+      }
+      if (context?.previousGroups) {
+        queryClient.setQueryData(["groups"], context.previousGroups);
+      }
+      toast.error("Failed to move bookmarks");
+    },
+    onSettled: (_data, _error, _variables, context) => {
+      if (context?.sourceGroupId) {
+        queryClient.invalidateQueries({
+          queryKey: ["bookmarks", context.sourceGroupId],
+        });
+      }
+      if (context?.targetGroupId) {
+        queryClient.invalidateQueries({
+          queryKey: ["bookmarks", context.targetGroupId],
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    },
+  });
+
   const selectedGroup =
     groups.find((g) => g.id === currentGroupId) || groups[0];
 
@@ -444,12 +554,12 @@ export function DashboardContent({
 
   const handleDeleteBookmark = useCallback(
     (id: string) => {
-      deleteBookmarkMutation.mutate({
-        id,
+      bulkDeleteMutation.mutate({
+        ids: [id],
         _groupId: currentGroupId ?? undefined,
       });
     },
-    [deleteBookmarkMutation, currentGroupId]
+    [bulkDeleteMutation, currentGroupId]
   );
 
   const filteredBookmarks = useMemo(() => {
@@ -462,110 +572,93 @@ export function DashboardContent({
     });
   }, [bookmarks, debouncedSearchQuery]);
 
-  // Sync refs with state for stable keyboard handler
-  useEffect(() => {
-    filteredBookmarksRef.current = filteredBookmarks;
+  const handleEnterSelectionMode = useCallback((initialId?: string) => {
+    setSelectionMode(true);
+    if (initialId) {
+      setSelectedIds(new Set([initialId]));
+    }
+  }, []);
+
+  const handleExitSelectionMode = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleToggleSelection = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedIds(new Set(filteredBookmarks.map((b) => b.id)));
   }, [filteredBookmarks]);
 
-  useEffect(() => {
-    selectedIndexRef.current = selectedIndex;
-  }, [selectedIndex]);
+  const handleCopyUrls = useCallback(() => {
+    const urls = bookmarks
+      .filter((b) => selectedIds.has(b.id) && b.url)
+      .map((b) => b.url)
+      .join("\n");
 
-  useEffect(() => {
-    hoveredIndexRef.current = hoveredIndex;
-  }, [hoveredIndex]);
+    if (urls) {
+      navigator.clipboard.writeText(urls);
+      toast.success(`Copied ${selectedIds.size} URLs`);
+    } else {
+      toast.error("No URLs to copy");
+    }
+  }, [bookmarks, selectedIds]);
 
-  useEffect(() => {
-    renamingIdRef.current = renamingId;
-  }, [renamingId]);
+  const handleConfirmMove = useCallback(
+    (targetGroupId: string) => {
+      bulkMoveMutation.mutate({
+        ids: Array.from(selectedIds),
+        targetGroupId,
+        _sourceGroupId: currentGroupId ?? undefined,
+      });
+      handleExitSelectionMode();
+      toast.success(`Moved ${selectedIds.size} bookmarks`);
+    },
+    [bulkMoveMutation, selectedIds, currentGroupId, handleExitSelectionMode]
+  );
 
-  useEffect(() => {
-    handleDeleteBookmarkRef.current = handleDeleteBookmark;
-  }, [handleDeleteBookmark]);
+  const handleConfirmDelete = useCallback(() => {
+    bulkDeleteMutation.mutate({
+      ids: Array.from(selectedIds),
+      _groupId: currentGroupId ?? undefined,
+    });
+    handleExitSelectionMode();
+    toast.success(`Deleted ${selectedIds.size} bookmarks`);
+  }, [bulkDeleteMutation, selectedIds, currentGroupId, handleExitSelectionMode]);
 
-  useEffect(() => {
-    handleStartRenameRef.current = handleStartRename;
-  }, [handleStartRename]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (renamingIdRef.current) return;
-
-      // Allow all keyboard events when focus is on the search input
-      if (document.activeElement === inputRef.current) {
-        return;
-      }
-
-      // Allow standard text editing shortcuts when focus is on any input/textarea
-      const isInputFocused =
-        document.activeElement instanceof HTMLInputElement ||
-        document.activeElement instanceof HTMLTextAreaElement;
-      if (isInputFocused && (e.metaKey || e.ctrlKey)) {
-        return; // Let the browser handle Ctrl+A, Ctrl+C, etc.
-      }
-
-      const bookmarks = filteredBookmarksRef.current;
-
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setSelectedIndex((prev) => Math.min(prev + 1, bookmarks.length - 1));
-        return;
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedIndex((prev) => Math.max(prev - 1, -1));
-        return;
-      }
-
-      const activeIndex =
-        hoveredIndexRef.current >= 0
-          ? hoveredIndexRef.current
-          : selectedIndexRef.current;
-      if (activeIndex < 0 || activeIndex >= bookmarks.length) return;
-      const activeBookmark = bookmarks[activeIndex];
-      if (!activeBookmark) return;
-
-      if (e.key === "Enter" && document.activeElement !== inputRef.current) {
-        e.preventDefault();
-        if (activeBookmark.url) {
-          window.open(activeBookmark.url, "_blank");
-        } else {
-          const textToCopy = activeBookmark.color || activeBookmark.title;
-          navigator.clipboard.writeText(textToCopy ?? "");
-        }
-      }
-
-      if ((e.metaKey || e.ctrlKey) && e.key === "c") {
-        e.preventDefault();
-        const textToCopy =
-          activeBookmark.url || activeBookmark.color || activeBookmark.title;
-        navigator.clipboard.writeText(textToCopy ?? "");
-      }
-
-      if ((e.metaKey || e.ctrlKey) && e.key === "e") {
-        e.preventDefault();
-        handleStartRenameRef.current(activeBookmark.id);
-      }
-
-      if ((e.metaKey || e.ctrlKey) && e.key === "Backspace") {
-        e.preventDefault();
-        handleDeleteBookmarkRef.current(activeBookmark.id);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  // Refs to store latest values for stable keyboard handler
+  const filteredBookmarksRef = useLatestRef(filteredBookmarks);
+  const selectedIndexRef = useLatestRef(selectedIndex);
+  const hoveredIndexRef = useLatestRef(hoveredIndex);
+  const renamingIdRef = useLatestRef(renamingId);
+  const handleDeleteBookmarkRef = useLatestRef(handleDeleteBookmark);
+  const handleStartRenameRef = useLatestRef(handleStartRename);
+  const selectionModeRef = useLatestRef(selectionMode);
+  const selectedIdsRef = useLatestRef(selectedIds);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
     setSelectedIndex(-1);
   }, []);
 
-  const handleSelectGroup = useCallback((id: string) => {
-    setSelectedGroupId(id);
-    setSelectedIndex(-1);
-  }, []);
+  const handleSelectGroup = useCallback(
+    (id: string) => {
+      setSelectedGroupId(id);
+      setSelectedIndex(-1);
+      handleExitSelectionMode();
+    },
+    [handleExitSelectionMode]
+  );
 
   const handleAddBookmark = useCallback(
     (value: string) => {
@@ -679,12 +772,101 @@ export function DashboardContent({
     [refetchBookmarkMutation]
   );
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (renamingIdRef.current) return;
+
+      // Allow all keyboard events when focus is on the search input
+      if (document.activeElement === inputRef.current) {
+        return;
+      }
+
+      // Allow standard text editing shortcuts when focus is on any input/textarea
+      const isInputFocused =
+        document.activeElement instanceof HTMLInputElement ||
+        document.activeElement instanceof HTMLTextAreaElement;
+      if (isInputFocused && (e.metaKey || e.ctrlKey)) {
+        return;
+      }
+
+      const bookmarks = filteredBookmarksRef.current;
+      const inSelectionMode = selectionModeRef.current;
+
+      if (e.key === "Escape" && inSelectionMode) {
+        e.preventDefault();
+        handleExitSelectionMode();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "a" && inSelectionMode) {
+        e.preventDefault();
+        handleSelectAll();
+        return;
+      }
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) => Math.min(prev + 1, bookmarks.length - 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((prev) => Math.max(prev - 1, -1));
+        return;
+      }
+
+      const activeIndex =
+        hoveredIndexRef.current >= 0
+          ? hoveredIndexRef.current
+          : selectedIndexRef.current;
+      if (activeIndex < 0 || activeIndex >= bookmarks.length) return;
+      const activeBookmark = bookmarks[activeIndex];
+      if (!activeBookmark) return;
+
+      if (e.key === " " && inSelectionMode) {
+        e.preventDefault();
+        handleToggleSelection(activeBookmark.id);
+        return;
+      }
+
+      if (e.key === "Enter" && document.activeElement !== inputRef.current) {
+        e.preventDefault();
+        if (activeBookmark.url) {
+          window.open(activeBookmark.url, "_blank");
+        } else {
+          const textToCopy = activeBookmark.color || activeBookmark.title;
+          navigator.clipboard.writeText(textToCopy ?? "");
+        }
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "c") {
+        e.preventDefault();
+        const textToCopy =
+          activeBookmark.url || activeBookmark.color || activeBookmark.title;
+        navigator.clipboard.writeText(textToCopy ?? "");
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "e") {
+        e.preventDefault();
+        handleStartRenameRef.current(activeBookmark.id);
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "Backspace") {
+        e.preventDefault();
+        handleDeleteBookmarkRef.current(activeBookmark.id);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleExitSelectionMode, handleSelectAll, handleToggleSelection]);
+
   if (!selectedGroup) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <Header
         groups={groups}
         selectedGroup={selectedGroup}
@@ -719,8 +901,38 @@ export function DashboardContent({
             onFinishRename={handleFinishRename}
             onHoverChange={setHoveredIndex}
             hoveredIndex={hoveredIndex}
+            selectionMode={selectionMode}
+            selectedIds={selectedIds}
+            onToggleSelection={handleToggleSelection}
+            onEnterSelectionMode={handleEnterSelectionMode}
+            onBulkMove={handleConfirmMove}
+            onBulkDelete={handleConfirmDelete}
           />
         )}
+        {selectionMode && selectedIds.size > 0 && (
+          <MultiSelectToolbar
+            selectedCount={selectedIds.size}
+            onSelectAll={handleSelectAll}
+            onMove={() => setMoveDialogOpen(true)}
+            onCopyUrls={handleCopyUrls}
+            onDelete={() => setDeleteDialogOpen(true)}
+            onClose={handleExitSelectionMode}
+          />
+        )}
+        <BulkMoveDialog
+          open={moveDialogOpen}
+          onOpenChange={setMoveDialogOpen}
+          groups={groups}
+          currentGroupId={currentGroupId || ""}
+          selectedCount={selectedIds.size}
+          onConfirm={handleConfirmMove}
+        />
+        <BulkDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          count={selectedIds.size}
+          onConfirm={handleConfirmDelete}
+        />
       </main>
     </div>
   );

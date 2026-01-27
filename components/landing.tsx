@@ -332,7 +332,7 @@ export function Landing() {
                 ></path>
               </svg>
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight tracking-wide">
+                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Save in seconds
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -390,7 +390,7 @@ export function Landing() {
                 </g>
               </svg>
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight tracking-wide">
+                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Auto-fetch metadata
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -434,7 +434,7 @@ export function Landing() {
                 </g>
               </svg>
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight tracking-wide">
+                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Organize with groups
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -468,7 +468,7 @@ export function Landing() {
                 </g>
               </svg>
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight tracking-wide">
+                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Instant search
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -490,7 +490,7 @@ export function Landing() {
                 ></path>
               </svg>
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight tracking-wide">
+                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Keyboard shortcuts
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -554,7 +554,7 @@ export function Landing() {
                 </g>
               </svg>
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight tracking-wide">
+                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Private by default
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -613,7 +613,7 @@ export function Landing() {
                 </g>
               </svg>
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight tracking-wide">
+                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Minimal interface
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -638,7 +638,7 @@ export function Landing() {
                 ></path>
               </svg>
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight tracking-wide">
+                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Access anywhere
                 </h3>
                 <p className="text-zinc-600 text-sm">

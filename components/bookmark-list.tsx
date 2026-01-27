@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useState, useEffect } from "react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   IconCopy,
   IconPencil,
@@ -21,7 +22,9 @@ import {
   IconChevronsRight,
   IconCheck,
   IconBookmark,
+  IconSquaresSelected,
 } from "@tabler/icons-react";
+import { ContextMenuSeparator } from "@/components/ui/context-menu";
 import {
   Empty,
   EmptyMedia,
@@ -56,6 +59,12 @@ interface BookmarkListProps {
   onFinishRename: () => void;
   onHoverChange: (index: number) => void;
   hoveredIndex: number;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelection?: (id: string) => void;
+  onEnterSelectionMode?: (initialId?: string) => void;
+  onBulkMove?: (targetGroupId: string) => void;
+  onBulkDelete?: () => void;
 }
 
 export function BookmarkList({
@@ -73,6 +82,12 @@ export function BookmarkList({
   onFinishRename,
   onHoverChange,
   hoveredIndex,
+  selectionMode = false,
+  selectedIds = new Set(),
+  onToggleSelection,
+  onEnterSelectionMode,
+  onBulkMove,
+  onBulkDelete,
 }: BookmarkListProps) {
   const [editValue, setEditValue] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -100,6 +115,12 @@ export function BookmarkList({
 
   const handleClick = (bookmark: BookmarkItem) => {
     if (renamingId) return;
+
+    if (selectionMode && onToggleSelection) {
+      onToggleSelection(bookmark.id);
+      return;
+    }
+
     onSelect(-1);
 
     if (bookmark.url) {
@@ -164,16 +185,24 @@ export function BookmarkList({
                       : "hover:bg-muted/50",
                     renamingId &&
                       renamingId !== bookmark.id &&
-                      "blur-[1.5px] opacity-50 pointer-events-none"
+                      "opacity-30 pointer-events-none"
                   )}
                 />
               }
             >
                 <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
-                  <BookmarkIcon
-                    bookmark={bookmark}
-                    isCopied={copiedId === bookmark.id}
-                  />
+                  {selectionMode ? (
+                    <Checkbox
+                      checked={selectedIds.has(bookmark.id)}
+                      onCheckedChange={() => onToggleSelection?.(bookmark.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <BookmarkIcon
+                      bookmark={bookmark}
+                      isCopied={copiedId === bookmark.id}
+                    />
+                  )}
                   {renamingId === bookmark.id ? (
                     <Input
                       type="text"
@@ -208,17 +237,19 @@ export function BookmarkList({
                   ) : null}
                 </div>
                 <div className="relative w-[90px] h-5 flex items-center justify-end">
-                  {!((selectedIndex === index || hoveredIndex === index) && !renamingId) ? (
-                    <span className="text-[13px] text-muted-foreground whitespace-nowrap">
-                      {formatDate(bookmark.createdAt)}
-                    </span>
-                  ) : null}
-                  {(selectedIndex === index || hoveredIndex === index) && !renamingId ? (
-                    <KbdGroup>
-                      <Kbd>⌘</Kbd>
-                      <Kbd>Enter</Kbd>
-                    </KbdGroup>
-                  ) : null}
+                  {(() => {
+                    const isActive = (selectedIndex === index || hoveredIndex === index) && !renamingId;
+                    return isActive ? (
+                      <KbdGroup>
+                        <Kbd>⌘</Kbd>
+                        <Kbd>Enter</Kbd>
+                      </KbdGroup>
+                    ) : (
+                      <span className="text-[13px] text-muted-foreground whitespace-nowrap">
+                        {formatDate(bookmark.createdAt)}
+                      </span>
+                    );
+                  })()}
                 </div>
             </ContextMenuTrigger>
             <ContextMenuContent className="w-48">
@@ -239,7 +270,13 @@ export function BookmarkList({
                 </KbdGroup>
               </ContextMenuItem>
               <ContextMenuItem
-                onClick={() => onDelete(bookmark.id)}
+                onClick={() => {
+                  if (selectionMode && selectedIds.has(bookmark.id) && onBulkDelete) {
+                    onBulkDelete();
+                  } else {
+                    onDelete(bookmark.id);
+                  }
+                }}
                 variant="destructive"
               >
                 <IconTrash className="mr-2 h-4 w-4" />
@@ -267,7 +304,13 @@ export function BookmarkList({
                       .map((group) => (
                         <ContextMenuItem
                           key={group.id}
-                          onClick={() => onMove(bookmark.id, group.id)}
+                          onClick={() => {
+                            if (selectionMode && selectedIds.has(bookmark.id) && onBulkMove) {
+                              onBulkMove(group.id);
+                            } else {
+                              onMove(bookmark.id, group.id);
+                            }
+                          }}
                         >
                           <span
                             className="mr-2 h-2 w-2 rounded-full"
@@ -279,6 +322,15 @@ export function BookmarkList({
                   </ContextMenuSubContent>
                 </ContextMenuSub>
               ) : null}
+              {!selectionMode && onEnterSelectionMode && (
+                <>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem onClick={() => onEnterSelectionMode(bookmark.id)}>
+                    <IconSquaresSelected className="mr-2 h-4 w-4" />
+                    <span>Select Multiple</span>
+                  </ContextMenuItem>
+                </>
+              )}
             </ContextMenuContent>
           </ContextMenu>
         ))}
@@ -295,6 +347,10 @@ const BookmarkIcon = memo(function BookmarkIcon({
   isCopied?: boolean;
 }) {
   const [faviconError, setFaviconError] = useState(false);
+
+  useEffect(() => {
+    setFaviconError(false);
+  }, [bookmark.id, bookmark.favicon]);
 
   if (isCopied) {
     return (

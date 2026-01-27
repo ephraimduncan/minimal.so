@@ -5,6 +5,8 @@ import {
   updateBookmark,
   deleteBookmark,
   refetchBookmark,
+  bulkDeleteBookmarks,
+  bulkMoveBookmarks,
   listGroups,
   createGroup,
   updateGroup,
@@ -18,6 +20,8 @@ export const router = base.router({
     update: updateBookmark,
     delete: deleteBookmark,
     refetch: refetchBookmark,
+    bulkDelete: bulkDeleteBookmarks,
+    bulkMove: bulkMoveBookmarks,
   },
   group: {
     list: listGroups,

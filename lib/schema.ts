@@ -78,6 +78,15 @@ export const deleteByIdSchema = z.object({
   id: z.string(),
 });
 
+export const bulkDeleteBookmarksSchema = z.object({
+  ids: z.array(z.string()).min(1, "At least one bookmark ID required"),
+});
+
+export const bulkMoveBookmarksSchema = z.object({
+  ids: z.array(z.string()).min(1),
+  targetGroupId: z.string(),
+});
+
 export const signupSchema = z
   .object({
     name: z.string().min(1, "Name is required"),

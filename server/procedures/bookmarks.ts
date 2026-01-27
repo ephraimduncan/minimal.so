@@ -7,6 +7,8 @@ import {
   deleteByIdSchema,
   createGroupSchema,
   updateGroupSchema,
+  bulkDeleteBookmarksSchema,
+  bulkMoveBookmarksSchema,
 } from "@/lib/schema";
 import { getUrlMetadata } from "@/lib/url-metadata";
 import { normalizeUrl } from "@/lib/utils";
@@ -170,4 +172,23 @@ export const refetchBookmark = authed
     });
 
     return bookmark;
+  });
+
+export const bulkDeleteBookmarks = authed
+  .input(bulkDeleteBookmarksSchema)
+  .handler(async ({ context, input }) => {
+    const result = await db.bookmark.deleteMany({
+      where: { id: { in: input.ids }, userId: context.user.id },
+    });
+    return { success: true, count: result.count };
+  });
+
+export const bulkMoveBookmarks = authed
+  .input(bulkMoveBookmarksSchema)
+  .handler(async ({ context, input }) => {
+    const result = await db.bookmark.updateMany({
+      where: { id: { in: input.ids }, userId: context.user.id },
+      data: { groupId: input.targetGroupId, updatedAt: new Date() },
+    });
+    return { success: true, count: result.count };
   });

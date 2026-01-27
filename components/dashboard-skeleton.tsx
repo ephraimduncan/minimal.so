@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function DashboardSkeleton() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <HeaderSkeleton />
       <main className="mx-auto w-full max-w-2xl px-5 py-20">
         <Skeleton className="h-8 w-full mb-8 rounded-lg" />

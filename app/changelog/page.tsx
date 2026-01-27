@@ -23,6 +23,39 @@ const GITHUB_REPO = "https://github.com/ephraimduncan/minimal.so";
 
 const changelog: ChangelogVersion[] = [
   {
+    version: "0.0.1",
+    date: "January 27, 2026",
+    added: [
+      { text: "Multi-select functionality with keyboard and mouse support for bulk operations", pr: 41 },
+      { text: "Bulk move and delete dialogs with server-side endpoints" },
+      { text: "Multi-select toolbar with Select All, Move, Copy URLs, and Delete actions" },
+      { text: "Context menu integration - actions on selected items apply to all selected bookmarks" },
+      { text: "Keyboard shortcuts for multi-select (Cmd+A for select all, Space for toggle)" },
+      { text: "Settings dialog with profile management and name editing", pr: 35 },
+      { text: "Claude Code GitHub workflows for automated PR assistance and code review", pr: 40 },
+      { text: "Split dashboard into separate route with cached landing page for better performance", pr: 36 },
+      { text: "Changelog page to track product updates", pr: 34 },
+    ],
+    changed: [
+      { text: "Migrated all dialogs to Base UI API for better compatibility and performance" },
+      { text: "Increased bulk move dialog dropdown width to 16rem for better readability" },
+      { text: "Replaced width animations with GPU-accelerated transform: scaleX() for smoother performance" },
+      { text: "Improved mobile browser support with proper dynamic viewport height (min-h-dvh)" },
+      { text: "Enhanced toolbar design to match context menu aesthetics" },
+      { text: "Added prefers-reduced-motion support for accessibility" },
+      { text: "Optimized animations by removing expensive blur filters" },
+      { text: "Improved dropdown spacing and visual balance" },
+    ],
+    fixed: [
+      { text: "Dropdown selection reset issue in bulk move dialog - selections now persist correctly" },
+      { text: "Hydration errors from nested button elements in dialogs and dropdowns" },
+      { text: "Invalid HTML structure where buttons were nested inside other buttons" },
+      { text: "Tab visibility state issues where favicons would show as fallback icons after returning to tab" },
+      { text: "Keyboard selection state misalignment when bookmarks data changed" },
+      { text: "Favicon loading failures during tab-hidden periods" },
+    ],
+  },
+  {
     version: "0.0.0",
     date: "January 20, 2026",
     added: [

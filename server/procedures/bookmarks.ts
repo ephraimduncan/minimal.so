@@ -186,11 +186,6 @@ export const bulkDeleteBookmarks = authed
 export const bulkMoveBookmarks = authed
   .input(bulkMoveBookmarksSchema)
   .handler(async ({ context, input }) => {
-    const targetGroup = await db.group.findFirst({
-      where: { id: input.targetGroupId, userId: context.user.id },
-    });
-    if (!targetGroup) throw new Error("Target group not found");
-
     const result = await db.bookmark.updateMany({
       where: { id: { in: input.ids }, userId: context.user.id },
       data: { groupId: input.targetGroupId, updatedAt: new Date() },

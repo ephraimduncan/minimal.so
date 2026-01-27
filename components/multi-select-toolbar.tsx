@@ -3,11 +3,20 @@
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   IconListCheck,
   IconX,
   IconDragDrop,
   IconCopyCheckFilled,
   IconTrash,
+  IconFileExport,
+  IconFileTypeCsv,
+  IconJson,
 } from "@tabler/icons-react";
 
 interface MultiSelectToolbarProps {
@@ -15,6 +24,7 @@ interface MultiSelectToolbarProps {
   onSelectAll: () => void;
   onMove: () => void;
   onCopyUrls: () => void;
+  onExport: (format: "csv" | "json") => void;
   onDelete: () => void;
   onClose: () => void;
 }
@@ -24,6 +34,7 @@ export function MultiSelectToolbar({
   onSelectAll,
   onMove,
   onCopyUrls,
+  onExport,
   onDelete,
   onClose,
 }: MultiSelectToolbarProps) {
@@ -64,6 +75,30 @@ export function MultiSelectToolbar({
           <IconCopyCheckFilled className="h-4 w-4" />
           Copy URLs
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-[13px] hover:bg-accent hover:text-accent-foreground"
+              />
+            }
+          >
+            <IconFileExport className="h-4 w-4" />
+            Export
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="w-40">
+            <DropdownMenuItem onClick={() => onExport("csv")} className="whitespace-nowrap">
+              <IconFileTypeCsv className="h-4 w-4" />
+              Export as CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onExport("json")} className="whitespace-nowrap">
+              <IconJson className="h-4 w-4" />
+              Export as JSON
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           variant="ghost"
           size="sm"

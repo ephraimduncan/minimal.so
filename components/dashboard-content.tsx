@@ -10,6 +10,7 @@ import { BookmarkListSkeleton } from "@/components/dashboard-skeleton";
 import { MultiSelectToolbar } from "@/components/multi-select-toolbar";
 import { BulkMoveDialog } from "@/components/bulk-move-dialog";
 import { BulkDeleteDialog } from "@/components/bulk-delete-dialog";
+import { ExportDialog, handleQuickExport } from "@/components/export-dialog";
 import { parseColor, isUrl, normalizeUrl } from "@/lib/utils";
 import { client } from "@/lib/orpc";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -42,6 +43,7 @@ export function DashboardContent({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   const groupsQuery = useQuery({
     queryKey: ["groups"],
@@ -69,6 +71,18 @@ export function DashboardContent({
   const bookmarks = useMemo(
     () => bookmarksQuery.data ?? [],
     [bookmarksQuery.data]
+  );
+
+  const allBookmarksQuery = useQuery({
+    queryKey: ["bookmarks", "all"],
+    queryFn: () => client.bookmark.list({}),
+    enabled: exportDialogOpen,
+    staleTime: 60 * 1000,
+  });
+
+  const allBookmarks = useMemo(
+    () => allBookmarksQuery.data ?? [],
+    [allBookmarksQuery.data]
   );
 
   useEffect(() => {
@@ -636,6 +650,19 @@ export function DashboardContent({
     toast.success(`Deleted ${selectedIds.size} bookmarks`);
   }, [bulkDeleteMutation, selectedIds, currentGroupId, handleExitSelectionMode]);
 
+  const handleQuickExportAction = useCallback(
+    (format: "csv" | "json") => {
+      const groupsMap = new Map(groups.map((g) => [g.id, g.name]));
+      handleQuickExport(format, bookmarks, selectedIds, groupsMap);
+      handleExitSelectionMode();
+    },
+    [bookmarks, selectedIds, groups, handleExitSelectionMode]
+  );
+
+  const handleOpenExportDialog = useCallback(() => {
+    setExportDialogOpen(true);
+  }, []);
+
   // Refs to store latest values for stable keyboard handler
   const filteredBookmarksRef = useLatestRef(filteredBookmarks);
   const selectedIndexRef = useLatestRef(selectedIndex);
@@ -875,6 +902,7 @@ export function DashboardContent({
         onDeleteGroup={handleDeleteGroup}
         userName={session.user.name}
         userEmail={session.user.email}
+        onExport={handleOpenExportDialog}
       />
       <main className="mx-auto w-full max-w-2xl px-5 py-20">
         <BookmarkInput
@@ -915,6 +943,7 @@ export function DashboardContent({
             onSelectAll={handleSelectAll}
             onMove={() => setMoveDialogOpen(true)}
             onCopyUrls={handleCopyUrls}
+            onExport={handleQuickExportAction}
             onDelete={() => setDeleteDialogOpen(true)}
             onClose={handleExitSelectionMode}
           />
@@ -932,6 +961,13 @@ export function DashboardContent({
           onOpenChange={setDeleteDialogOpen}
           count={selectedIds.size}
           onConfirm={handleConfirmDelete}
+        />
+        <ExportDialog
+          open={exportDialogOpen}
+          onOpenChange={setExportDialogOpen}
+          mode="settings"
+          bookmarks={allBookmarks}
+          groups={groups}
         />
       </main>
     </div>

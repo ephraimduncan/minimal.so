@@ -52,6 +52,7 @@ interface HeaderProps {
   onDeleteGroup?: (id: string) => void;
   userName: string;
   userEmail: string;
+  onExport?: () => void;
 }
 
 export function Header({
@@ -62,6 +63,7 @@ export function Header({
   onDeleteGroup,
   userName,
   userEmail,
+  onExport,
 }: HeaderProps) {
   const router = useRouter();
   const [newGroupName, setNewGroupName] = useState("");
@@ -304,6 +306,7 @@ export function Header({
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         user={{ name: userName, email: userEmail }}
+        onExport={onExport}
       />
     </header>
   );

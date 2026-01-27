@@ -185,7 +185,7 @@ export function BookmarkList({
                       : "hover:bg-muted/50",
                     renamingId &&
                       renamingId !== bookmark.id &&
-                      "blur-[1.5px] opacity-50 pointer-events-none"
+                      "opacity-30 pointer-events-none"
                   )}
                 />
               }

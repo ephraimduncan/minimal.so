@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
   IconListCheck,
@@ -32,7 +32,7 @@ export function MultiSelectToolbar({
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
-      transition={{ type: "spring", stiffness: 200, damping: 25 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50"
     >
       <div className="flex items-center rounded-lg bg-popover text-popover-foreground p-1 shadow-md ring-1 ring-foreground/10">
@@ -79,6 +79,7 @@ export function MultiSelectToolbar({
           size="sm"
           onClick={onClose}
           className="rounded-md p-1 h-auto hover:bg-accent hover:text-accent-foreground"
+          aria-label="Close multi-select toolbar"
         >
           <IconX className="h-4 w-4" />
         </Button>

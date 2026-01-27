@@ -192,8 +192,8 @@ export function Header({
               >
                 {holdingGroupId === selectedGroup.id && (
                   <div
-                    className="absolute inset-0 bg-destructive/20"
-                    style={{ width: `${holdProgress}%` }}
+                    className="absolute inset-0 bg-destructive/20 origin-left"
+                    style={{ transform: `scaleX(${holdProgress / 100})` }}
                   />
                 )}
                 <span className="relative z-10 flex items-center gap-2">

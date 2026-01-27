@@ -45,7 +45,7 @@ export function MultiSelectToolbar({
           <IconListCheck className="h-4 w-4" />
           Select All
         </Button>
-        <div className="h-4 w-px bg-border mx-0.5" />
+        <div className="h-4 w-px bg-border mx-0.5 -my-1" />
         <Button
           variant="ghost"
           size="sm"

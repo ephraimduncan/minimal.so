@@ -49,7 +49,7 @@ export function BulkMoveDialog({
     if (open && availableGroups.length > 0) {
       setTargetGroupId(availableGroups[0].id);
     }
-  }, [open, availableGroups]);
+  }, [open]);
 
   const handleConfirm = () => {
     if (targetGroupId) {
@@ -98,7 +98,7 @@ export function BulkMoveDialog({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"
-                  className="w-full rounded-xl"
+                  className="w-full rounded-xl space-y-1"
                 >
                   {availableGroups.map((group) => (
                     <DropdownMenuItem

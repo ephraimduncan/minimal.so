@@ -220,23 +220,27 @@ export function ExportDialog({
             </FieldContent>
           </Field>
 
-          <Field>
+          <div className="space-y-2">
             <FieldLabel>Format</FieldLabel>
             <RadioGroup value={format} onValueChange={(value) => setFormat(value as "csv" | "json")}>
-              <div className="flex items-center gap-2">
+              <Field orientation="horizontal">
                 <RadioGroupItem id="format-csv" value="csv" />
-                <FieldLabel htmlFor="format-csv" className="mb-0 cursor-pointer">
-                  CSV
-                </FieldLabel>
-              </div>
-              <div className="flex items-center gap-2">
+                <FieldContent>
+                  <FieldLabel htmlFor="format-csv">
+                    CSV
+                  </FieldLabel>
+                </FieldContent>
+              </Field>
+              <Field orientation="horizontal">
                 <RadioGroupItem id="format-json" value="json" />
-                <FieldLabel htmlFor="format-json" className="mb-0 cursor-pointer">
-                  JSON
-                </FieldLabel>
-              </div>
+                <FieldContent>
+                  <FieldLabel htmlFor="format-json">
+                    JSON
+                  </FieldLabel>
+                </FieldContent>
+              </Field>
             </RadioGroup>
-          </Field>
+          </div>
 
           <p className="text-sm text-muted-foreground">
             {exportCount} bookmark{exportCount !== 1 ? "s" : ""} will be exported

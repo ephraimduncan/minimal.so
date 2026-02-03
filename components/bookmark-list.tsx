@@ -44,6 +44,8 @@ const EMPTY_STATE = (
   </Empty>
 );
 
+const EMPTY_SET = new Set<string>();
+
 interface BookmarkListProps {
   bookmarks: BookmarkItem[];
   groups: GroupItem[];
@@ -66,6 +68,7 @@ interface BookmarkListProps {
   onBulkMove?: (targetGroupId: string) => void;
   onBulkDelete?: () => void;
   readOnly?: boolean;
+  onLinkClick?: (bookmark: BookmarkItem) => void;
 }
 
 export function BookmarkList({
@@ -84,12 +87,13 @@ export function BookmarkList({
   onHoverChange,
   hoveredIndex,
   selectionMode = false,
-  selectedIds = new Set(),
+  selectedIds = EMPTY_SET,
   onToggleSelection,
   onEnterSelectionMode,
   onBulkMove,
   onBulkDelete,
   readOnly = false,
+  onLinkClick,
 }: BookmarkListProps) {
   const [editValue, setEditValue] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -104,7 +108,17 @@ export function BookmarkList({
 
   const formatDate = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
-    const isCurrentYear = currentYear !== null && d.getFullYear() === currentYear;
+
+    // During SSR, currentYear is null - always show year to avoid new Date()
+    if (currentYear === null) {
+      return d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
+
+    const isCurrentYear = d.getFullYear() === currentYear;
 
     if (isCurrentYear) {
       return d.toLocaleDateString("en-US", {
@@ -140,6 +154,10 @@ export function BookmarkList({
   };
 
   const handleRowClick = (bookmark: BookmarkItem, index: number) => {
+    if (onLinkClick && bookmark.url) {
+      onLinkClick(bookmark);
+      return;
+    }
     if (readOnly) {
       onSelect(index);
       return;
@@ -178,62 +196,73 @@ export function BookmarkList({
         <span>Created At</span>
       </div>
       <div className="flex flex-col gap-0.5 -mx-3">
-        {bookmarks.map((bookmark, index) => {
-          const rowContent = (
-            <>
-              <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
-                {selectionMode ? (
-                  <Checkbox
-                    checked={selectedIds.has(bookmark.id)}
-                    onCheckedChange={() => onToggleSelection?.(bookmark.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    onPointerDown={(e) => e.stopPropagation()}
-                  />
-                ) : (
-                  <BookmarkIcon
-                    bookmark={bookmark}
-                    isCopied={copiedId === bookmark.id}
-                  />
+        {bookmarks.map((bookmark, index) => (
+            <ContextMenu
+              key={bookmark.id}
+              onOpenChange={(open) =>
+                setContextMenuOpenId(open ? bookmark.id : null)
+              }
+            >
+              <ContextMenuTrigger render={<Button
+                variant="ghost"
+                onClick={() => handleRowClick(bookmark, index)}
+                onMouseEnter={() => onHoverChange(index)}
+                onMouseLeave={() => onHoverChange(-1)}
+                className={cn(
+                  "group flex h-auto items-center justify-between rounded-xl px-4 py-3 text-left",
+                  selectedIndex === index || contextMenuOpenId === bookmark.id
+                    ? "bg-muted"
+                    : "hover:bg-muted/50",
+                  renamingId &&
+                    renamingId !== bookmark.id &&
+                    "opacity-30 pointer-events-none"
                 )}
-                {renamingId === bookmark.id ? (
-                  <Input
-                    type="text"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onBlur={() => handleFinishRename(bookmark.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleFinishRename(bookmark.id);
-                      if (e.key === "Escape") {
-                        onFinishRename();
-                        setEditValue("");
-                      }
-                    }}
-                    autoFocus
-                    className="h-auto flex-1 max-w-[60%] border-none bg-transparent px-0 py-0 text-sm font-normal shadow-none selection:bg-primary/20 focus-visible:ring-0"
-                    onClick={(e) => e.stopPropagation()}
-                    onFocus={(e) => {
-                      const val = e.target.value;
-                      e.target.value = "";
-                      e.target.value = val;
-                    }}
-                  />
-                ) : (
-                  <span className="text-sm font-normal truncate">
-                    {copiedId === bookmark.id ? "Copied" : bookmark.title}
-                  </span>
-                )}
-                {bookmark.url && !renamingId && copiedId !== bookmark.id ? (
-                  <span className="text-[13px] text-muted-foreground">
-                    {new URL(bookmark.url).hostname.replace("www.", "")}
-                  </span>
-                ) : null}
-              </div>
-              <div className="relative w-[90px] h-5 flex items-center justify-end">
-                {(() => {
-                  const isActive =
-                    (selectedIndex === index || hoveredIndex === index) &&
-                    !renamingId;
-                  return isActive ? (
+              />}>
+                <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
+                  {selectionMode ? (
+                    <Checkbox
+                      checked={selectedIds.has(bookmark.id)}
+                      onCheckedChange={() => onToggleSelection?.(bookmark.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <BookmarkIcon
+                      bookmark={bookmark}
+                      isCopied={copiedId === bookmark.id}
+                    />
+                  )}
+                  {renamingId === bookmark.id ? (
+                    <Input
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={() => handleFinishRename(bookmark.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleFinishRename(bookmark.id);
+                        if (e.key === "Escape") {
+                          onFinishRename();
+                          setEditValue("");
+                        }
+                      }}
+                      autoFocus
+                      className="h-auto flex-1 max-w-[60%] border-none bg-transparent px-0 py-0 text-sm font-normal shadow-none selection:bg-primary/20 focus-visible:ring-0"
+                      onClick={(e) => e.stopPropagation()}
+                      onFocus={(e) => e.target.select()}
+                    />
+                  ) : (
+                    <span className="text-sm font-normal truncate">
+                      {copiedId === bookmark.id ? "Copied" : bookmark.title}
+                    </span>
+                  )}
+                  {bookmark.url && !renamingId && copiedId !== bookmark.id ? (
+                    <span className="text-[13px] text-muted-foreground">
+                      {new URL(bookmark.url).hostname.replace("www.", "")}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="relative w-[90px] h-5 flex items-center justify-end">
+                  {((selectedIndex === index || hoveredIndex === index) && !renamingId) ? (
                     <KbdGroup>
                       <Kbd>⌘</Kbd>
                       <Kbd>Enter</Kbd>
@@ -242,37 +271,8 @@ export function BookmarkList({
                     <span className="text-[13px] text-muted-foreground whitespace-nowrap">
                       {formatDate(bookmark.createdAt)}
                     </span>
-                  );
-                })()}
-              </div>
-            </>
-          );
-
-          const rowButtonProps = {
-            variant: "ghost" as const,
-            onClick: () => handleRowClick(bookmark, index),
-            onMouseEnter: () => onHoverChange(index),
-            onMouseLeave: () => onHoverChange(-1),
-            className: cn(
-              "group flex h-auto items-center justify-between rounded-xl px-4 py-3 text-left",
-              selectedIndex === index || contextMenuOpenId === bookmark.id
-                ? "bg-muted"
-                : "hover:bg-muted/50",
-              renamingId &&
-                renamingId !== bookmark.id &&
-                "opacity-30 pointer-events-none"
-            ),
-          };
-
-          return (
-            <ContextMenu
-              key={bookmark.id}
-              onOpenChange={(open) =>
-                setContextMenuOpenId(open ? bookmark.id : null)
-              }
-            >
-              <ContextMenuTrigger render={<Button {...rowButtonProps} />}>
-                {rowContent}
+                  )}
+                </div>
               </ContextMenuTrigger>
               <ContextMenuContent className="w-48">
                 <ContextMenuItem onClick={() => handleCopy(bookmark)}>
@@ -365,8 +365,7 @@ export function BookmarkList({
                 )}
               </ContextMenuContent>
             </ContextMenu>
-          );
-        })}
+        ))}
       </div>
     </div>
   );

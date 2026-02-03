@@ -52,6 +52,9 @@ interface HeaderProps {
   onDeleteGroup?: (id: string) => void;
   userName: string;
   userEmail: string;
+  readOnly?: boolean;
+  showUserMenu?: boolean;
+  logoSize?: number;
 }
 
 export function Header({
@@ -62,6 +65,9 @@ export function Header({
   onDeleteGroup,
   userName,
   userEmail,
+  readOnly = false,
+  showUserMenu = true,
+  logoSize = 24,
 }: HeaderProps) {
   const router = useRouter();
   const [newGroupName, setNewGroupName] = useState("");
@@ -96,6 +102,7 @@ export function Header({
 
   const startHold = useCallback(
     (groupId: string) => {
+      if (readOnly) return;
       if (groups.length <= 1) return;
       setHoldingGroupId(groupId);
       holdStartRef.current = Date.now();
@@ -115,7 +122,7 @@ export function Header({
 
       holdTimerRef.current = setTimeout(updateProgress, 16);
     },
-    [groups.length, onDeleteGroup, cancelHold],
+    [groups.length, onDeleteGroup, cancelHold, readOnly],
   );
 
   useEffect(() => {
@@ -127,9 +134,9 @@ export function Header({
   }, []);
 
   return (
-    <header className="flex items-center justify-between px-6 py-3">
+    <header className={cn("flex items-center justify-between", readOnly ? "px-4 py-2" : "px-6 py-3")}>
       <div className="flex items-center gap-2">
-        <BmrksLogo />
+        <BmrksLogo size={logoSize} />
         <span className="text-muted-foreground">/</span>
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -173,13 +180,16 @@ export function Header({
               </DropdownMenuItem>
             ))}
             <DropdownMenuItem
-              onClick={() => setDialogOpen(true)}
+              onClick={() => {
+                if (!readOnly) setDialogOpen(true);
+              }}
+              disabled={readOnly}
               className="rounded-lg w-full"
             >
               <IconPlus className="h-4 w-4 mr-0" />
               Create Group
             </DropdownMenuItem>
-            {groups.length > 1 && (
+            {!readOnly && groups.length > 1 && (
               <DropdownMenuItem
                 onSelect={(e) => e.preventDefault()}
                 onMouseDown={() => startHold(selectedGroup.id)}
@@ -242,79 +252,86 @@ export function Header({
         </Dialog>
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="rounded-xl"
-          render={
-            <Button
-              variant="ghost"
-              className="w-44 justify-between gap-2 px-2"
-            />
-          }
-        >
-          <UserAvatar name={userName} />
-          <span className="truncate">{userName}</span>
-          <IconSelector className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="rounded-2xl">
-          <DropdownMenuItem
-            className="rounded-lg"
-            onClick={() => setSettingsOpen(true)}
-          >
-            <IconSettings className="h-4 w-4" />
-            Settings
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="rounded-lg"
-            render={
-              <a href="/chrome" target="_blank" rel="noopener noreferrer" />
-            }
-          >
-            <ChromeIcon />
-            Chrome Extension
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="rounded-lg"
-            onClick={() => setSignOutOpen(true)}
-          >
-            <IconLogout className="h-4 w-4" />
-            Sign out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-semibold text-xl<">
-              Sign out?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              You will need to sign in again to access your bookmarks.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel variant="ghost">Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={handleSignOut}>
-              Sign out
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        user={{ name: userName, email: userEmail }}
-      />
+      {showUserMenu ? (
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="rounded-xl"
+              render={
+                <Button
+                  variant="ghost"
+                  className="w-44 justify-between gap-2 px-2"
+                />
+              }
+            >
+              <UserAvatar name={userName} />
+              <span className="truncate">{userName}</span>
+              <IconSelector className="h-4 w-4 shrink-0 text-muted-foreground" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-2xl">
+              <DropdownMenuItem
+                className="rounded-lg"
+                onClick={() => setSettingsOpen(true)}
+                disabled={readOnly}
+              >
+                <IconSettings className="h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="rounded-lg"
+                render={
+                  <a href="/chrome" target="_blank" rel="noopener noreferrer" />
+                }
+                disabled={readOnly}
+              >
+                <ChromeIcon />
+                Chrome Extension
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="rounded-lg"
+                onClick={() => setSignOutOpen(true)}
+                disabled={readOnly}
+              >
+                <IconLogout className="h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="font-semibold text-xl<">
+                  Sign out?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  You will need to sign in again to access your bookmarks.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel variant="ghost">Cancel</AlertDialogCancel>
+                <AlertDialogAction variant="destructive" onClick={handleSignOut}>
+                  Sign out
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <SettingsDialog
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            user={{ name: userName, email: userEmail }}
+          />
+        </>
+      ) : null}
     </header>
   );
 }
 
-function BmrksLogo() {
+function BmrksLogo({ size = 24 }: { size?: number }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

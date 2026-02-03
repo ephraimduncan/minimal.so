@@ -44,6 +44,8 @@ const EMPTY_STATE = (
   </Empty>
 );
 
+const EMPTY_SET = new Set<string>();
+
 interface BookmarkListProps {
   bookmarks: BookmarkItem[];
   groups: GroupItem[];
@@ -65,6 +67,8 @@ interface BookmarkListProps {
   onEnterSelectionMode?: (initialId?: string) => void;
   onBulkMove?: (targetGroupId: string) => void;
   onBulkDelete?: () => void;
+  readOnly?: boolean;
+  onLinkClick?: (bookmark: BookmarkItem) => void;
 }
 
 export function BookmarkList({
@@ -83,22 +87,38 @@ export function BookmarkList({
   onHoverChange,
   hoveredIndex,
   selectionMode = false,
-  selectedIds = new Set(),
+  selectedIds = EMPTY_SET,
   onToggleSelection,
   onEnterSelectionMode,
   onBulkMove,
   onBulkDelete,
+  readOnly = false,
+  onLinkClick,
 }: BookmarkListProps) {
   const [editValue, setEditValue] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [contextMenuOpenId, setContextMenuOpenId] = useState<string | null>(
     null
   );
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   const formatDate = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
-    const now = new Date();
-    const isCurrentYear = d.getFullYear() === now.getFullYear();
+
+    // During SSR, currentYear is null - always show year to avoid new Date()
+    if (currentYear === null) {
+      return d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
+
+    const isCurrentYear = d.getFullYear() === currentYear;
 
     if (isCurrentYear) {
       return d.toLocaleDateString("en-US", {
@@ -133,6 +153,18 @@ export function BookmarkList({
     }
   };
 
+  const handleRowClick = (bookmark: BookmarkItem, index: number) => {
+    if (onLinkClick && bookmark.url) {
+      onLinkClick(bookmark);
+      return;
+    }
+    if (readOnly) {
+      onSelect(index);
+      return;
+    }
+    handleClick(bookmark);
+  };
+
   const handleCopy = (bookmark: BookmarkItem) => {
     const textToCopy = bookmark.url || bookmark.color || bookmark.title;
     navigator.clipboard.writeText(textToCopy);
@@ -165,31 +197,27 @@ export function BookmarkList({
       </div>
       <div className="flex flex-col gap-0.5 -mx-3">
         {bookmarks.map((bookmark, index) => (
-          <ContextMenu
-            key={bookmark.id}
-            onOpenChange={(open) =>
-              setContextMenuOpenId(open ? bookmark.id : null)
-            }
-          >
-            <ContextMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  onClick={() => handleClick(bookmark)}
-                  onMouseEnter={() => onHoverChange(index)}
-                  onMouseLeave={() => onHoverChange(-1)}
-                  className={cn(
-                    "group flex h-auto items-center justify-between rounded-xl px-4 py-3 text-left",
-                    selectedIndex === index || contextMenuOpenId === bookmark.id
-                      ? "bg-muted"
-                      : "hover:bg-muted/50",
-                    renamingId &&
-                      renamingId !== bookmark.id &&
-                      "opacity-30 pointer-events-none"
-                  )}
-                />
+            <ContextMenu
+              key={bookmark.id}
+              onOpenChange={(open) =>
+                setContextMenuOpenId(open ? bookmark.id : null)
               }
             >
+              <ContextMenuTrigger render={<Button
+                variant="ghost"
+                onClick={() => handleRowClick(bookmark, index)}
+                onMouseEnter={() => onHoverChange(index)}
+                onMouseLeave={() => onHoverChange(-1)}
+                className={cn(
+                  "group flex h-auto items-center justify-between rounded-xl px-4 py-3 text-left",
+                  selectedIndex === index || contextMenuOpenId === bookmark.id
+                    ? "bg-muted"
+                    : "hover:bg-muted/50",
+                  renamingId &&
+                    renamingId !== bookmark.id &&
+                    "opacity-30 pointer-events-none"
+                )}
+              />}>
                 <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
                   {selectionMode ? (
                     <Checkbox
@@ -220,11 +248,7 @@ export function BookmarkList({
                       autoFocus
                       className="h-auto flex-1 max-w-[60%] border-none bg-transparent px-0 py-0 text-sm font-normal shadow-none selection:bg-primary/20 focus-visible:ring-0"
                       onClick={(e) => e.stopPropagation()}
-                      onFocus={(e) => {
-                        const val = e.target.value;
-                        e.target.value = "";
-                        e.target.value = val;
-                      }}
+                      onFocus={(e) => e.target.select()}
                     />
                   ) : (
                     <span className="text-sm font-normal truncate">
@@ -238,102 +262,109 @@ export function BookmarkList({
                   ) : null}
                 </div>
                 <div className="relative w-[90px] h-5 flex items-center justify-end">
-                  {(() => {
-                    const isActive = (selectedIndex === index || hoveredIndex === index) && !renamingId;
-                    return isActive ? (
-                      <KbdGroup>
-                        <Kbd>⌘</Kbd>
-                        <Kbd>Enter</Kbd>
-                      </KbdGroup>
-                    ) : (
-                      <span className="text-[13px] text-muted-foreground whitespace-nowrap">
-                        {formatDate(bookmark.createdAt)}
-                      </span>
-                    );
-                  })()}
+                  {((selectedIndex === index || hoveredIndex === index) && !renamingId) ? (
+                    <KbdGroup>
+                      <Kbd>⌘</Kbd>
+                      <Kbd>Enter</Kbd>
+                    </KbdGroup>
+                  ) : (
+                    <span className="text-[13px] text-muted-foreground whitespace-nowrap">
+                      {formatDate(bookmark.createdAt)}
+                    </span>
+                  )}
                 </div>
-            </ContextMenuTrigger>
-            <ContextMenuContent className="w-48">
-              <ContextMenuItem onClick={() => handleCopy(bookmark)}>
-                <IconCopy className="mr-2 h-4 w-4" />
-                <span>Copy</span>
-                <KbdGroup className="ml-auto">
-                  <Kbd>⌘</Kbd>
-                  <Kbd>C</Kbd>
-                </KbdGroup>
-              </ContextMenuItem>
-              <ContextMenuItem onClick={() => handleStartRename(bookmark)}>
-                <IconPencil className="mr-2 h-4 w-4" />
-                <span>Rename</span>
-                <KbdGroup className="ml-auto">
-                  <Kbd>⌘</Kbd>
-                  <Kbd>E</Kbd>
-                </KbdGroup>
-              </ContextMenuItem>
-              <ContextMenuItem
-                onClick={() => {
-                  if (selectionMode && selectedIds.has(bookmark.id) && onBulkDelete) {
-                    onBulkDelete();
-                  } else {
-                    onDelete(bookmark.id);
-                  }
-                }}
-                variant="destructive"
-              >
-                <IconTrash className="mr-2 h-4 w-4" />
-                <span>Delete</span>
-                <KbdGroup className="ml-auto">
-                  <Kbd>⌘</Kbd>
-                  <Kbd>⌫</Kbd>
-                </KbdGroup>
-              </ContextMenuItem>
-              {bookmark.url ? (
-                <ContextMenuItem onClick={() => onRefetch(bookmark.id)}>
-                  <IconRefresh className="mr-2 h-4 w-4" />
-                  <span>Refetch</span>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="w-48">
+                <ContextMenuItem onClick={() => handleCopy(bookmark)}>
+                  <IconCopy className="mr-2 h-4 w-4" />
+                  <span>Copy</span>
+                  <KbdGroup className="ml-auto">
+                    <Kbd>⌘</Kbd>
+                    <Kbd>C</Kbd>
+                  </KbdGroup>
                 </ContextMenuItem>
-              ) : null}
-              {groups.length > 1 ? (
-                <ContextMenuSub>
-                  <ContextMenuSubTrigger>
-                    <IconChevronsRight className="mr-2 h-4 w-4" />
-                    <span>Move To...</span>
-                  </ContextMenuSubTrigger>
-                  <ContextMenuSubContent className="w-40">
-                    {groups
-                      .filter((g) => g.id !== currentGroupId)
-                      .map((group) => (
-                        <ContextMenuItem
-                          key={group.id}
-                          onClick={() => {
-                            if (selectionMode && selectedIds.has(bookmark.id) && onBulkMove) {
-                              onBulkMove(group.id);
-                            } else {
-                              onMove(bookmark.id, group.id);
-                            }
-                          }}
-                        >
-                          <span
-                            className="mr-2 h-2 w-2 rounded-full"
-                            style={{ backgroundColor: group.color }}
-                          />
-                          {group.name}
-                        </ContextMenuItem>
-                      ))}
-                  </ContextMenuSubContent>
-                </ContextMenuSub>
-              ) : null}
-              {!selectionMode && onEnterSelectionMode && (
-                <>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem onClick={() => onEnterSelectionMode(bookmark.id)}>
-                    <IconSquaresSelected className="mr-2 h-4 w-4" />
-                    <span>Select Multiple</span>
+                <ContextMenuItem onClick={() => handleStartRename(bookmark)}>
+                  <IconPencil className="mr-2 h-4 w-4" />
+                  <span>Rename</span>
+                  <KbdGroup className="ml-auto">
+                    <Kbd>⌘</Kbd>
+                    <Kbd>E</Kbd>
+                  </KbdGroup>
+                </ContextMenuItem>
+                <ContextMenuItem
+                  onClick={() => {
+                    if (
+                      selectionMode &&
+                      selectedIds.has(bookmark.id) &&
+                      onBulkDelete
+                    ) {
+                      onBulkDelete();
+                    } else {
+                      onDelete(bookmark.id);
+                    }
+                  }}
+                  variant="destructive"
+                >
+                  <IconTrash className="mr-2 h-4 w-4" />
+                  <span>Delete</span>
+                  <KbdGroup className="ml-auto">
+                    <Kbd>⌘</Kbd>
+                    <Kbd>⌫</Kbd>
+                  </KbdGroup>
+                </ContextMenuItem>
+                {bookmark.url ? (
+                  <ContextMenuItem onClick={() => onRefetch(bookmark.id)}>
+                    <IconRefresh className="mr-2 h-4 w-4" />
+                    <span>Refetch</span>
                   </ContextMenuItem>
-                </>
-              )}
-            </ContextMenuContent>
-          </ContextMenu>
+                ) : null}
+                {groups.length > 1 ? (
+                  <ContextMenuSub>
+                    <ContextMenuSubTrigger>
+                      <IconChevronsRight className="mr-2 h-4 w-4" />
+                      <span>Move To...</span>
+                    </ContextMenuSubTrigger>
+                    <ContextMenuSubContent className="w-40">
+                      {groups
+                        .filter((g) => g.id !== currentGroupId)
+                        .map((group) => (
+                          <ContextMenuItem
+                            key={group.id}
+                            onClick={() => {
+                              if (
+                                selectionMode &&
+                                selectedIds.has(bookmark.id) &&
+                                onBulkMove
+                              ) {
+                                onBulkMove(group.id);
+                              } else {
+                                onMove(bookmark.id, group.id);
+                              }
+                            }}
+                          >
+                            <span
+                              className="mr-2 h-2 w-2 rounded-full"
+                              style={{ backgroundColor: group.color }}
+                            />
+                            {group.name}
+                          </ContextMenuItem>
+                        ))}
+                    </ContextMenuSubContent>
+                  </ContextMenuSub>
+                ) : null}
+                {!selectionMode && onEnterSelectionMode && (
+                  <>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem
+                      onClick={() => onEnterSelectionMode(bookmark.id)}
+                    >
+                      <IconSquaresSelected className="mr-2 h-4 w-4" />
+                      <span>Select Multiple</span>
+                    </ContextMenuItem>
+                  </>
+                )}
+              </ContextMenuContent>
+            </ContextMenu>
         ))}
       </div>
     </div>

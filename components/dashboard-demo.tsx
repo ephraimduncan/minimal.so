@@ -416,7 +416,7 @@ export function DashboardDemo() {
   };
 
   return (
-    <section className="-mx-4 sm:-mx-6 lg:-mx-32 xl:-mx-48">
+    <section className="-mx-4 sm:mx-0 sm:w-[80vw] lg:w-[50vw] sm:relative sm:left-1/2 sm:-translate-x-1/2">
       <div className="rounded-xl border border-border bg-background">
         <div className="border-b border-border">
           <Header

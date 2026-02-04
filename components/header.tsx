@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +43,11 @@ import { Form } from "@/components/ui/form";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { type GroupItem } from "@/lib/schema";
-import { SettingsDialog } from "@/components/settings-dialog";
+
+const SettingsDialog = dynamic(
+  () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
+  { ssr: false }
+);
 
 interface HeaderProps {
   groups: GroupItem[];

@@ -1,5 +1,19 @@
 import Link from "next/link";
 import { DashboardDemo } from "@/components/dashboard-demo";
+import {
+  LOGO_SVG,
+  CHROME_ICON,
+  BOOKMARK_ICON,
+  AUTO_FETCH_ICON,
+  ORGANIZE_ICON,
+  SEARCH_ICON,
+  KEYBOARD_ICON,
+  PRIVACY_ICON,
+  MINIMAL_ICON,
+  ACCESS_ANYWHERE_ICON,
+} from "@/components/landing-icons";
+
+const CURRENT_YEAR = new Date().getFullYear();
 
 export function Landing() {
   return (
@@ -9,23 +23,7 @@ export function Landing() {
         aria-labelledby="landing-title"
       >
         <header className="mx-auto mb-8 mt-12 flex max-w-[400px] flex-col items-center justify-center text-center sm:mb-12 sm:mt-24">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="48"
-            height="48"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="mb-4 text-zinc-900"
-            aria-label="Logo"
-          >
-            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-            <path d="M12.432 17.949c.863 1.544 2.589 1.976 4.13 1.112c1.54 -.865 1.972 -2.594 1.048 -4.138c-.185 -.309 -.309 -.556 -.494 -.74c.247 .06 .555 .06 .925 .06c1.726 0 2.959 -1.234 2.959 -2.963c0 -1.73 -1.233 -2.965 -3.02 -2.965c-.37 0 -.617 0 -.925 .062c.185 -.185 .308 -.432 .493 -.74c.863 -1.545 .431 -3.274 -1.048 -4.138c-1.541 -.865 -3.205 -.433 -4.13 1.111c-.185 .309 -.308 .556 -.432 .803c-.123 -.247 -.246 -.494 -.431 -.803c-.802 -1.605 -2.528 -2.038 -4.007 -1.173c-1.541 .865 -1.973 2.594 -1.048 4.137c.185 .31 .308 .556 .493 .741c-.246 -.061 -.555 -.061 -.924 -.061c-1.788 0 -3.021 1.235 -3.021 2.964c0 1.729 1.233 2.964 3.02 2.964" />
-            <path d="M4.073 21c4.286 -2.756 5.9 -5.254 7.927 -9" />
-          </svg>
+          {LOGO_SVG}
           <h1 id="landing-title" className="mb-1.5 text-2xl text-zinc-900">
             minimal
           </h1>
@@ -52,23 +50,7 @@ export function Landing() {
               className="rounded-full border border-zinc-200 p-2 text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
               title="Chrome Extension"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <circle cx="12" cy="12" r="4" />
-                <line x1="21.17" y1="8" x2="12" y2="8" />
-                <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
-                <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
-              </svg>
+              {CHROME_ICON}
             </a>
           </nav>
         </header>
@@ -84,20 +66,7 @@ export function Landing() {
           </h2>
           <div className="space-y-7">
             <div className="flex items-start">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                className="w-5 h-5 mr-3 mt-1 text-zinc-700 shrink-0"
-              >
-                <path
-                  fill="currentColor"
-                  fillRule="evenodd"
-                  d="M17.3996 1.42712c1.2142 0 2.15 0.93583 2.15 2.15003V21.1052c0 0.571 -0.2976 1.0547 -0.7616 1.3003 -0.4549 0.2408 -1.0093 0.2218 -1.4743 -0.0572 -0.0153 -0.0092 -0.0303 -0.019 -0.0449 -0.0292l-5.2692 -3.6977 -5.26917 3.6977c-0.01463 0.0102 -0.02962 0.02 -0.04495 0.0292 -0.47898 0.2874 -1.04541 0.2849 -1.49442 0.0722 -0.46239 -0.219 -0.84145 -0.6866 -0.84145 -1.3153V3.57715c0 -1.2142 0.93577 -2.15003 2.15 -2.15003H17.3996Z"
-                  clipRule="evenodd"
-                  strokeWidth="1"
-                ></path>
-              </svg>
+              {BOOKMARK_ICON}
               <div>
                 <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Save in seconds
@@ -108,54 +77,7 @@ export function Landing() {
               </div>
             </div>
             <div className="flex items-start">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                className="w-5 h-5 mr-3 mt-1 text-zinc-700 shrink-0"
-              >
-                <g>
-                  <path
-                    d="M12 0.5A4.51 4.51 0 0 0 7.5 5v3.13a1 1 0 1 0 2 0V5a2.5 2.5 0 0 1 5 0v5.5A2.5 2.5 0 0 1 12 13a1 1 0 0 0 0 2 4.51 4.51 0 0 0 4.5 -4.5V5A4.51 4.51 0 0 0 12 0.5Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M15.5 15.63a1 1 0 0 0 -1 1V19a2.5 2.5 0 0 1 -5 0v-5a2.5 2.5 0 0 1 2.5 -2.5 1 1 0 0 0 0 -2A4.51 4.51 0 0 0 7.5 14v5a4.5 4.5 0 0 0 9 0v-2.37a1 1 0 0 0 -1 -1Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="m5.24 6.88 -1.3 -0.75a1 1 0 1 0 -1 1.74l1.3 0.75a1 1 0 0 0 1.36 -0.37 1 1 0 0 0 -0.36 -1.37Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M4 12.5a1 1 0 0 0 0 -2H2.5a1 1 0 0 0 0 2Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="m4.24 14.38 -1.3 0.75a1 1 0 0 0 1 1.74l1.3 -0.75a1 1 0 0 0 -1 -1.74Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M19.26 8.75a1 1 0 0 0 0.5 -0.13l1.3 -0.75a1 1 0 0 0 -1 -1.74l-1.3 0.75a1 1 0 0 0 0.5 1.87Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M21.5 10.5H20a1 1 0 0 0 0 2h1.5a1 1 0 0 0 0 -2Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="m21.06 15.13 -1.3 -0.75a1 1 0 0 0 -1 1.74l1.3 0.75a1 1 0 1 0 1 -1.74Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                </g>
-              </svg>
+              {AUTO_FETCH_ICON}
               <div>
                 <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Auto-fetch metadata
@@ -167,39 +89,7 @@ export function Landing() {
               </div>
             </div>
             <div className="flex items-start">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                className="w-5 h-5 mr-3 mt-1 text-zinc-700 shrink-0"
-              >
-                <g>
-                  <path
-                    d="M22.5 14H19a1 1 0 0 0 -1 1 1 1 0 0 1 -1 1H7a1 1 0 0 1 -1 -1 1 1 0 0 0 -1 -1H1.5A1.5 1.5 0 0 0 0 15.5V22a2 2 0 0 0 2 2h20a2 2 0 0 0 2 -2v-6.5a1.5 1.5 0 0 0 -1.5 -1.5Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M9.5 12a1 1 0 0 0 0 2h5a1 1 0 0 0 0 -2Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M2.5 11a1 1 0 0 0 1 -1h17a1 1 0 0 0 2 0 2 2 0 0 0 -2 -2h-17a2 2 0 0 0 -2 2 1 1 0 0 0 1 1Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M2.5 7a1 1 0 0 0 1 -1h17a1 1 0 0 0 2 0 2 2 0 0 0 -2 -2h-17a2 2 0 0 0 -2 2 1 1 0 0 0 1 1Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M2.5 3a1 1 0 0 0 1 -1h17a1 1 0 0 0 2 0 2 2 0 0 0 -2 -2h-17a2 2 0 0 0 -2 2 1 1 0 0 0 1 1Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                </g>
-              </svg>
+              {ORGANIZE_ICON}
               <div>
                 <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Organize with groups
@@ -211,29 +101,7 @@ export function Landing() {
               </div>
             </div>
             <div className="flex items-start">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                className="w-5 h-5 mr-3 mt-1 text-zinc-700 shrink-0"
-              >
-                <g>
-                  <path
-                    d="M15.67 6a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0 -3 0"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M10.58 16.53a5.52 5.52 0 0 0 8.5 4.66 0.26 0.26 0 0 1 0.31 0l2.48 2.49a1 1 0 0 0 0.71 0.29 1 1 0 0 0 0.71 -0.29 1 1 0 0 0 0 -1.42l-2.49 -2.45a0.24 0.24 0 0 1 0 -0.31 5.53 5.53 0 1 0 -10.19 -3Zm9.06 0A3.53 3.53 0 1 1 16.11 13a3.54 3.54 0 0 1 3.53 3.53Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M21.17 0H14a3 3 0 0 0 -2.12 0.88l-11 11a3 3 0 0 0 0 4.24l6.17 6.17a3 3 0 0 0 4.24 0l0.14 -0.14a0.23 0.23 0 0 0 0.07 -0.15 0.23 0.23 0 0 0 -0.08 -0.18 7.17 7.17 0 0 1 -1 -1.06 0.25 0.25 0 0 0 -0.18 -0.1 0.27 0.27 0 0 0 -0.19 0.08l-0.17 0.17a1 1 0 0 1 -1.42 0l-6.17 -6.2a1 1 0 0 1 0 -1.42l11 -11A1 1 0 0 1 14 2h6.67a0.5 0.5 0 0 1 0.5 0.5v6.67a1 1 0 0 1 -0.29 0.71l-0.67 0.67a0.27 0.27 0 0 0 -0.08 0.19 0.29 0.29 0 0 0 0.1 0.18 7.67 7.67 0 0 1 1.06 1 0.21 0.21 0 0 0 0.18 0.09 0.26 0.26 0 0 0 0.19 -0.07l0.63 -0.64a3 3 0 0 0 0.88 -2.12V2a2 2 0 0 0 -2 -2Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                </g>
-              </svg>
+              {SEARCH_ICON}
               <div>
                 <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Instant search
@@ -245,17 +113,7 @@ export function Landing() {
               </div>
             </div>
             <div className="flex items-start">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                className="w-5 h-5 mr-3 mt-1 text-zinc-700 shrink-0"
-              >
-                <path
-                  d="M5.75 10.25h13.5c2.65 0 4.5 -1.64 4.5 -4s-1.85 -4 -4.5 -4h-6a1 1 0 0 1 -1 -1 1 1 0 0 0 -2 0 3 3 0 0 0 3 3h6c1.21 0 2.5 0.53 2.5 2s-1.29 2 -2.5 2H5.75c-2.29 0 -4 2.38 -4 4.5v0.75a0.25 0.25 0 0 1 -0.25 0.25h-0.25a1 1 0 0 0 -1 1v8a1 1 0 0 0 1 1h20a1 1 0 0 0 1 -1v-8a1 1 0 0 0 -1 -1H4a0.25 0.25 0 0 1 -0.25 -0.25v-0.75c0 -1.12 0.92 -2.5 2 -2.5Zm-1.5 9.5h-0.5a0.5 0.5 0 0 1 0 -1h0.5a0.5 0.5 0 0 1 0 1Zm14.5 -3.5h0.5a0.5 0.5 0 0 1 0 1h-0.5a0.5 0.5 0 0 1 0 -1Zm0 2.5h0.5a0.5 0.5 0 0 1 0 1h-0.5a0.5 0.5 0 0 1 0 -1Zm-3 -2.5h0.5a0.5 0.5 0 0 1 0 1h-0.5a0.5 0.5 0 0 1 0 -1Zm0 2.5h0.5a0.5 0.5 0 0 1 0 1h-0.5a0.5 0.5 0 0 1 0 -1Zm-3 -2.5h0.5a0.5 0.5 0 0 1 0 1h-0.5a0.5 0.5 0 0 1 0 -1Zm0 2.5h0.5a0.5 0.5 0 0 1 0 1h-0.5a0.5 0.5 0 0 1 0 -1Zm-3 -2.5h0.5a0.5 0.5 0 0 1 0 1h-0.5a0.5 0.5 0 0 1 0 -1Zm0 2.5h0.5a0.5 0.5 0 0 1 0 1h-0.5a0.5 0.5 0 0 1 0 -1Zm-3 -2.5h0.5a0.5 0.5 0 0 1 0 1h-0.5a0.5 0.5 0 0 1 0 -1Zm0 2.5h0.5a0.5 0.5 0 0 1 0 1h-0.5a0.5 0.5 0 0 1 0 -1Zm-1 2.5h11a0.5 0.5 0 0 1 0 1h-11a0.5 0.5 0 0 1 0 -1Zm-1.5 -5a0.5 0.5 0 0 1 0 1h-0.5a0.5 0.5 0 0 1 0 -1Z"
-                  fill="currentColor"
-                  strokeWidth="1"
-                ></path>
-              </svg>
+              {KEYBOARD_ICON}
               <div>
                 <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Keyboard shortcuts
@@ -267,59 +125,7 @@ export function Landing() {
               </div>
             </div>
             <div className="flex items-start">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                className="w-5 h-5 mr-3 mt-1 text-zinc-700 shrink-0"
-              >
-                <g>
-                  <path
-                    d="M12 21.26a7.56 7.56 0 0 1 -2.66 0.48 0.75 0.75 0 1 0 0 1.5 9.1 9.1 0 0 0 2.82 -0.45 0.26 0.26 0 0 0 0.18 -0.23v-1.07a0.27 0.27 0 0 0 -0.11 -0.2 0.24 0.24 0 0 0 -0.23 -0.03Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M17.12 9.27a0.29 0.29 0 0 0 0.1 0.27 0.26 0.26 0 0 0 0.21 0.05 4.13 4.13 0 0 1 1 -0.1 0.21 0.21 0 0 0 0.21 -0.22 9.14 9.14 0 0 0 -1.94 -5.65 0.75 0.75 0 0 0 -1 -0.14 0.72 0.72 0 0 0 -0.13 1.05 7.79 7.79 0 0 1 1.55 4.74Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M6.36 21.13A7.74 7.74 0 0 1 1.62 14v-1.9a0.74 0.74 0 0 0 -0.74 -0.75 0.75 0.75 0 0 0 -0.76 0.75V14a9.23 9.23 0 0 0 5.66 8.52 0.72 0.72 0 0 0 0.29 0.06 0.75 0.75 0 0 0 0.29 -1.44Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M0.85 9.54a0.75 0.75 0 0 0 0.79 -0.71 7.75 7.75 0 0 1 11.61 -6.28 0.75 0.75 0 0 0 1 -0.27 0.76 0.76 0 0 0 -0.28 -1A9.25 9.25 0 0 0 0.14 8.75a0.74 0.74 0 0 0 0.71 0.79Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M14.47 11.41a0.26 0.26 0 0 0 0.28 -0.09 4.19 4.19 0 0 1 0.94 -0.94 0.23 0.23 0 0 0 0.1 -0.2v-0.91a6.41 6.41 0 0 0 -8.41 -6.1 0.75 0.75 0 0 0 0.45 1.43 4.75 4.75 0 0 1 1.55 -0.25 4.93 4.93 0 0 1 4.91 4.92v1.9a0.25 0.25 0 0 0 0.18 0.24Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M12.25 18.14a0.24 0.24 0 0 0 -0.26 0 4.88 4.88 0 0 1 -2.61 0.76A4.93 4.93 0 0 1 4.46 14V9.27A5 5 0 0 1 5.71 6a0.76 0.76 0 0 0 0 -1.06 0.77 0.77 0 0 0 -1.12 0.06A6.43 6.43 0 0 0 3 9.27V14a6.42 6.42 0 0 0 6.42 6.42 6.35 6.35 0 0 0 2.86 -0.69 0.26 0.26 0 0 0 0.14 -0.22v-1.15a0.25 0.25 0 0 0 -0.17 -0.22Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M9.38 5.68a3.59 3.59 0 0 0 -3.59 3.59v1.41a0.75 0.75 0 0 0 1.5 0V9.27a2.09 2.09 0 1 1 4.17 0V14a2.09 2.09 0 0 1 -4.17 0 0.75 0.75 0 1 0 -1.5 0 3.59 3.59 0 0 0 6.56 2 0.28 0.28 0 0 0 0 -0.13 1.79 1.79 0 0 1 0.46 -1.14 0.31 0.31 0 0 0 0.06 -0.13A4 4 0 0 0 13 14V9.27a3.59 3.59 0 0 0 -3.62 -3.59Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M10.12 13.51v-2.83a0.75 0.75 0 0 0 -0.74 -0.75 0.76 0.76 0 0 0 -0.76 0.75v2.83a0.75 0.75 0 0 0 0.76 0.75 0.74 0.74 0 0 0 0.74 -0.75Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M22.59 15.5a0.25 0.25 0 0 1 -0.21 -0.25v-1a3.5 3.5 0 0 0 -7 0v1a0.26 0.26 0 0 1 -0.22 0.25 1.5 1.5 0 0 0 -1.28 1.5v5.5a1.5 1.5 0 0 0 1.5 1.5h7a1.51 1.51 0 0 0 1.5 -1.5V17a1.51 1.51 0 0 0 -1.29 -1.5Zm-3.71 5.74a1 1 0 1 1 1 -1 1 1 0 0 1 -1 1Zm1.5 -6a0.26 0.26 0 0 1 -0.26 0.25h-2.5a0.25 0.25 0 0 1 -0.24 -0.25v-1a1.5 1.5 0 1 1 3 0Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                </g>
-              </svg>
+              {PRIVACY_ICON}
               <div>
                 <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Private by default
@@ -331,54 +137,7 @@ export function Landing() {
               </div>
             </div>
             <div className="flex items-start">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                className="w-5 h-5 mr-3 mt-1 text-zinc-700 shrink-0"
-              >
-                <g>
-                  <path
-                    d="M8 0H3a3 3 0 0 0 -3 3v5a3 3 0 0 0 3 3h5a3 3 0 0 0 3 -3V3a3 3 0 0 0 -3 -3Zm1 8a1 1 0 0 1 -1 1H3a1 1 0 0 1 -1 -1V3a1 1 0 0 1 1 -1h5a1 1 0 0 1 1 1Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M8 13H3a3 3 0 0 0 -3 3v5a3 3 0 0 0 3 3h5a3 3 0 0 0 3 -3v-5a3 3 0 0 0 -3 -3Zm1 8a1 1 0 0 1 -1 1H3a1 1 0 0 1 -1 -1v-5a1 1 0 0 1 1 -1h5a1 1 0 0 1 1 1Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M14.25 3h9a0.75 0.75 0 0 0 0 -1.5h-9a0.75 0.75 0 0 0 0 1.5Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M23.25 4.5h-9a0.75 0.75 0 0 0 0 1.5h9a0.75 0.75 0 0 0 0 -1.5Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M23.25 7.5h-9a0.75 0.75 0 0 0 0 1.5h9a0.75 0.75 0 0 0 0 -1.5Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M23.25 14.5h-9a0.75 0.75 0 0 0 0 1.5h9a0.75 0.75 0 0 0 0 -1.5Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M23.25 17.5h-9a0.75 0.75 0 0 0 0 1.5h9a0.75 0.75 0 0 0 0 -1.5Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                  <path
-                    d="M23.25 20.5h-9a0.75 0.75 0 0 0 0 1.5h9a0.75 0.75 0 0 0 0 -1.5Z"
-                    fill="currentColor"
-                    strokeWidth="1"
-                  ></path>
-                </g>
-              </svg>
+              {MINIMAL_ICON}
               <div>
                 <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Minimal interface
@@ -390,20 +149,7 @@ export function Landing() {
               </div>
             </div>
             <div className="flex items-start">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                className="w-5 h-5 mr-3 mt-1 text-zinc-700 shrink-0"
-              >
-                <path
-                  fill="currentColor"
-                  fillRule="evenodd"
-                  d="M2.23035 12.0487c0 -5.39291 4.32797 -9.72088 9.72095 -9.72088 2.6659 0 5.1002 1.10388 6.8705 2.85713l-0.421 0.29034c-0.3294 0.22718 -0.4917 0.62884 -0.4125 1.02108 0.0792 0.39223 0.3846 0.6995 0.7763 0.78111l2.3391 0.48732c0.0395 0.00822 0.0792 0.01401 0.119 0.0174 0.1711 0.01476 0.3475 -0.01433 0.5116 -0.09197 0.043 -0.02025 0.0846 -0.04366 0.1247 -0.07015l0.0038 -0.00249c0.2309 -0.15374 0.3789 -0.38975 0.4275 -0.64608l0.4852 -2.42615c0.0799 -0.39942 -0.0904 -0.80738 -0.4307 -1.03136 -0.3402 -0.22398 -0.7822 -0.21922 -1.1176 0.01203l-0.7352 0.50707C18.3492 1.77426 15.312 0.32782 11.9513 0.32782 5.45375 0.32782 0.230347 5.55122 0.230347 12.0487c0 0.5523 0.447715 1 1.000003 1 0.55228 0 1 -0.4477 1 -1Zm6.9288 -6.44142c-1.48488 0.66085 -2.69692 1.82386 -3.42046 3.27335h2.66279c0.17045 -1.12282 0.42914 -2.22293 0.75767 -3.27335ZM5.19466 10.3806c-0.12322 0.5198 -0.18843 1.062 -0.18843 1.6194 0 0.5944 0.07414 1.1714 0.21369 1.7224h3.03559c-0.07951 -0.8354 -0.10506 -1.682 -0.07325 -2.537 0.01 -0.2686 0.02557 -0.537 0.04649 -0.8048H5.20099l-0.00633 0Zm0.59655 4.8418c0.75404 1.4499 2.00102 2.6024 3.51883 3.2353 -0.37253 -1.0502 -0.65939 -2.131 -0.85232 -3.2353H5.79121Zm5.31459 3.7147c0.2928 0.0374 0.5912 0.0567 0.8942 0.0567 0.303 0 0.6014 -0.0193 0.8942 -0.0567 0.0069 -0.0225 0.015 -0.045 0.0242 -0.0672 0.4873 -1.1768 0.8568 -2.3965 1.0953 -3.6475H9.98625c0.23855 1.251 0.60805 2.4707 1.09535 3.6475 0.0092 0.0222 0.0173 0.0447 0.0242 0.0672Zm3.5842 -0.4794c1.5178 -0.6329 2.7648 -1.7854 3.5188 -3.2353h-2.6665c-0.193 1.1043 -0.4798 2.1851 -0.8523 3.2353Zm4.0901 -4.7353c0.1395 -0.551 0.2137 -1.128 0.2137 -1.7224 0 -0.5574 -0.0652 -1.0996 -0.1885 -1.6194l-0.0062 0h-3.0278c0.0209 0.2678 0.0364 0.5362 0.0464 0.8048 0.0318 0.855 0.0063 1.7016 -0.0732 2.537h3.0356Zm-0.5188 -4.84177c-0.7235 -1.44949 -1.9356 -2.6125 -3.4205 -3.27335 0.3286 1.05042 0.5873 2.15053 0.7577 3.27335h2.6628Zm-5.1637 -3.78878c-0.3576 -0.05636 -0.7242 -0.08562 -1.0976 -0.08562 -0.3734 0 -0.74 0.02926 -1.0976 0.08562 -0.0073 0.03807 -0.0177 0.07609 -0.0313 0.11378 -0.4189 1.16302 -0.7468 2.40404 -0.95346 3.675h4.16476c-0.2067 -1.27096 -0.5346 -2.51198 -0.9535 -3.675 -0.0136 -0.03769 -0.024 -0.07571 -0.0313 -0.11378Zm1.2206 6.13145c0.0313 0.842 0.0023 1.6761 -0.0835 2.4991H9.76527c-0.08582 -0.823 -0.11482 -1.6571 -0.08348 -2.4991 0.01046 -0.2811 0.02755 -0.5622 0.05095 -0.8427h4.53456c0.0234 0.2805 0.0405 0.5616 0.0509 0.8427ZM1.44294 14.0111c0.53104 -0.1517 1.08452 0.1558 1.23625 0.6868 0.52822 1.8488 1.58584 3.441 3.01071 4.6877 0.41564 0.3637 0.45776 0.9955 0.09408 1.4111 -0.36369 0.4156 -0.99545 0.4578 -1.41108 0.0941 -1.69394 -1.4822 -2.97542 -3.3987 -3.616759 -5.6434 -0.151725 -0.531 0.155768 -1.0845 0.686799 -1.2363Zm6.4311 6.8701c-0.50468 -0.2243 -1.09565 0.003 -1.31995 0.5077 -0.2243 0.5047 0.00299 1.0957 0.50767 1.32 0.95544 0.4246 2.00235 0.7371 3.03644 0.9439 0.5416 0.1083 1.0684 -0.2429 1.1767 -0.7845 0.1083 -0.5415 -0.2429 -1.0684 -0.7844 -1.1767 -0.91519 -0.183 -1.81757 -0.4553 -2.61646 -0.8104Zm8.43716 0.9876c0.1746 0.5239 -0.1085 1.0903 -0.6325 1.2649 -0.677 0.2257 -1.3393 0.3329 -2.0266 0.4311 -0.5467 0.0781 -1.0533 -0.3018 -1.1314 -0.8485 -0.0781 -0.5467 0.3018 -1.0533 0.8486 -1.1314 0.6772 -0.0967 1.1845 -0.1844 1.677 -0.3486 0.5239 -0.1746 1.0902 0.1086 1.2649 0.6325Zm3.672 -1.2422c0.4312 -0.345 0.5011 -0.9743 0.1561 -1.4056 -0.345 -0.4312 -0.9743 -0.5011 -1.4055 -0.1561l-1.462 1.1695c-0.4312 0.345 -0.5012 0.9743 -0.1561 1.4056 0.345 0.4312 0.9743 0.5012 1.4055 0.1562l1.462 -1.1696Zm2.259 -5.1838c0.494 0.247 0.6942 0.8477 0.4472 1.3417l-0.5847 1.1695c-0.247 0.494 -0.8477 0.6942 -1.3417 0.4472 -0.494 -0.247 -0.6942 -0.8476 -0.4472 -1.3416l0.5848 -1.1696c0.247 -0.4939 0.8476 -0.6942 1.3416 -0.4472Zm1.5275 -3.0041c0 -0.5523 -0.4478 -1 -1 -1 -0.5523 0 -1 0.4477 -1 1 0 0.4253 -0.0093 0.5477 -0.0462 0.6584 -0.1746 0.524 0.1085 1.0903 0.6325 1.2649 0.5239 0.1747 1.0902 -0.1085 1.2649 -0.6324 0.1499 -0.4496 0.1493 -0.8886 0.1488 -1.2351l0 -0.0558Z"
-                  clipRule="evenodd"
-                  strokeWidth="1"
-                ></path>
-              </svg>
+              {ACCESS_ANYWHERE_ICON}
               <div>
                 <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
                   Access anywhere
@@ -885,8 +631,8 @@ export function Landing() {
             </Link>
           </div>
           <p>
-            © {new Date().getFullYear()} minimal.so - Save and organize your
-            bookmarks beautifully
+            © {CURRENT_YEAR} minimal.so - Save and organize your bookmarks
+            beautifully
           </p>
         </footer>
       </article>

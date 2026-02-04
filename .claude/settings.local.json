@@ -18,7 +18,8 @@
       "mcp__plugin_context7_context7__query-docs",
       "Bash(bunx tsc:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(bun typecheck:*)"
+      "Bash(bun typecheck:*)",
+      "Bash(xargs ls:*)"
     ],
     "deny": [],
     "ask": []

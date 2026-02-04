@@ -186,3 +186,31 @@ input:not(:-webkit-autofill) {
     transition-duration: 0.01ms !important;
   }
 }
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bg-link-article {
+    background-color: #3b82f6;
+  }
+
+  .bg-link-book {
+    background-color: #f59e0b;
+  }
+
+  .bg-link-other {
+    background-color: #a1a1aa;
+  }
+
+  .bg-link-video {
+    background-color: #ef4444;
+  }
+
+}

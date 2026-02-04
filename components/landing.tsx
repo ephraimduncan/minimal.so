@@ -76,7 +76,7 @@ export function Landing() {
         <DashboardDemo />
 
         <section
-          className="mx-auto my-12 max-w-[450px] sm:my-20"
+          className="mx-auto my-12 mt-12! max-w-[450px] sm:my-20"
           aria-labelledby="benefits-title"
         >
           <h2 id="benefits-title" className="sr-only">

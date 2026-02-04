@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/header";
 import { BookmarkInput } from "@/components/bookmark-input";
@@ -12,44 +12,263 @@ const hoursAgo = (hours: number): string =>
   new Date(Date.now() - 1000 * 60 * 60 * hours).toISOString();
 
 const demoGroups: GroupItem[] = [
-  { id: "personal", name: "Personal", color: "#18181b", bookmarkCount: 6 },
+  { id: "personal", name: "Personal", color: "#FFD700", bookmarkCount: 6 },
   { id: "x-accounts", name: "𝕏", color: "#0ea5e9", bookmarkCount: 21 },
 ];
 
 const personalBookmarks: Omit<BookmarkItem, "favicon">[] = [
-  { id: "p1", title: "Ephraim Duncan", url: "https://ephraimduncan.com", type: "link", color: null, groupId: "personal", createdAt: new Date().toISOString() },
-  { id: "p2", title: "Documenso", url: "https://documenso.com", type: "link", color: null, groupId: "personal", createdAt: hoursAgo(1) },
-  { id: "p3", title: "Blocks", url: "https://blocks.so", type: "link", color: null, groupId: "personal", createdAt: hoursAgo(2) },
-  { id: "p4", title: "Writer", url: "https://writer.so", type: "link", color: null, groupId: "personal", createdAt: hoursAgo(3) },
-  { id: "p5", title: "Refine", url: "https://refine.so", type: "link", color: null, groupId: "personal", createdAt: hoursAgo(4) },
-  { id: "p6", title: "Weekday", url: "https://weekday.so", type: "link", color: null, groupId: "personal", createdAt: hoursAgo(5) },
+  {
+    id: "p1",
+    title: "Ephraim Duncan",
+    url: "https://ephraimduncan.com",
+    type: "link",
+    color: null,
+    groupId: "personal",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "p2",
+    title: "Documenso",
+    url: "https://documenso.com",
+    type: "link",
+    color: null,
+    groupId: "personal",
+    createdAt: hoursAgo(1),
+  },
+  {
+    id: "p3",
+    title: "Blocks",
+    url: "https://blocks.so",
+    type: "link",
+    color: null,
+    groupId: "personal",
+    createdAt: hoursAgo(2),
+  },
+  {
+    id: "p4",
+    title: "Writer",
+    url: "https://writer.so",
+    type: "link",
+    color: null,
+    groupId: "personal",
+    createdAt: hoursAgo(3),
+  },
+  {
+    id: "p5",
+    title: "Refine",
+    url: "https://refine.so",
+    type: "link",
+    color: null,
+    groupId: "personal",
+    createdAt: hoursAgo(4),
+  },
+  {
+    id: "p6",
+    title: "Weekday",
+    url: "https://weekday.so",
+    type: "link",
+    color: null,
+    groupId: "personal",
+    createdAt: hoursAgo(5),
+  },
 ];
 
 const xAccountBookmarks: Omit<BookmarkItem, "favicon">[] = [
-  { id: "x1", title: "Aiden Bai", url: "https://x.com/aidenybai", type: "link", color: null, groupId: "x-accounts", createdAt: new Date().toISOString() },
-  { id: "x2", title: "Ben Awad", url: "https://x.com/benawad", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(1) },
-  { id: "x3", title: "Benji Taylor", url: "https://x.com/benjitaylor", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(2) },
-  { id: "x4", title: "Dillon Mulroy", url: "https://x.com/dillon_mulroy", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(3) },
-  { id: "x5", title: "Ethan Niser", url: "https://x.com/ethanniser", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(4) },
-  { id: "x6", title: "Jakub Krehel", url: "https://x.com/jakubkrehel", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(5) },
-  { id: "x7", title: "Jarred Sumner", url: "https://x.com/jarredsumner", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(6) },
-  { id: "x8", title: "Andrej Karpathy", url: "https://x.com/karpathy", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(7) },
-  { id: "x9", title: "Kit Langton", url: "https://x.com/kitlangton", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(8) },
-  { id: "x10", title: "Lucas Smith", url: "https://x.com/lxunos", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(9) },
-  { id: "x11", title: "Pontus Abrahamsson", url: "https://x.com/pontusab", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(10) },
-  { id: "x12", title: "Raphael Schaad", url: "https://x.com/raphaelschaad", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(11) },
-  { id: "x13", title: "Guillermo Rauch", url: "https://x.com/rauchg", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(12) },
-  { id: "x14", title: "George Hotz", url: "https://x.com/realGeorgeHotz", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(13) },
-  { id: "x15", title: "Rich Harris", url: "https://x.com/Rich_Harris", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(14) },
-  { id: "x16", title: "Ryan Carniato", url: "https://x.com/RyanCarniato", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(15) },
-  { id: "x17", title: "shadcn", url: "https://x.com/shadcn", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(16) },
-  { id: "x18", title: "Shu Ding", url: "https://x.com/shuding", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(17) },
-  { id: "x19", title: "Tanner Linsley", url: "https://x.com/tannerlinsley", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(18) },
-  { id: "x20", title: "dax", url: "https://x.com/thdxr", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(19) },
-  { id: "x21", title: "sunil pai", url: "https://x.com/threepointone", type: "link", color: null, groupId: "x-accounts", createdAt: hoursAgo(20) },
+  {
+    id: "x1",
+    title: "Aiden Bai",
+    url: "https://x.com/aidenybai",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "x2",
+    title: "Ben Awad",
+    url: "https://x.com/benawad",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(1),
+  },
+  {
+    id: "x3",
+    title: "Benji Taylor",
+    url: "https://x.com/benjitaylor",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(2),
+  },
+  {
+    id: "x4",
+    title: "Dillon Mulroy",
+    url: "https://x.com/dillon_mulroy",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(3),
+  },
+  {
+    id: "x5",
+    title: "Ethan Niser",
+    url: "https://x.com/ethanniser",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(4),
+  },
+  {
+    id: "x6",
+    title: "Jakub Krehel",
+    url: "https://x.com/jakubkrehel",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(5),
+  },
+  {
+    id: "x7",
+    title: "Jarred Sumner",
+    url: "https://x.com/jarredsumner",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(6),
+  },
+  {
+    id: "x8",
+    title: "Andrej Karpathy",
+    url: "https://x.com/karpathy",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(7),
+  },
+  {
+    id: "x9",
+    title: "Kit Langton",
+    url: "https://x.com/kitlangton",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(8),
+  },
+  {
+    id: "x10",
+    title: "Lucas Smith",
+    url: "https://x.com/lxunos",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(9),
+  },
+  {
+    id: "x11",
+    title: "Pontus Abrahamsson",
+    url: "https://x.com/pontusab",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(10),
+  },
+  {
+    id: "x12",
+    title: "Raphael Schaad",
+    url: "https://x.com/raphaelschaad",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(11),
+  },
+  {
+    id: "x13",
+    title: "Guillermo Rauch",
+    url: "https://x.com/rauchg",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(12),
+  },
+  {
+    id: "x14",
+    title: "George Hotz",
+    url: "https://x.com/realGeorgeHotz",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(13),
+  },
+  {
+    id: "x15",
+    title: "Rich Harris",
+    url: "https://x.com/Rich_Harris",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(14),
+  },
+  {
+    id: "x16",
+    title: "Ryan Carniato",
+    url: "https://x.com/RyanCarniato",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(15),
+  },
+  {
+    id: "x17",
+    title: "shadcn",
+    url: "https://x.com/shadcn",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(16),
+  },
+  {
+    id: "x18",
+    title: "Shu Ding",
+    url: "https://x.com/shuding",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(17),
+  },
+  {
+    id: "x19",
+    title: "Tanner Linsley",
+    url: "https://x.com/tannerlinsley",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(18),
+  },
+  {
+    id: "x20",
+    title: "dax",
+    url: "https://x.com/thdxr",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(19),
+  },
+  {
+    id: "x21",
+    title: "sunil pai",
+    url: "https://x.com/threepointone",
+    type: "link",
+    color: null,
+    groupId: "x-accounts",
+    createdAt: hoursAgo(20),
+  },
 ];
 
-const initialBookmarks: Omit<BookmarkItem, "favicon">[] = [...personalBookmarks, ...xAccountBookmarks];
+const initialBookmarks: Omit<BookmarkItem, "favicon">[] = [
+  ...personalBookmarks,
+  ...xAccountBookmarks,
+];
 
 const FAVICON_CACHE_KEY = "demo-favicons";
 
@@ -78,16 +297,9 @@ function getFaviconUrl(url: string): string {
 export function DashboardDemo() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() => {
-    return initialBookmarks.map((b) => ({ ...b, favicon: null }));
-  });
-  const [selectedGroupId, setSelectedGroupId] = useState(
-    demoGroups[0]?.id ?? ""
+  const [bookmarks, setBookmarks] = useState<BookmarkItem[]>(() =>
+    initialBookmarks.map((b) => ({ ...b, favicon: null })),
   );
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [hoveredIndex, setHoveredIndex] = useState(-1);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
 
   useEffect(() => {
     const faviconCache = getFaviconCache();
@@ -105,8 +317,17 @@ export function DashboardDemo() {
     });
 
     saveFaviconCache(faviconCache);
-    setBookmarks(bookmarksWithFavicons);
+    startTransition(() => {
+      setBookmarks(bookmarksWithFavicons);
+    });
   }, []);
+  const [selectedGroupId, setSelectedGroupId] = useState(
+    demoGroups[0]?.id ?? "",
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [hoveredIndex, setHoveredIndex] = useState(-1);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
 
   const handleLinkClick = () => {
     router.push("/login");
@@ -172,16 +393,16 @@ export function DashboardDemo() {
   const handleRenameBookmark = (id: string, newTitle: string) => {
     setBookmarks((prev) =>
       prev.map((bookmark) =>
-        bookmark.id === id ? { ...bookmark, title: newTitle } : bookmark
-      )
+        bookmark.id === id ? { ...bookmark, title: newTitle } : bookmark,
+      ),
     );
   };
 
   const handleMoveBookmark = (id: string, groupId: string) => {
     setBookmarks((prev) =>
       prev.map((bookmark) =>
-        bookmark.id === id ? { ...bookmark, groupId } : bookmark
-      )
+        bookmark.id === id ? { ...bookmark, groupId } : bookmark,
+      ),
     );
     setSelectedIndex(-1);
   };
@@ -195,7 +416,7 @@ export function DashboardDemo() {
   };
 
   return (
-    <section className="my-12 -mx-4 sm:-mx-6 lg:-mx-32 xl:-mx-48">
+    <section className="-mx-4 sm:-mx-6 lg:-mx-32 xl:-mx-48">
       <div className="rounded-xl border border-border bg-background">
         <div className="border-b border-border">
           <Header
@@ -214,7 +435,7 @@ export function DashboardDemo() {
             logoSize={20}
           />
         </div>
-        <div className="mx-auto w-full max-w-lg px-6 pt-10 pb-10 max-h-[500px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="mx-auto w-full max-w-lg px-6 pt-10 pb-10 min-h-[500px] max-h-[500px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <BookmarkInput
             ref={inputRef}
             value={searchQuery}

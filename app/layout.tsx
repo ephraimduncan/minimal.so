@@ -15,9 +15,27 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://minimal.so";
+const title = "minimal — simple bookmarking for everyone";
+const description =
+  "A clean, minimal bookmark manager. Save, organize, and share your bookmarks with ease.";
+
 export const metadata: Metadata = {
-  title: "minimal",
-  description: "Bookmark manager",
+  title,
+  description,
+  openGraph: {
+    title,
+    description,
+    url: baseUrl,
+    siteName: "minimal.so",
+    images: [{ url: `${baseUrl}/api/og`, width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: [`${baseUrl}/api/og`],
+  },
 };
 
 export default function RootLayout({

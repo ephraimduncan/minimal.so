@@ -33,7 +33,11 @@
       "Bash(git -C /Users/duncan/dev/bmrks diff HEAD~1 --stat)",
       "Bash(git -C /Users/duncan/dev/bmrks diff HEAD~1 -- server/procedures/public.ts server/queries/public-profile.ts app/u/[username]/page.tsx app/u/[username]/public-profile-content.tsx app/dashboard/page.tsx)",
       "Bash(git -C /Users/duncan/dev/bmrks diff HEAD~1 -- components/dashboard-content.tsx components/dashboard-demo.tsx components/landing.tsx app/api/extension/bookmark/route.ts prisma/schema.prisma)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(npm pack geist@1.3.1)",
+      "Bash(tar:*)",
+      "Bash(command tar xzf /tmp/geist-1.3.1.tgz -C /tmp)",
+      "WebFetch(domain:localhost)"
     ],
     "deny": [],
     "ask": []

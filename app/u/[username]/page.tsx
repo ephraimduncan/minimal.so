@@ -10,17 +10,36 @@ interface PageProps {
   searchParams?: Promise<{ group?: string | string[] }>;
 }
 
+function resolveGroupParam(group?: string | string[]) {
+  return Array.isArray(group) ? group[0] : group;
+}
+
 export async function generateMetadata({
   params,
+  searchParams,
 }: PageProps): Promise<Metadata> {
-  const { username } = await params;
+  const [{ username }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const data = await getPublicProfileData(username);
 
   if (!data) return {};
 
+  const group = resolveGroupParam(resolvedSearchParams?.group);
+
   const title = `${data.user.name} (@${data.user.username}) — bmrks`;
   const description =
     data.user.bio || `Public bookmarks shared by ${data.user.name}`;
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://minimal.so";
+  const ogParams = new URLSearchParams({ username });
+  if (group) ogParams.set("group", group);
+  const ogUrl = `${baseUrl}/api/og?${ogParams.toString()}`;
+
+  const pageUrl = group
+    ? `${baseUrl}/u/${username}?group=${encodeURIComponent(group)}`
+    : `${baseUrl}/u/${username}`;
 
   return {
     title,
@@ -29,11 +48,14 @@ export async function generateMetadata({
       title,
       description,
       type: "profile",
+      url: pageUrl,
+      images: [{ url: ogUrl, width: 1200, height: 630 }],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title,
       description,
+      images: [ogUrl],
     },
   };
 }
@@ -56,9 +78,7 @@ async function PublicProfileData({
   }
 
   const resolvedSearchParams = await searchParamsPromise;
-  const activeGroupParam = Array.isArray(resolvedSearchParams?.group)
-    ? resolvedSearchParams?.group[0]
-    : resolvedSearchParams?.group;
+  const activeGroupParam = resolveGroupParam(resolvedSearchParams?.group);
 
   return (
     <PublicProfileContent

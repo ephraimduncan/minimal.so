@@ -71,14 +71,16 @@ async function DashboardData() {
       session={session}
       initialGroups={groupItems}
       initialBookmarks={initialBookmarks}
-      profile={{
-        username: user?.username ?? null,
-        bio: user?.bio ?? null,
-        github: user?.github ?? null,
-        twitter: user?.twitter ?? null,
-        website: user?.website ?? null,
-        isProfilePublic: user?.isProfilePublic ?? false,
-      }}
+      profile={
+        user ?? {
+          username: null,
+          bio: null,
+          github: null,
+          twitter: null,
+          website: null,
+          isProfilePublic: false,
+        }
+      }
     />
   );
 }

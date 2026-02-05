@@ -17,9 +17,9 @@ model user {
   bio           String?
   github        String?
   twitter       String?
-  website         String?
+  website       String?
   isProfilePublic Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   sessions  session[]

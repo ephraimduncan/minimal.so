@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicProfileData } from "@/server/queries/public-profile";
+import { getSession } from "@/lib/auth-server";
 import { PublicProfileContent } from "./public-profile-content";
 
 interface PageProps {
@@ -44,16 +45,17 @@ async function PublicProfileData({
   paramsPromise: Promise<{ username: string }>;
   searchParamsPromise?: Promise<{ group?: string | string[] }>;
 }) {
-  const { username } = await paramsPromise;
+  const [{ username }, session] = await Promise.all([
+    paramsPromise,
+    getSession(),
+  ]);
   const data = await getPublicProfileData(username);
 
   if (!data) {
     redirect("/dashboard");
   }
 
-  const resolvedSearchParams = searchParamsPromise
-    ? await searchParamsPromise
-    : undefined;
+  const resolvedSearchParams = await searchParamsPromise;
   const activeGroupParam = Array.isArray(resolvedSearchParams?.group)
     ? resolvedSearchParams?.group[0]
     : resolvedSearchParams?.group;
@@ -65,6 +67,7 @@ async function PublicProfileData({
       groups={data.groups}
       bookmarks={data.bookmarks}
       activeGroupId={activeGroupParam}
+      isLoggedIn={!!session}
     />
   );
 }

@@ -13,18 +13,7 @@ export const getPublicProfile = base
     }
 
     const { user, groups, bookmarks } = data;
+    const { id, isProfilePublic, ...userFields } = user;
 
-    return {
-      user: {
-        name: user.name,
-        image: user.image,
-        username: user.username,
-        bio: user.bio,
-        github: user.github,
-        twitter: user.twitter,
-        website: user.website,
-      },
-      groups,
-      bookmarks,
-    };
+    return { user: userFields, groups, bookmarks };
   });

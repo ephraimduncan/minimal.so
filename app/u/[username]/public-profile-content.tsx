@@ -35,6 +35,7 @@ interface PublicProfileContentProps {
   groups: PublicGroup[];
   bookmarks: PublicBookmark[];
   activeGroupId?: string;
+  isLoggedIn: boolean;
 }
 
 export function PublicProfileContent({
@@ -43,15 +44,17 @@ export function PublicProfileContent({
   groups,
   bookmarks,
   activeGroupId,
+  isLoggedIn,
 }: PublicProfileContentProps) {
-  const tabs: Array<{ value: string; label: string; color?: string }> = [
+  const tabs: { value: string; label: string; color?: string }[] = [
     { value: "all", label: "All" },
     ...groups.map((g) => ({ value: g.id, label: g.name, color: g.color })),
   ];
 
-  const groupIds = new Set(groups.map((group) => group.id));
   const activeTab =
-    activeGroupId && groupIds.has(activeGroupId) ? activeGroupId : "all";
+    activeGroupId && groups.some((g) => g.id === activeGroupId)
+      ? activeGroupId
+      : "all";
 
   const filteredBookmarks = (
     activeTab === "all"
@@ -90,11 +93,7 @@ export function PublicProfileContent({
       icon: IconWorld,
       label: "Website",
     },
-  ].filter(Boolean) as Array<{
-    href: string;
-    icon: typeof IconBrandX;
-    label: string;
-  }>;
+  ].flatMap((s) => (s ? [s] : []));
 
   const basePath = `/u/${encodeURIComponent(profileUsername)}`;
 
@@ -108,6 +107,22 @@ export function PublicProfileContent({
           <BmrksLogo />
           minimal
         </Link>
+        {!isLoggedIn && (
+          <div className="flex items-center">
+            <Link
+              href="/login"
+              className="rounded-full px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Login
+            </Link>
+            <Link
+              href="/signup"
+              className="rounded-full bg-foreground px-3 py-1 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+            >
+              Sign Up
+            </Link>
+          </div>
+        )}
       </nav>
       <div className="flex flex-col lg:flex-row lg:gap-10">
         <aside className="mb-8 lg:mb-0 lg:sticky lg:top-20 lg:self-start lg:w-64 shrink-0">

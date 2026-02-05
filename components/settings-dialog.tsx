@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
+import { orpc } from "@/lib/orpc";
+import type { ProfileData } from "@/components/dashboard-content";
 import {
   Dialog,
   DialogClose,
@@ -13,10 +16,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Form } from "@/components/ui/form";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { Switch } from "@/components/ui/switch";
+import {
+  IconCheck,
+  IconX,
+  IconLoader2,
+  IconCopy,
+  IconExternalLink,
+} from "@tabler/icons-react";
+import { useDebounce } from "@/hooks/use-debounce";
+import { usernameSchema, updateProfileSchema } from "@/lib/schema";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -25,12 +40,14 @@ interface SettingsDialogProps {
     name: string;
     email: string;
   };
+  profile?: ProfileData;
 }
 
 export function SettingsDialog({
   open,
   onOpenChange,
   user,
+  profile,
 }: SettingsDialogProps) {
   const router = useRouter();
   const [name, setName] = useState(user.name);
@@ -38,7 +55,6 @@ export function SettingsDialog({
 
   const handleSaveName = async () => {
     if (name.trim() === user.name) {
-      onOpenChange(false);
       return;
     }
 
@@ -52,68 +68,336 @@ export function SettingsDialog({
     }
 
     toast.success("Name updated");
-    onOpenChange(false);
     router.refresh();
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <Form
-          className="contents"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSaveName();
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>Settings</DialogTitle>
-            <DialogDescription>
-              Manage your account settings.
-            </DialogDescription>
-          </DialogHeader>
-          <Field>
-            <FieldLabel>Name</FieldLabel>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-              type="text"
-            />
-          </Field>
-          <Field>
-            <FieldLabel>Email</FieldLabel>
-            <Input
-              value={user.email}
-              disabled
-              type="email"
-              className="text-muted-foreground"
-            />
-          </Field>
-          <Field>
-            <FieldLabel>Chrome Extension</FieldLabel>
-            <a
-              href="/chrome"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Settings</DialogTitle>
+          <DialogDescription>Manage your account settings.</DialogDescription>
+        </DialogHeader>
+        <Tabs defaultValue="general">
+          <TabsList>
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="profile">Public Profile</TabsTrigger>
+          </TabsList>
+          <TabsContent value="general">
+            <Form
+              className="space-y-4 pt-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveName();
+              }}
             >
-              <ChromeIcon />
-              <span>Get the Chrome Extension</span>
-            </a>
-          </Field>
-          <DialogFooter>
-            <DialogClose render={<Button variant="ghost" />}>
-              Cancel
-            </DialogClose>
-            <Button type="submit" disabled={isSaving || !name.trim()}>
-              {isSaving ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
-        </Form>
+              <Field>
+                <FieldLabel>Name</FieldLabel>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  type="text"
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Email</FieldLabel>
+                <Input
+                  value={user.email}
+                  disabled
+                  type="email"
+                  className="text-muted-foreground"
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Chrome Extension</FieldLabel>
+                <a
+                  href="/chrome"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ChromeIcon />
+                  <span>Get the Chrome Extension</span>
+                </a>
+              </Field>
+              <DialogFooter>
+                <DialogClose render={<Button variant="ghost" />}>
+                  Cancel
+                </DialogClose>
+                <Button type="submit" disabled={isSaving || !name.trim()}>
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+              </DialogFooter>
+            </Form>
+          </TabsContent>
+          <TabsContent value="profile">
+            {profile && (
+              <ProfileTab
+                profile={profile}
+                onOpenChange={onOpenChange}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
+}
+
+function ProfileTab({
+  profile,
+  onOpenChange,
+}: {
+  profile: ProfileData;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const router = useRouter();
+
+  const [username, setUsername] = useState(profile.username ?? "");
+  const [bio, setBio] = useState(profile.bio ?? "");
+  const [github, setGithub] = useState(profile.github ?? "");
+  const [twitter, setTwitter] = useState(profile.twitter ?? "");
+  const [website, setWebsite] = useState(profile.website?.replace(/^https?:\/\//, "") ?? "");
+  const [isProfilePublic, setIsProfilePublic] = useState(profile.isProfilePublic);
+  const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set());
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const markDirty = (field: string) => {
+    setDirtyFields((prev) => new Set(prev).add(field));
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const debouncedUsername = useDebounce(username, 400);
+  const usernameParseResult = usernameSchema.safeParse(debouncedUsername);
+  const isUsernameValid = debouncedUsername.length > 0 && usernameParseResult.success;
+
+  const availabilityQuery = useQuery({
+    ...orpc.profile.checkUsername.queryOptions({ input: { username: debouncedUsername } }),
+    enabled: isUsernameValid,
+    staleTime: 10_000,
+  });
+
+  const usernameStatus = getStatus(
+    username,
+    debouncedUsername,
+    usernameParseResult,
+    availabilityQuery,
+  );
+
+  const updateMutation = useMutation({
+    ...orpc.profile.update.mutationOptions(),
+    onSuccess: () => {
+      toast.success("Profile updated");
+      router.refresh();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to update profile");
+    },
+  });
+
+  const handleSubmit = () => {
+    if (username && usernameStatus !== "available") return;
+
+    const result = updateProfileSchema.safeParse({
+      username: username || null,
+      bio: bio || null,
+      github: github || null,
+      twitter: twitter || null,
+      website: website || null,
+      isProfilePublic,
+    });
+
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const field = issue.path[0]?.toString();
+        if (field && !errors[field]) {
+          errors[field] = issue.message;
+        }
+      }
+      setFieldErrors(errors);
+      return;
+    }
+
+    setFieldErrors({});
+    updateMutation.mutate({
+      username: username || null,
+      bio: bio || null,
+      github: github || null,
+      twitter: twitter || null,
+      website: website || null,
+      isProfilePublic,
+    });
+  };
+
+  const profileUrl = username ? `${typeof window !== "undefined" ? window.location.origin : ""}/u/${username}` : "";
+
+  const handleCopyLink = useCallback(() => {
+    if (profileUrl) {
+      navigator.clipboard.writeText(profileUrl);
+      toast.success("Link copied");
+    }
+  }, [profileUrl]);
+
+  return (
+    <Form
+      className="space-y-4 pt-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit();
+      }}
+    >
+      <Field>
+        <div className="flex items-center justify-between">
+          <FieldLabel>Public Profile</FieldLabel>
+          <Switch checked={isProfilePublic} onCheckedChange={setIsProfilePublic} size="sm" />
+        </div>
+      </Field>
+      <Field>
+        <FieldLabel>Username</FieldLabel>
+        <div className="relative">
+          <Input
+            value={username}
+            onChange={(e) => { markDirty("username"); setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")); }}
+            placeholder="your-username"
+            type="text"
+            className="pr-8"
+          />
+          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+            <UsernameStatusIcon status={usernameStatus} />
+          </div>
+        </div>
+        {dirtyFields.has("username") && username && usernameStatus === "invalid" && (
+          <p className="text-xs text-destructive mt-1">
+            {usernameParseResult.error?.issues[0]?.message}
+          </p>
+        )}
+        {dirtyFields.has("username") && username && usernameStatus === "taken" && (
+          <p className="text-xs text-destructive mt-1">Username is taken</p>
+        )}
+      </Field>
+      <Field>
+        <FieldLabel>Bio</FieldLabel>
+        <Textarea
+          value={bio}
+          onChange={(e) => { markDirty("bio"); setBio(e.target.value); }}
+          placeholder="A short bio"
+          rows={2}
+          maxLength={160}
+          className="resize-none"
+        />
+        {fieldErrors.bio && (
+          <p className="text-xs text-destructive mt-1">{fieldErrors.bio}</p>
+        )}
+      </Field>
+      <Field>
+        <FieldLabel>GitHub</FieldLabel>
+        <Input
+          value={github}
+          onChange={(e) => { markDirty("github"); setGithub(e.target.value); }}
+          placeholder="username"
+          type="text"
+        />
+        {fieldErrors.github && (
+          <p className="text-xs text-destructive mt-1">{fieldErrors.github}</p>
+        )}
+      </Field>
+      <Field>
+        <FieldLabel>X (Twitter)</FieldLabel>
+        <Input
+          value={twitter}
+          onChange={(e) => { markDirty("twitter"); setTwitter(e.target.value); }}
+          placeholder="username"
+          type="text"
+        />
+        {fieldErrors.twitter && (
+          <p className="text-xs text-destructive mt-1">{fieldErrors.twitter}</p>
+        )}
+      </Field>
+      <Field>
+        <FieldLabel>Website</FieldLabel>
+        <div className="flex">
+          <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-2 text-sm text-muted-foreground">
+            https://
+          </span>
+          <Input
+            value={website}
+            onChange={(e) => { markDirty("website"); setWebsite(e.target.value.replace(/^https?:\/\//, "")); }}
+            placeholder="example.com"
+            type="text"
+            className="rounded-l-none px-2"
+          />
+        </div>
+        {fieldErrors.website && (
+          <p className="text-xs text-destructive mt-1">{fieldErrors.website}</p>
+        )}
+      </Field>
+      {username && usernameStatus === "available" && (
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={handleCopyLink}>
+            <IconCopy className="h-3.5 w-3.5" />
+            Copy Profile Link
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => window.open(`/u/${username}`, "_blank")}
+          >
+            <IconExternalLink className="h-3.5 w-3.5" />
+            Preview Profile
+          </Button>
+        </div>
+      )}
+      <DialogFooter>
+        <DialogClose render={<Button variant="ghost" />}>Cancel</DialogClose>
+        <Button
+          type="submit"
+          disabled={
+            updateMutation.isPending ||
+            (!!username && usernameStatus !== "available")
+          }
+        >
+          {updateMutation.isPending ? "Saving..." : "Save"}
+        </Button>
+      </DialogFooter>
+    </Form>
+  );
+}
+
+type UsernameStatus = "idle" | "checking" | "available" | "taken" | "invalid";
+
+function getStatus(
+  username: string,
+  debouncedUsername: string,
+  parseResult: ReturnType<typeof usernameSchema.safeParse>,
+  availabilityQuery: { isPending: boolean; data?: { available: boolean } },
+): UsernameStatus {
+  if (!username) return "idle";
+  if (!parseResult.success) return "invalid";
+  if (username !== debouncedUsername) return "checking";
+  if (availabilityQuery.isPending) return "checking";
+  if (availabilityQuery.data?.available) return "available";
+  return "taken";
+}
+
+function UsernameStatusIcon({ status }: { status: UsernameStatus }) {
+  switch (status) {
+    case "checking":
+      return <IconLoader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+    case "available":
+      return <IconCheck className="h-4 w-4 text-green-600" />;
+    case "taken":
+      return <IconX className="h-4 w-4 text-destructive" />;
+    default:
+      return null;
+  }
 }
 
 function ChromeIcon() {

@@ -334,10 +334,14 @@ export function DashboardDemo() {
   };
 
   const groupsWithCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const bookmark of bookmarks) {
+      counts.set(bookmark.groupId, (counts.get(bookmark.groupId) ?? 0) + 1);
+    }
+
     return demoGroups.map((group) => ({
       ...group,
-      bookmarkCount: bookmarks.filter((item) => item.groupId === group.id)
-        .length,
+      bookmarkCount: counts.get(group.id) ?? 0,
     }));
   }, [bookmarks]);
 

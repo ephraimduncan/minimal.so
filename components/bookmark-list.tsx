@@ -23,6 +23,8 @@ import {
   IconCheck,
   IconBookmark,
   IconSquaresSelected,
+  IconWorld,
+  IconWorldOff,
 } from "@tabler/icons-react";
 import { ContextMenuSeparator } from "@/components/ui/context-menu";
 import {
@@ -69,6 +71,9 @@ interface BookmarkListProps {
   onBulkDelete?: () => void;
   readOnly?: boolean;
   onLinkClick?: (bookmark: BookmarkItem) => void;
+  hasUsername?: boolean;
+  publicGroupIds?: Set<string>;
+  onToggleVisibility?: (id: string, currentIsPublic: boolean | null | undefined) => void;
 }
 
 export function BookmarkList({
@@ -94,6 +99,9 @@ export function BookmarkList({
   onBulkDelete,
   readOnly = false,
   onLinkClick,
+  hasUsername = false,
+  publicGroupIds,
+  onToggleVisibility,
 }: BookmarkListProps) {
   const [editValue, setEditValue] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -267,7 +275,7 @@ export function BookmarkList({
                   </span>
                 ) : null}
               </div>
-              <div className="relative w-[90px] h-5 flex items-center justify-end">
+              <div className="relative w-[100px] h-5 flex items-center justify-end gap-1.5">
                 {(selectedIndex === index || hoveredIndex === index) &&
                 !renamingId ? (
                   <KbdGroup>
@@ -275,9 +283,14 @@ export function BookmarkList({
                     <Kbd>Enter</Kbd>
                   </KbdGroup>
                 ) : (
-                  <span className="text-[13px] text-muted-foreground whitespace-nowrap">
-                    {formatDate(bookmark.createdAt)}
-                  </span>
+                  <>
+                    {hasUsername && !renamingId && bookmark.isPublic === true && (
+                      <IconWorld className="h-2.5 w-2.5 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className="text-[13px] text-muted-foreground whitespace-nowrap">
+                      {formatDate(bookmark.createdAt)}
+                    </span>
+                  </>
                 )}
               </div>
             </ContextMenuTrigger>
@@ -325,6 +338,23 @@ export function BookmarkList({
                   <span>Refetch</span>
                 </ContextMenuItem>
               ) : null}
+              {hasUsername && onToggleVisibility && (
+                <ContextMenuItem
+                  onClick={() => onToggleVisibility(bookmark.id, bookmark.isPublic)}
+                >
+                  {isBookmarkPublic(bookmark, currentGroupId, publicGroupIds) ? (
+                    <>
+                      <IconWorldOff className="mr-2 h-4 w-4" />
+                      <span>Make Private</span>
+                    </>
+                  ) : (
+                    <>
+                      <IconWorld className="mr-2 h-4 w-4" />
+                      <span>Make Public</span>
+                    </>
+                  )}
+                </ContextMenuItem>
+              )}
               {groups.length > 1 ? (
                 <ContextMenuSub>
                   <ContextMenuSubTrigger>
@@ -376,6 +406,15 @@ export function BookmarkList({
       </div>
     </div>
   );
+}
+
+function isBookmarkPublic(
+  bookmark: BookmarkItem,
+  currentGroupId: string,
+  publicGroupIds?: Set<string>,
+): boolean {
+  const groupIsPublic = publicGroupIds?.has(currentGroupId) ?? false;
+  return bookmark.isPublic === true || groupIsPublic;
 }
 
 const BookmarkIcon = memo(function BookmarkIcon({

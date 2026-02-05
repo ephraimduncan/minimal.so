@@ -28,6 +28,9 @@ import {
   IconTrash,
   IconSettings,
   IconLogout,
+  IconWorld,
+  IconWorldOff,
+  IconUser,
 } from "@tabler/icons-react";
 import { signOut } from "@/lib/auth-client";
 import {
@@ -43,6 +46,7 @@ import { Form } from "@/components/ui/form";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { type GroupItem } from "@/lib/schema";
+import type { ProfileData } from "@/components/dashboard-content";
 
 const SettingsDialog = dynamic(
   () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
@@ -55,8 +59,11 @@ interface HeaderProps {
   onSelectGroup: (id: string) => void;
   onCreateGroup: (name: string) => void;
   onDeleteGroup?: (id: string) => void;
+  onToggleGroupVisibility?: (id: string, isPublic: boolean) => void;
   userName: string;
   userEmail: string;
+  username?: string | null;
+  profile?: ProfileData;
   readOnly?: boolean;
   showUserMenu?: boolean;
   logoSize?: number;
@@ -68,8 +75,11 @@ export function Header({
   onSelectGroup,
   onCreateGroup,
   onDeleteGroup,
+  onToggleGroupVisibility,
   userName,
   userEmail,
+  username,
+  profile,
   readOnly = false,
   showUserMenu = true,
   logoSize = 24,
@@ -79,6 +89,8 @@ export function Header({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [publicDialogOpen, setPublicDialogOpen] = useState(false);
+  const [pendingPublicGroupId, setPendingPublicGroupId] = useState<string | null>(null);
   const [holdingGroupId, setHoldingGroupId] = useState<string | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -174,6 +186,9 @@ export function Header({
                     style={{ backgroundColor: group.color }}
                   />
                   <span>{group.name}</span>
+                  {group.isPublic && (
+                    <IconWorld className="h-3 w-3 text-muted-foreground" />
+                  )}
                 </div>
                 {group.id === selectedGroup.id ? (
                   <IconCheck className="h-4 w-4" />
@@ -194,6 +209,31 @@ export function Header({
               <IconPlus className="h-4 w-4 mr-0" />
               Create Group
             </DropdownMenuItem>
+            {!readOnly && onToggleGroupVisibility && (
+              <DropdownMenuItem
+                onClick={() => {
+                  if (selectedGroup.isPublic) {
+                    onToggleGroupVisibility(selectedGroup.id, false);
+                  } else {
+                    setPendingPublicGroupId(selectedGroup.id);
+                    setPublicDialogOpen(true);
+                  }
+                }}
+                className="rounded-lg"
+              >
+                {selectedGroup.isPublic ? (
+                  <>
+                    <IconWorldOff className="h-4 w-4" />
+                    Make Private
+                  </>
+                ) : (
+                  <>
+                    <IconWorld className="h-4 w-4" />
+                    Make Public
+                  </>
+                )}
+              </DropdownMenuItem>
+            )}
             {!readOnly && groups.length > 1 && (
               <DropdownMenuItem
                 onSelect={(e) => e.preventDefault()}
@@ -282,6 +322,17 @@ export function Header({
                 <IconSettings className="h-4 w-4" />
                 Settings
               </DropdownMenuItem>
+              {username && (
+                <DropdownMenuItem
+                  className="rounded-lg"
+                  render={
+                    <a href={`/u/${username}`} target="_blank" rel="noopener noreferrer" />
+                  }
+                >
+                  <IconUser className="h-4 w-4" />
+                  Public Profile
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 className="rounded-lg"
                 render={
@@ -305,7 +356,7 @@ export function Header({
           <AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle className="font-semibold text-xl<">
+                <AlertDialogTitle className="font-semibold text-xl">
                   Sign out?
                 </AlertDialogTitle>
                 <AlertDialogDescription>
@@ -320,10 +371,36 @@ export function Header({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          <AlertDialog open={publicDialogOpen} onOpenChange={setPublicDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="font-semibold text-xl">
+                  Make group public?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  All bookmarks in this group will become publicly visible on your profile.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel variant="ghost">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    if (pendingPublicGroupId) {
+                      onToggleGroupVisibility?.(pendingPublicGroupId, true);
+                    }
+                    setPendingPublicGroupId(null);
+                  }}
+                >
+                  Make Public
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <SettingsDialog
             open={settingsOpen}
             onOpenChange={setSettingsOpen}
             user={{ name: userName, email: userEmail }}
+            profile={profile}
           />
         </>
       ) : null}

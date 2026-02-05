@@ -89,6 +89,8 @@ export function Header({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [publicDialogOpen, setPublicDialogOpen] = useState(false);
+  const [pendingPublicGroupId, setPendingPublicGroupId] = useState<string | null>(null);
   const [holdingGroupId, setHoldingGroupId] = useState<string | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -184,6 +186,9 @@ export function Header({
                     style={{ backgroundColor: group.color }}
                   />
                   <span>{group.name}</span>
+                  {group.isPublic && (
+                    <IconWorld className="h-3 w-3 text-muted-foreground" />
+                  )}
                 </div>
                 {group.id === selectedGroup.id ? (
                   <IconCheck className="h-4 w-4" />
@@ -206,12 +211,14 @@ export function Header({
             </DropdownMenuItem>
             {!readOnly && onToggleGroupVisibility && (
               <DropdownMenuItem
-                onClick={() =>
-                  onToggleGroupVisibility(
-                    selectedGroup.id,
-                    !selectedGroup.isPublic,
-                  )
-                }
+                onClick={() => {
+                  if (selectedGroup.isPublic) {
+                    onToggleGroupVisibility(selectedGroup.id, false);
+                  } else {
+                    setPendingPublicGroupId(selectedGroup.id);
+                    setPublicDialogOpen(true);
+                  }
+                }}
                 className="rounded-lg"
               >
                 {selectedGroup.isPublic ? (
@@ -360,6 +367,31 @@ export function Header({
                 <AlertDialogCancel variant="ghost">Cancel</AlertDialogCancel>
                 <AlertDialogAction variant="destructive" onClick={handleSignOut}>
                   Sign out
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <AlertDialog open={publicDialogOpen} onOpenChange={setPublicDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="font-semibold text-xl">
+                  Make group public?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  All bookmarks in this group will become publicly visible on your profile.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel variant="ghost">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    if (pendingPublicGroupId) {
+                      onToggleGroupVisibility?.(pendingPublicGroupId, true);
+                    }
+                    setPendingPublicGroupId(null);
+                  }}
+                >
+                  Make Public
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

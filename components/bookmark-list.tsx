@@ -284,7 +284,7 @@ export function BookmarkList({
                   </KbdGroup>
                 ) : (
                   <>
-                    {hasUsername && !renamingId && isBookmarkPublic(bookmark, currentGroupId, publicGroupIds) && (
+                    {hasUsername && !renamingId && bookmark.isPublic === true && (
                       <IconWorld className="h-2.5 w-2.5 shrink-0 text-muted-foreground" />
                     )}
                     <span className="text-[13px] text-muted-foreground whitespace-nowrap">
@@ -414,7 +414,7 @@ function isBookmarkPublic(
   publicGroupIds?: Set<string>,
 ): boolean {
   const groupIsPublic = publicGroupIds?.has(currentGroupId) ?? false;
-  return bookmark.isPublic === true || (groupIsPublic && bookmark.isPublic !== false);
+  return bookmark.isPublic === true || groupIsPublic;
 }
 
 const BookmarkIcon = memo(function BookmarkIcon({

@@ -43,7 +43,7 @@ export const getPublicProfile = base
       where: {
         userId: user.id,
         OR: [
-          { groupId: { in: publicGroupIds }, isPublic: { not: false } },
+          { groupId: { in: publicGroupIds } },
           { isPublic: true },
         ],
       },

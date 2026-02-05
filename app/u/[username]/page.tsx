@@ -46,7 +46,7 @@ async function PublicProfileData({
       userId: user.id,
       OR: [
         ...(publicGroupIds.length > 0
-          ? [{ groupId: { in: publicGroupIds }, isPublic: { not: false } }]
+          ? [{ groupId: { in: publicGroupIds } }]
           : []),
         { isPublic: true },
       ],

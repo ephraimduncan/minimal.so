@@ -196,21 +196,20 @@ input:not(:-webkit-autofill) {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+}
 
-  .bg-link-article {
-    background-color: #3b82f6;
-  }
+@utility bg-link-article {
+  background-color: #3b82f6;
+}
 
-  .bg-link-book {
-    background-color: #f59e0b;
-  }
+@utility bg-link-video {
+  background-color: #ef4444;
+}
 
-  .bg-link-other {
-    background-color: #a1a1aa;
-  }
+@utility bg-link-tool {
+  background-color: #22c55e;
+}
 
-  .bg-link-video {
-    background-color: #ef4444;
-  }
-
+@utility bg-link-podcast {
+  background-color: #a855f7;
 }

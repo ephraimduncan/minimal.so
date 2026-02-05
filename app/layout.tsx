@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { QueryProvider } from "@/lib/query-provider";
 import { ToasterProvider } from "@/components/toaster-provider";
+import { Agentation } from "agentation";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -46,14 +47,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {process.env.NODE_ENV === "development" && (
-          <Script
-            src="//unpkg.com/react-grab/dist/index.global.js"
-            crossOrigin="anonymous"
-            strategy="beforeInteractive"
-          />
-        )}
-        <Script
+<Script
           defer
           src="https://analytics.duncan.land/script.js"
           data-website-id="9c4de642-a2b5-4747-ae7b-38096c43b993"
@@ -65,6 +59,7 @@ export default function RootLayout({
       >
         <QueryProvider>{children}</QueryProvider>
         <ToasterProvider />
+        {process.env.NODE_ENV === "development" && <Agentation />}
       </body>
     </html>
   );

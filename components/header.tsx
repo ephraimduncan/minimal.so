@@ -31,6 +31,7 @@ import {
   IconWorld,
   IconWorldOff,
   IconUser,
+  IconLoader2,
 } from "@tabler/icons-react";
 import { signOut } from "@/lib/auth-client";
 import {
@@ -60,6 +61,7 @@ interface HeaderProps {
   onCreateGroup: (name: string) => void;
   onDeleteGroup?: (id: string) => void;
   onToggleGroupVisibility?: (id: string, isPublic: boolean) => void;
+  isTogglingGroupVisibility?: boolean;
   userName: string;
   userEmail: string;
   username?: string | null;
@@ -76,6 +78,7 @@ export function Header({
   onCreateGroup,
   onDeleteGroup,
   onToggleGroupVisibility,
+  isTogglingGroupVisibility,
   userName,
   userEmail,
   username,
@@ -95,6 +98,15 @@ export function Header({
   const [holdProgress, setHoldProgress] = useState(0);
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartRef = useRef<number>(0);
+  const initiatedToggleRef = useRef(false);
+
+  useEffect(() => {
+    if (!isTogglingGroupVisibility && initiatedToggleRef.current) {
+      initiatedToggleRef.current = false;
+      setPublicDialogOpen(false);
+      setPendingPublicGroupId(null);
+    }
+  }, [isTogglingGroupVisibility]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -371,7 +383,12 @@ export function Header({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <AlertDialog open={publicDialogOpen} onOpenChange={setPublicDialogOpen}>
+          <AlertDialog
+            open={publicDialogOpen}
+            onOpenChange={(open) => {
+              if (!isTogglingGroupVisibility) setPublicDialogOpen(open);
+            }}
+          >
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle className="font-semibold text-xl">
@@ -382,17 +399,30 @@ export function Header({
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel variant="ghost">Cancel</AlertDialogCancel>
-                <AlertDialogAction
+                <Button
+                  variant="ghost"
+                  disabled={isTogglingGroupVisibility}
                   onClick={() => {
-                    if (pendingPublicGroupId) {
-                      onToggleGroupVisibility?.(pendingPublicGroupId, true);
-                    }
+                    setPublicDialogOpen(false);
                     setPendingPublicGroupId(null);
                   }}
                 >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={isTogglingGroupVisibility}
+                  onClick={() => {
+                    if (pendingPublicGroupId) {
+                      onToggleGroupVisibility?.(pendingPublicGroupId, true);
+                      initiatedToggleRef.current = true;
+                    }
+                  }}
+                >
+                  {isTogglingGroupVisibility && (
+                    <IconLoader2 className="h-4 w-4 animate-spin" />
+                  )}
                   Make Public
-                </AlertDialogAction>
+                </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

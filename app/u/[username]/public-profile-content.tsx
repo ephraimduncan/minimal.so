@@ -24,7 +24,7 @@ interface PublicBookmark {
   type: string;
   color: string | null;
   groupName: string | null;
-  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 interface PublicProfileContentProps {
@@ -199,7 +199,7 @@ export function PublicProfileContent({
             <>
               <div className="mb-2 flex items-center justify-between border-b border-border px-1 pb-2 text-sm text-muted-foreground">
                 <span>Title</span>
-                <span>Created At</span>
+                <span>Updated</span>
               </div>
               <div className="flex flex-col gap-0.5 -mx-3">
                 {filteredBookmarks.map((bookmark) => (
@@ -234,7 +234,7 @@ export function PublicProfileContent({
                             "transition-transform duration-200 group-hover:-translate-x-5",
                         )}
                       >
-                        {formatDate(bookmark.createdAt)}
+                        {formatDate(bookmark.updatedAt)}
                       </span>
                       {bookmark.url && (
                         <svg

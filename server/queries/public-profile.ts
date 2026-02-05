@@ -26,7 +26,7 @@ const bookmarkSelect = {
   type: true,
   color: true,
   groupId: true,
-  createdAt: true,
+  updatedAt: true,
 } as const;
 
 export const getPublicProfileData = cache(async (username: string) => {
@@ -51,7 +51,7 @@ export const getPublicProfileData = cache(async (username: string) => {
           { isPublic: true },
         ],
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { updatedAt: "desc" },
       select: bookmarkSelect,
     }),
   ]);

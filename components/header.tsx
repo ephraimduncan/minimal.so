@@ -188,13 +188,13 @@ export function Header({
                 key={group.id}
                 onClick={() => onSelectGroup(group.id)}
                 className={cn(
-                  "flex items-center justify-between rounded-lg",
+                  "flex items-start justify-between rounded-lg",
                   group.id === selectedGroup.id && "bg-accent",
                 )}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2">
                   <span
-                    className="h-2.5 w-2.5 rounded-full"
+                    className="mt-[5px] h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: group.color }}
                   />
                   <span>{group.name}</span>

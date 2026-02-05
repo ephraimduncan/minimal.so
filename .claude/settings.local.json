@@ -27,7 +27,13 @@
       "Bash(npx next build)",
       "Bash(lsof:*)",
       "Bash(git -C /Users/duncan/dev/bmrks diff --stat)",
-      "Bash(git -C /Users/duncan/dev/bmrks status -s)"
+      "Bash(git -C /Users/duncan/dev/bmrks status -s)",
+      "Bash(git -C /Users/duncan/dev/bmrks add app/api/extension/bookmark/route.ts app/u/[username]/page.tsx app/u/[username]/public-profile-content.tsx components/dashboard-demo.tsx components/landing.tsx)",
+      "Bash(git -C /Users/duncan/dev/bmrks status)",
+      "Bash(git -C /Users/duncan/dev/bmrks diff HEAD~1 --stat)",
+      "Bash(git -C /Users/duncan/dev/bmrks diff HEAD~1 -- server/procedures/public.ts server/queries/public-profile.ts app/u/[username]/page.tsx app/u/[username]/public-profile-content.tsx app/dashboard/page.tsx)",
+      "Bash(git -C /Users/duncan/dev/bmrks diff HEAD~1 -- components/dashboard-content.tsx components/dashboard-demo.tsx components/landing.tsx app/api/extension/bookmark/route.ts prisma/schema.prisma)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

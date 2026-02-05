@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DashboardDemo } from "@/components/dashboard-demo";
+import dynamic from "next/dynamic";
 import {
   LOGO_SVG,
   CHROME_ICON,
@@ -14,6 +14,16 @@ import {
 } from "@/components/landing-icons";
 
 const CURRENT_YEAR = new Date().getFullYear();
+
+const DashboardDemo = dynamic(
+  () => import("@/components/dashboard-demo").then((m) => m.DashboardDemo),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[540px] rounded-xl border border-border bg-background" />
+    ),
+  },
+);
 
 export function Landing() {
   return (

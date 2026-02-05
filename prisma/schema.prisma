@@ -83,6 +83,7 @@ model group {
   bookmarks bookmark[]
 
   @@index([userId])
+  @@index([userId, isPublic])
 }
 
 model bookmark {
@@ -102,5 +103,6 @@ model bookmark {
   user  user  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, isPublic])
   @@index([groupId])
 }

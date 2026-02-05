@@ -12,7 +12,7 @@ async function DashboardData() {
     redirect("/login");
   }
 
-  const [groups, user] = await Promise.all([
+  const [groups, user, firstGroupWithBookmarks] = await Promise.all([
     db.group.findMany({
       where: { userId: session.user.id },
       orderBy: { createdAt: "asc" },
@@ -33,6 +33,15 @@ async function DashboardData() {
         isProfilePublic: true,
       },
     }),
+    db.group.findFirst({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "asc" },
+      select: {
+        bookmarks: {
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    }),
   ]);
 
   const groupItems: GroupItem[] = groups.map((g) => ({
@@ -43,30 +52,19 @@ async function DashboardData() {
     bookmarkCount: g._count.bookmarks,
   }));
 
-  const defaultGroupId = groups[0]?.id;
-  let initialBookmarks: BookmarkItem[] = [];
-
-  if (defaultGroupId) {
-    const bookmarks = await db.bookmark.findMany({
-      where: {
-        userId: session.user.id,
-        groupId: defaultGroupId,
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    initialBookmarks = bookmarks.map((b) => ({
-      id: b.id,
-      title: b.title,
-      url: b.url,
-      favicon: b.favicon,
-      type: b.type,
-      color: b.color,
-      isPublic: b.isPublic,
-      groupId: b.groupId,
-      createdAt: b.createdAt,
-    }));
-  }
+  const initialBookmarks: BookmarkItem[] = (
+    firstGroupWithBookmarks?.bookmarks ?? []
+  ).map((b) => ({
+    id: b.id,
+    title: b.title,
+    url: b.url,
+    favicon: b.favicon,
+    type: b.type,
+    color: b.color,
+    isPublic: b.isPublic,
+    groupId: b.groupId,
+    createdAt: b.createdAt,
+  }));
 
   return (
     <DashboardContent

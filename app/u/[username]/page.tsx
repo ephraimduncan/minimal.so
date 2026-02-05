@@ -1,82 +1,81 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
+import type { Metadata } from "next";
+import { getPublicProfileData } from "@/server/queries/public-profile";
 import { PublicProfileContent } from "./public-profile-content";
 
 interface PageProps {
   params: Promise<{ username: string }>;
+  searchParams?: Promise<{ group?: string | string[] }>;
+}
+
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { username } = await params;
+  const data = await getPublicProfileData(username);
+
+  if (!data) return {};
+
+  const title = `${data.user.name} (@${data.user.username}) — bmrks`;
+  const description =
+    data.user.bio || `Public bookmarks shared by ${data.user.name}`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "profile",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
 }
 
 async function PublicProfileData({
   paramsPromise,
+  searchParamsPromise,
 }: {
   paramsPromise: Promise<{ username: string }>;
+  searchParamsPromise?: Promise<{ group?: string | string[] }>;
 }) {
   const { username } = await paramsPromise;
+  const data = await getPublicProfileData(username);
 
-  const user = await db.user.findUnique({
-    where: { username: username.toLowerCase() },
-    select: {
-      id: true,
-      name: true,
-      image: true,
-      username: true,
-      bio: true,
-      github: true,
-      twitter: true,
-      website: true,
-      isProfilePublic: true,
-    },
-  });
-
-  if (!user || !user.isProfilePublic) {
+  if (!data) {
     redirect("/dashboard");
   }
 
-  const groups = await db.group.findMany({
-    where: { userId: user.id, isPublic: true },
-    orderBy: { createdAt: "asc" },
-    select: { id: true, name: true, color: true },
-  });
-
-  const publicGroupIds = groups.map((g) => g.id);
-
-  const bookmarks = await db.bookmark.findMany({
-    where: {
-      userId: user.id,
-      OR: [
-        ...(publicGroupIds.length > 0
-          ? [{ groupId: { in: publicGroupIds } }]
-          : []),
-        { isPublic: true },
-      ],
-    },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      url: true,
-      favicon: true,
-      type: true,
-      color: true,
-      groupId: true,
-      createdAt: true,
-    },
-  });
+  const resolvedSearchParams = searchParamsPromise
+    ? await searchParamsPromise
+    : undefined;
+  const activeGroupParam = Array.isArray(resolvedSearchParams?.group)
+    ? resolvedSearchParams?.group[0]
+    : resolvedSearchParams?.group;
 
   return (
     <PublicProfileContent
-      user={user}
-      groups={groups}
-      bookmarks={bookmarks}
+      profileUsername={username}
+      user={data.user}
+      groups={data.groups}
+      bookmarks={data.bookmarks}
+      activeGroupId={activeGroupParam}
     />
   );
 }
 
-export default function PublicProfilePage({ params }: PageProps) {
+export default function PublicProfilePage({ params, searchParams }: PageProps) {
   return (
     <Suspense>
-      <PublicProfileData paramsPromise={params} />
+      <PublicProfileData
+        paramsPromise={params}
+        searchParamsPromise={searchParams}
+      />
     </Suspense>
   );
 }

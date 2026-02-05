@@ -25,7 +25,9 @@
       "Bash(git commit:*)",
       "Bash(npx prisma migrate dev:*)",
       "Bash(npx next build)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(git -C /Users/duncan/dev/bmrks diff --stat)",
+      "Bash(git -C /Users/duncan/dev/bmrks status -s)"
     ],
     "deny": [],
     "ask": []

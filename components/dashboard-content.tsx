@@ -3,13 +3,24 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import dynamic from "next/dynamic";
 import { Header } from "@/components/header";
 import { BookmarkInput } from "@/components/bookmark-input";
 import { BookmarkList } from "@/components/bookmark-list";
 import { BookmarkListSkeleton } from "@/components/dashboard-skeleton";
-import { MultiSelectToolbar } from "@/components/multi-select-toolbar";
-import { BulkMoveDialog } from "@/components/bulk-move-dialog";
-import { BulkDeleteDialog } from "@/components/bulk-delete-dialog";
+
+const MultiSelectToolbar = dynamic(
+  () => import("@/components/multi-select-toolbar").then((m) => m.MultiSelectToolbar),
+  { ssr: false }
+);
+const BulkMoveDialog = dynamic(
+  () => import("@/components/bulk-move-dialog").then((m) => m.BulkMoveDialog),
+  { ssr: false }
+);
+const BulkDeleteDialog = dynamic(
+  () => import("@/components/bulk-delete-dialog").then((m) => m.BulkDeleteDialog),
+  { ssr: false }
+);
 import { parseColor, isUrl, normalizeUrl } from "@/lib/utils";
 import { client } from "@/lib/orpc";
 import { useDebounce } from "@/hooks/use-debounce";

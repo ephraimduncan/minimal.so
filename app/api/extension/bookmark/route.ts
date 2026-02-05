@@ -90,6 +90,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const normalizedUrl = normalizeUrl(url);
+    const metadataPromise = getUrlMetadata(normalizedUrl);
 
     const existing = await db.bookmark.findFirst({
       where: {
@@ -98,9 +99,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         url: normalizedUrl,
       },
     });
+    const metadata = await metadataPromise;
 
     if (existing) {
-      const metadata = await getUrlMetadata(normalizedUrl);
       const bookmark = await db.bookmark.update({
         where: { id: existing.id },
         data: {
@@ -124,7 +125,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const metadata = await getUrlMetadata(normalizedUrl);
     const title = providedTitle || metadata.title || normalizedUrl;
 
     const bookmark = await db.bookmark.create({

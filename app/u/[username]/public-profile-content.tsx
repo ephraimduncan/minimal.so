@@ -1,6 +1,3 @@
-"use client";
-
-import { useMemo, useState, startTransition, useEffect } from "react";
 import Link from "next/link";
 import { IconBrandX, IconBrandGithub, IconWorld } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -33,56 +30,48 @@ interface PublicBookmark {
 }
 
 interface PublicProfileContentProps {
+  profileUsername: string;
   user: PublicUser;
   groups: PublicGroup[];
   bookmarks: PublicBookmark[];
+  activeGroupId?: string;
 }
 
 export function PublicProfileContent({
+  profileUsername,
   user,
   groups,
   bookmarks,
+  activeGroupId,
 }: PublicProfileContentProps) {
-  const [activeTab, setActiveTab] = useState<string>("all");
-  const [currentYear, setCurrentYear] = useState<number | null>(null);
+  const tabs: Array<{ value: string; label: string; color?: string }> = [
+    { value: "all", label: "All" },
+    ...groups.map((g) => ({ value: g.id, label: g.name, color: g.color })),
+  ];
 
-  useEffect(() => {
-    startTransition(() => {
-      setCurrentYear(new Date().getFullYear());
-    });
-  }, []);
+  const groupIds = new Set(groups.map((group) => group.id));
+  const activeTab =
+    activeGroupId && groupIds.has(activeGroupId) ? activeGroupId : "all";
 
-  const tabs = useMemo(
-    () => [
-      { value: "all", label: "All" },
-      ...groups.map((g) => ({ value: g.id, label: g.name, color: g.color })),
-    ],
-    [groups],
-  );
+  const filteredBookmarks = (
+    activeTab === "all"
+      ? bookmarks
+      : bookmarks.filter((bookmark) => bookmark.groupId === activeTab)
+  ).map((bookmark) => ({
+    ...bookmark,
+    hostname: bookmark.url
+      ? new URL(bookmark.url).hostname.replace("www.", "")
+      : null,
+  }));
 
-  const filteredBookmarks = useMemo(() => {
-    if (activeTab === "all") return bookmarks;
-    return bookmarks.filter((b) => b.groupId === activeTab);
-  }, [activeTab, bookmarks]);
-
+  const currentYear = new Date().getFullYear();
   const formatDate = (date: Date | string) => {
-    const d = typeof date === "string" ? new Date(date) : date;
-    if (currentYear === null) {
-      return d.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    }
+    const d = new Date(date);
     const isCurrentYear = d.getFullYear() === currentYear;
-    if (isCurrentYear) {
-      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    }
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    const formatOptions: Intl.DateTimeFormatOptions = isCurrentYear
+      ? { month: "short", day: "numeric" }
+      : { month: "short", day: "numeric", year: "numeric" };
+    return new Intl.DateTimeFormat("en-US", formatOptions).format(d);
   };
 
   const socials = [
@@ -107,19 +96,10 @@ export function PublicProfileContent({
     label: string;
   }>;
 
-  const pageTitle = `${user.name} (@${user.username}) — bmrks`;
-  const pageDescription = user.bio || `Public bookmarks shared by ${user.name}`;
+  const basePath = `/u/${encodeURIComponent(profileUsername)}`;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
-      <title>{pageTitle}</title>
-      <meta name="description" content={pageDescription} />
-      <meta property="og:title" content={pageTitle} />
-      <meta property="og:description" content={pageDescription} />
-      <meta property="og:type" content="profile" />
-      <meta name="twitter:card" content="summary" />
-      <meta name="twitter:title" content={pageTitle} />
-      <meta name="twitter:description" content={pageDescription} />
       <nav className="mb-8 flex items-center justify-between">
         <Link
           href="/"
@@ -172,10 +152,13 @@ export function PublicProfileContent({
           {tabs.length > 1 && (
             <div className="mb-8 flex items-center gap-1 flex-wrap">
               {tabs.map((tab) => (
-                <button
+                <Link
                   key={tab.value}
-                  type="button"
-                  onClick={() => setActiveTab(tab.value)}
+                  href={
+                    tab.value === "all"
+                      ? basePath
+                      : `${basePath}?group=${encodeURIComponent(tab.value)}`
+                  }
                   className={cn(
                     "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
                     activeTab === tab.value
@@ -183,14 +166,14 @@ export function PublicProfileContent({
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {"color" in tab && tab.color && (
+                  {tab.color && (
                     <span
                       className="h-2 w-2 rounded-full shrink-0"
                       style={{ backgroundColor: tab.color }}
                     />
                   )}
                   {tab.label}
-                </button>
+                </Link>
               ))}
             </div>
           )}
@@ -206,65 +189,60 @@ export function PublicProfileContent({
                 <span>Created At</span>
               </div>
               <div className="flex flex-col gap-0.5 -mx-3">
-                {filteredBookmarks.map((bookmark) => {
-                  const hostname = bookmark.url
-                    ? new URL(bookmark.url).hostname.replace("www.", "")
-                    : null;
-                  return (
-                    <a
-                      key={bookmark.id}
-                      href={bookmark.url || undefined}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={cn(
-                        "group relative flex items-center justify-between rounded-xl px-4 py-3 text-left transition-transform duration-200",
-                        bookmark.url
-                          ? "hover:bg-muted/50 active:scale-[0.99]"
-                          : "cursor-default",
+                {filteredBookmarks.map((bookmark) => (
+                  <a
+                    key={bookmark.id}
+                    href={bookmark.url || undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "group relative flex items-center justify-between rounded-xl px-4 py-3 text-left transition-transform duration-200",
+                      bookmark.url
+                        ? "hover:bg-muted/50 active:scale-[0.99]"
+                        : "cursor-default",
+                    )}
+                  >
+                    <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
+                      <BookmarkIcon bookmark={bookmark} />
+                      <span className="text-sm truncate">
+                        {bookmark.title}
+                      </span>
+                      {bookmark.hostname && (
+                        <span className="text-[13px] text-muted-foreground shrink-0">
+                          {bookmark.hostname}
+                        </span>
                       )}
-                    >
-                      <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
-                        <BookmarkIcon bookmark={bookmark} />
-                        <span className="text-sm truncate">
-                          {bookmark.title}
-                        </span>
-                        {hostname && (
-                          <span className="text-[13px] text-muted-foreground shrink-0">
-                            {hostname}
-                          </span>
+                    </div>
+                    <div className="flex items-center shrink-0">
+                      <span
+                        className={cn(
+                          "text-[13px] text-muted-foreground whitespace-nowrap",
+                          bookmark.url &&
+                            "transition-transform duration-200 group-hover:-translate-x-5",
                         )}
-                      </div>
-                      <div className="flex items-center shrink-0">
-                        <span
-                          className={cn(
-                            "text-[13px] text-muted-foreground whitespace-nowrap",
-                            bookmark.url &&
-                              "transition-transform duration-200 group-hover:-translate-x-5",
-                          )}
+                      >
+                        {formatDate(bookmark.createdAt)}
+                      </span>
+                      {bookmark.url && (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-muted-foreground transition-opacity duration-200 opacity-0 group-hover:opacity-100 absolute right-4"
                         >
-                          {formatDate(bookmark.createdAt)}
-                        </span>
-                        {bookmark.url && (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-muted-foreground transition-opacity duration-200 opacity-0 group-hover:opacity-100 absolute right-4"
-                          >
-                            <path d="M7 7h10v10" />
-                            <path d="M7 17 17 7" />
-                          </svg>
-                        )}
-                      </div>
-                    </a>
-                  );
-                })}
+                          <path d="M7 7h10v10" />
+                          <path d="M7 17 17 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </a>
+                ))}
               </div>
             </>
           )}
@@ -275,8 +253,6 @@ export function PublicProfileContent({
 }
 
 function BookmarkIcon({ bookmark }: { bookmark: PublicBookmark }) {
-  const [faviconError, setFaviconError] = useState(false);
-
   if (bookmark.type === "color" && bookmark.color) {
     return (
       <div
@@ -286,14 +262,13 @@ function BookmarkIcon({ bookmark }: { bookmark: PublicBookmark }) {
     );
   }
 
-  if (bookmark.favicon && !faviconError) {
+  if (bookmark.favicon) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={bookmark.favicon}
         alt=""
         className="h-5 w-5 rounded object-contain shrink-0"
-        onError={() => setFaviconError(true)}
       />
     );
   }

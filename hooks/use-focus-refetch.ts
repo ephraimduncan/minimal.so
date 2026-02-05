@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc";
 import type { GroupItem } from "@/lib/schema";
 
 const COOLDOWN_MS = 30 * 1000;
@@ -15,10 +16,10 @@ export function useFocusRefetch(groups: GroupItem[]) {
     if (now - lastRefreshRef.current < COOLDOWN_MS) return;
 
     lastRefreshRef.current = now;
-    queryClient.invalidateQueries({ queryKey: ["groups"] });
+    queryClient.invalidateQueries({ queryKey: orpc.group.key() });
     for (const group of groups) {
       queryClient.invalidateQueries({
-        queryKey: ["bookmarks", group.id],
+        queryKey: orpc.bookmark.list.key({ input: { groupId: group.id } }),
         refetchType: "all",
       });
     }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
-import { client } from "@/lib/orpc";
+import { orpc } from "@/lib/orpc";
 import type { ProfileData } from "@/components/dashboard-content";
 import {
   Dialog,
@@ -177,8 +177,7 @@ function ProfileTab({
   const isUsernameValid = debouncedUsername.length > 0 && usernameParseResult.success;
 
   const availabilityQuery = useQuery({
-    queryKey: ["username-check", debouncedUsername],
-    queryFn: () => client.profile.checkUsername({ username: debouncedUsername }),
+    ...orpc.profile.checkUsername.queryOptions({ input: { username: debouncedUsername } }),
     enabled: isUsernameValid,
     staleTime: 10_000,
   });
@@ -191,15 +190,7 @@ function ProfileTab({
   );
 
   const updateMutation = useMutation({
-    mutationFn: () =>
-      client.profile.update({
-        username: username || null,
-        bio: bio || null,
-        github: github || null,
-        twitter: twitter || null,
-        website: website || null,
-        isProfilePublic,
-      }),
+    ...orpc.profile.update.mutationOptions(),
     onSuccess: () => {
       toast.success("Profile updated");
       router.refresh();
@@ -234,7 +225,14 @@ function ProfileTab({
     }
 
     setFieldErrors({});
-    updateMutation.mutate();
+    updateMutation.mutate({
+      username: username || null,
+      bio: bio || null,
+      github: github || null,
+      twitter: twitter || null,
+      website: website || null,
+      isProfilePublic,
+    });
   };
 
   const profileUrl = username ? `${typeof window !== "undefined" ? window.location.origin : ""}/u/${username}` : "";

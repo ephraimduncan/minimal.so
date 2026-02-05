@@ -22,7 +22,7 @@ const BulkDeleteDialog = dynamic(
   { ssr: false }
 );
 import { parseColor, isUrl, normalizeUrl } from "@/lib/utils";
-import { client } from "@/lib/orpc";
+import { client, orpc } from "@/lib/orpc";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useFocusRefetch } from "@/hooks/use-focus-refetch";
 import { useLatestRef } from "@/lib/hooks/use-latest-ref";
@@ -45,6 +45,13 @@ interface DashboardContentProps {
   profile: ProfileData;
 }
 
+// Untagged keys for getQueryData/setQueryData (strips ORPC DataTag to avoid
+// type conflict between server return types and UI-level BookmarkItem/GroupItem).
+const groupListKey = () =>
+  orpc.group.list.queryKey() as readonly unknown[];
+const bookmarkListKey = (groupId?: string | null) =>
+  orpc.bookmark.list.queryKey({ input: { groupId: groupId ?? undefined } }) as readonly unknown[];
+
 export function DashboardContent({
   session,
   initialGroups,
@@ -66,10 +73,9 @@ export function DashboardContent({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const groupsQuery = useQuery({
-    queryKey: ["groups"],
-    queryFn: () => client.group.list(),
+    ...orpc.group.list.queryOptions(),
     initialData: initialGroups,
-    staleTime: 60 * 1000,
+    initialDataUpdatedAt: Date.now(),
   });
 
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data]);
@@ -85,13 +91,11 @@ export function DashboardContent({
   const currentGroupId = selectedGroupId ?? groups[0]?.id ?? null;
 
   const bookmarksQuery = useQuery({
-    queryKey: ["bookmarks", currentGroupId],
-    queryFn: () =>
-      client.bookmark.list({ groupId: currentGroupId ?? undefined }),
+    ...orpc.bookmark.list.queryOptions({ input: { groupId: currentGroupId ?? undefined } }),
     initialData:
       currentGroupId === initialGroups[0]?.id ? initialBookmarks : undefined,
+    initialDataUpdatedAt: Date.now(),
     enabled: !!currentGroupId,
-    staleTime: 60 * 1000,
   });
 
   const bookmarks = useMemo(
@@ -105,42 +109,35 @@ export function DashboardContent({
   }, [bookmarks, currentGroupId]);
 
   const createBookmarkMutation = useMutation({
-    mutationFn: (data: {
-      title: string;
-      url?: string;
-      type: BookmarkType;
-      color?: string;
-      groupId: string;
-    }) => client.bookmark.create(data),
+    ...orpc.bookmark.create.mutationOptions(),
     onMutate: async (newBookmark) => {
       await queryClient.cancelQueries({
-        queryKey: ["bookmarks", newBookmark.groupId],
+        queryKey: orpc.bookmark.list.queryKey({ input: { groupId: newBookmark.groupId } }),
       });
-      await queryClient.cancelQueries({ queryKey: ["groups"] });
+      await queryClient.cancelQueries({ queryKey: orpc.group.list.queryKey() });
 
-      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>([
-        "bookmarks",
-        newBookmark.groupId,
-      ]);
-      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
+      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>(
+        bookmarkListKey(newBookmark.groupId)
+      );
+      const previousGroups = queryClient.getQueryData<GroupItem[]>(groupListKey());
 
       const optimisticBookmark: BookmarkItem = {
         id: `temp-${Date.now()}`,
         title: newBookmark.title,
         url: newBookmark.url || null,
         favicon: null,
-        type: newBookmark.type,
+        type: newBookmark.type ?? "link",
         color: newBookmark.color || null,
         groupId: newBookmark.groupId,
         createdAt: new Date().toISOString(),
       };
 
       queryClient.setQueryData<BookmarkItem[]>(
-        ["bookmarks", newBookmark.groupId],
+        bookmarkListKey(newBookmark.groupId),
         (old) => [optimisticBookmark, ...(old || [])]
       );
 
-      queryClient.setQueryData<GroupItem[]>(["groups"], (old) =>
+      queryClient.setQueryData<GroupItem[]>(groupListKey(), (old) =>
         old?.map((g) =>
           g.id === newBookmark.groupId
             ? { ...g, bookmarkCount: (g.bookmarkCount ?? 0) + 1 }
@@ -156,21 +153,21 @@ export function DashboardContent({
     },
     onError: (_err, _newBookmark, context) => {
       if (context?.previousBookmarks) {
-        queryClient.setQueryData(
-          ["bookmarks", context.groupId],
+        queryClient.setQueryData<BookmarkItem[]>(
+          bookmarkListKey(context.groupId),
           context.previousBookmarks
         );
       }
       if (context?.previousGroups) {
-        queryClient.setQueryData(["groups"], context.previousGroups);
+        queryClient.setQueryData<GroupItem[]>(groupListKey(), context.previousGroups);
       }
       toast.error("Failed to create bookmark");
     },
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["bookmarks", variables.groupId],
+        queryKey: orpc.bookmark.list.key({ input: { groupId: variables.groupId } }),
       });
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: orpc.group.key() });
     },
   });
 
@@ -197,37 +194,45 @@ export function DashboardContent({
       const { id, groupId: targetGroupId, _sourceGroupId, ...updates } = data;
       const isMove =
         targetGroupId && _sourceGroupId && targetGroupId !== _sourceGroupId;
+      const sourceGroupId = _sourceGroupId ?? currentGroupId;
 
-      await queryClient.cancelQueries({ queryKey: ["bookmarks"] });
-      await queryClient.cancelQueries({ queryKey: ["groups"] });
+      await queryClient.cancelQueries({ queryKey: orpc.group.list.queryKey() });
+      await queryClient.cancelQueries({
+        queryKey: orpc.bookmark.list.queryKey({ input: { groupId: sourceGroupId ?? undefined } }),
+      });
+      if (isMove) {
+        await queryClient.cancelQueries({
+          queryKey: orpc.bookmark.list.queryKey({ input: { groupId: targetGroupId } }),
+        });
+      }
 
-      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
+      const previousGroups = queryClient.getQueryData<GroupItem[]>(groupListKey());
 
       if (isMove) {
-        const previousSourceBookmarks = queryClient.getQueryData<
-          BookmarkItem[]
-        >(["bookmarks", _sourceGroupId]);
-        const previousTargetBookmarks = queryClient.getQueryData<
-          BookmarkItem[]
-        >(["bookmarks", targetGroupId]);
+        const previousSourceBookmarks = queryClient.getQueryData<BookmarkItem[]>(
+          bookmarkListKey(_sourceGroupId)
+        );
+        const previousTargetBookmarks = queryClient.getQueryData<BookmarkItem[]>(
+          bookmarkListKey(targetGroupId)
+        );
 
         const movedBookmark = previousSourceBookmarks?.find((b) => b.id === id);
 
         if (movedBookmark) {
           queryClient.setQueryData<BookmarkItem[]>(
-            ["bookmarks", _sourceGroupId],
+            bookmarkListKey(_sourceGroupId),
             (old) => old?.filter((b) => b.id !== id) ?? []
           );
 
           queryClient.setQueryData<BookmarkItem[]>(
-            ["bookmarks", targetGroupId],
+            bookmarkListKey(targetGroupId),
             (old) => [
               { ...movedBookmark, groupId: targetGroupId },
               ...(old ?? []),
             ]
           );
 
-          queryClient.setQueryData<GroupItem[]>(["groups"], (old) =>
+          queryClient.setQueryData<GroupItem[]>(groupListKey(), (old) =>
             old?.map((g) => {
               if (g.id === _sourceGroupId) {
                 return {
@@ -252,14 +257,12 @@ export function DashboardContent({
         };
       }
 
-      const sourceGroupId = _sourceGroupId ?? currentGroupId;
-      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>([
-        "bookmarks",
-        sourceGroupId,
-      ]);
+      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>(
+        bookmarkListKey(sourceGroupId)
+      );
 
       queryClient.setQueryData<BookmarkItem[]>(
-        ["bookmarks", sourceGroupId],
+        bookmarkListKey(sourceGroupId),
         (old) => old?.map((b) => (b.id === id ? { ...b, ...updates } : b)) ?? []
       );
 
@@ -270,8 +273,8 @@ export function DashboardContent({
         context?.previousSourceBookmarks !== undefined &&
         context?.sourceGroupId
       ) {
-        queryClient.setQueryData(
-          ["bookmarks", context.sourceGroupId],
+        queryClient.setQueryData<BookmarkItem[]>(
+          bookmarkListKey(context.sourceGroupId),
           context.previousSourceBookmarks
         );
       }
@@ -279,34 +282,34 @@ export function DashboardContent({
         context?.previousTargetBookmarks !== undefined &&
         context?.targetGroupId
       ) {
-        queryClient.setQueryData(
-          ["bookmarks", context.targetGroupId],
+        queryClient.setQueryData<BookmarkItem[]>(
+          bookmarkListKey(context.targetGroupId),
           context.previousTargetBookmarks
         );
       }
       if (context?.previousBookmarks !== undefined && context?.sourceGroupId) {
-        queryClient.setQueryData(
-          ["bookmarks", context.sourceGroupId],
+        queryClient.setQueryData<BookmarkItem[]>(
+          bookmarkListKey(context.sourceGroupId),
           context.previousBookmarks
         );
       }
       if (context?.previousGroups) {
-        queryClient.setQueryData(["groups"], context.previousGroups);
+        queryClient.setQueryData<GroupItem[]>(groupListKey(), context.previousGroups);
       }
       toast.error("Failed to update bookmark");
     },
     onSettled: (_data, _error, data, context) => {
       if (context?.sourceGroupId) {
         queryClient.invalidateQueries({
-          queryKey: ["bookmarks", context.sourceGroupId],
+          queryKey: orpc.bookmark.list.key({ input: { groupId: context.sourceGroupId } }),
         });
       }
       if (context?.targetGroupId) {
         queryClient.invalidateQueries({
-          queryKey: ["bookmarks", context.targetGroupId],
+          queryKey: orpc.bookmark.list.key({ input: { groupId: context.targetGroupId } }),
         });
       }
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: orpc.group.key() });
     },
   });
 
@@ -320,9 +323,9 @@ export function DashboardContent({
       return client.group.create(createData);
     },
     onMutate: async (newGroup) => {
-      await queryClient.cancelQueries({ queryKey: ["groups"] });
+      await queryClient.cancelQueries({ queryKey: orpc.group.list.queryKey() });
 
-      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
+      const previousGroups = queryClient.getQueryData<GroupItem[]>(groupListKey());
       const previousSelectedGroupId = selectedGroupId;
 
       const optimisticGroup: GroupItem = {
@@ -332,7 +335,7 @@ export function DashboardContent({
         bookmarkCount: 0,
       };
 
-      queryClient.setQueryData<GroupItem[]>(["groups"], (old) => [
+      queryClient.setQueryData<GroupItem[]>(groupListKey(), (old) => [
         ...(old ?? []),
         optimisticGroup,
       ]);
@@ -348,7 +351,7 @@ export function DashboardContent({
     },
     onError: (_err, _newGroup, context) => {
       if (context?.previousGroups) {
-        queryClient.setQueryData(["groups"], context.previousGroups);
+        queryClient.setQueryData<GroupItem[]>(groupListKey(), context.previousGroups);
       }
       if (context?.previousSelectedGroupId !== undefined) {
         setSelectedGroupId(context.previousSelectedGroupId);
@@ -356,20 +359,20 @@ export function DashboardContent({
       toast.error("Failed to create group");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: orpc.group.key() });
     },
   });
 
   const deleteGroupMutation = useMutation({
-    mutationFn: (data: { id: string }) => client.group.delete(data),
+    ...orpc.group.delete.mutationOptions(),
     onMutate: async (data) => {
-      await queryClient.cancelQueries({ queryKey: ["groups"] });
+      await queryClient.cancelQueries({ queryKey: orpc.group.list.queryKey() });
 
-      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
+      const previousGroups = queryClient.getQueryData<GroupItem[]>(groupListKey());
       const previousSelectedGroupId = selectedGroupId;
 
       queryClient.setQueryData<GroupItem[]>(
-        ["groups"],
+        groupListKey(),
         (old) => old?.filter((g) => g.id !== data.id) ?? []
       );
 
@@ -384,7 +387,7 @@ export function DashboardContent({
     },
     onError: (_err, _data, context) => {
       if (context?.previousGroups) {
-        queryClient.setQueryData(["groups"], context.previousGroups);
+        queryClient.setQueryData<GroupItem[]>(groupListKey(), context.previousGroups);
       }
       if (context?.previousSelectedGroupId !== undefined) {
         setSelectedGroupId(context.previousSelectedGroupId);
@@ -392,14 +395,17 @@ export function DashboardContent({
       toast.error("Failed to delete group");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: orpc.group.key() });
     },
   });
 
   const refetchBookmarkMutation = useMutation({
-    mutationFn: (data: { id: string }) => client.bookmark.refetch(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+    mutationFn: (data: { id: string; groupId?: string }) =>
+      client.bookmark.refetch({ id: data.id }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: orpc.bookmark.list.key({ input: { groupId: variables.groupId } }),
+      });
       toast.success("Metadata refreshed");
     },
     onError: () => {
@@ -419,21 +425,22 @@ export function DashboardContent({
     onMutate: async (data) => {
       const groupId = data._groupId ?? currentGroupId;
 
-      await queryClient.cancelQueries({ queryKey: ["bookmarks", groupId] });
-      await queryClient.cancelQueries({ queryKey: ["groups"] });
+      await queryClient.cancelQueries({
+        queryKey: orpc.bookmark.list.queryKey({ input: { groupId: groupId ?? undefined } }),
+      });
+      await queryClient.cancelQueries({ queryKey: orpc.group.list.queryKey() });
 
-      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>([
-        "bookmarks",
-        groupId,
-      ]);
-      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
+      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>(
+        bookmarkListKey(groupId)
+      );
+      const previousGroups = queryClient.getQueryData<GroupItem[]>(groupListKey());
 
       queryClient.setQueryData<BookmarkItem[]>(
-        ["bookmarks", groupId],
+        bookmarkListKey(groupId),
         (old) => old?.filter((b) => !data.ids.includes(b.id)) ?? []
       );
 
-      queryClient.setQueryData<GroupItem[]>(["groups"], (old) =>
+      queryClient.setQueryData<GroupItem[]>(groupListKey(), (old) =>
         old?.map((g) =>
           g.id === groupId
             ? {
@@ -448,23 +455,23 @@ export function DashboardContent({
     },
     onError: (_err, _data, context) => {
       if (context?.previousBookmarks) {
-        queryClient.setQueryData(
-          ["bookmarks", context.groupId],
+        queryClient.setQueryData<BookmarkItem[]>(
+          bookmarkListKey(context.groupId),
           context.previousBookmarks
         );
       }
       if (context?.previousGroups) {
-        queryClient.setQueryData(["groups"], context.previousGroups);
+        queryClient.setQueryData<GroupItem[]>(groupListKey(), context.previousGroups);
       }
       toast.error("Failed to delete bookmarks");
     },
     onSettled: (_data, _error, _variables, context) => {
       if (context?.groupId) {
         queryClient.invalidateQueries({
-          queryKey: ["bookmarks", context.groupId],
+          queryKey: orpc.bookmark.list.key({ input: { groupId: context.groupId } }),
         });
       }
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: orpc.group.key() });
     },
   });
 
@@ -481,18 +488,21 @@ export function DashboardContent({
       const { ids, targetGroupId, _sourceGroupId } = data;
       const sourceGroupId = _sourceGroupId ?? currentGroupId;
 
-      await queryClient.cancelQueries({ queryKey: ["bookmarks"] });
-      await queryClient.cancelQueries({ queryKey: ["groups"] });
+      await queryClient.cancelQueries({
+        queryKey: orpc.bookmark.list.queryKey({ input: { groupId: sourceGroupId ?? undefined } }),
+      });
+      await queryClient.cancelQueries({
+        queryKey: orpc.bookmark.list.queryKey({ input: { groupId: targetGroupId } }),
+      });
+      await queryClient.cancelQueries({ queryKey: orpc.group.list.queryKey() });
 
-      const previousSourceBookmarks = queryClient.getQueryData<BookmarkItem[]>([
-        "bookmarks",
-        sourceGroupId,
-      ]);
-      const previousTargetBookmarks = queryClient.getQueryData<BookmarkItem[]>([
-        "bookmarks",
-        targetGroupId,
-      ]);
-      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
+      const previousSourceBookmarks = queryClient.getQueryData<BookmarkItem[]>(
+        bookmarkListKey(sourceGroupId)
+      );
+      const previousTargetBookmarks = queryClient.getQueryData<BookmarkItem[]>(
+        bookmarkListKey(targetGroupId)
+      );
+      const previousGroups = queryClient.getQueryData<GroupItem[]>(groupListKey());
 
       const movedBookmarks = previousSourceBookmarks?.filter((b) =>
         ids.includes(b.id)
@@ -500,19 +510,19 @@ export function DashboardContent({
 
       if (movedBookmarks) {
         queryClient.setQueryData<BookmarkItem[]>(
-          ["bookmarks", sourceGroupId],
+          bookmarkListKey(sourceGroupId),
           (old) => old?.filter((b) => !ids.includes(b.id)) ?? []
         );
 
         queryClient.setQueryData<BookmarkItem[]>(
-          ["bookmarks", targetGroupId],
+          bookmarkListKey(targetGroupId),
           (old) => [
             ...movedBookmarks.map((b) => ({ ...b, groupId: targetGroupId })),
             ...(old ?? []),
           ]
         );
 
-        queryClient.setQueryData<GroupItem[]>(["groups"], (old) =>
+        queryClient.setQueryData<GroupItem[]>(groupListKey(), (old) =>
           old?.map((g) => {
             if (g.id === sourceGroupId) {
               return {
@@ -538,51 +548,51 @@ export function DashboardContent({
     },
     onError: (_err, _data, context) => {
       if (context?.previousSourceBookmarks && context?.sourceGroupId) {
-        queryClient.setQueryData(
-          ["bookmarks", context.sourceGroupId],
+        queryClient.setQueryData<BookmarkItem[]>(
+          bookmarkListKey(context.sourceGroupId),
           context.previousSourceBookmarks
         );
       }
       if (context?.previousTargetBookmarks && context?.targetGroupId) {
-        queryClient.setQueryData(
-          ["bookmarks", context.targetGroupId],
+        queryClient.setQueryData<BookmarkItem[]>(
+          bookmarkListKey(context.targetGroupId),
           context.previousTargetBookmarks
         );
       }
       if (context?.previousGroups) {
-        queryClient.setQueryData(["groups"], context.previousGroups);
+        queryClient.setQueryData<GroupItem[]>(groupListKey(), context.previousGroups);
       }
       toast.error("Failed to move bookmarks");
     },
     onSettled: (_data, _error, _variables, context) => {
       if (context?.sourceGroupId) {
         queryClient.invalidateQueries({
-          queryKey: ["bookmarks", context.sourceGroupId],
+          queryKey: orpc.bookmark.list.key({ input: { groupId: context.sourceGroupId } }),
         });
       }
       if (context?.targetGroupId) {
         queryClient.invalidateQueries({
-          queryKey: ["bookmarks", context.targetGroupId],
+          queryKey: orpc.bookmark.list.key({ input: { groupId: context.targetGroupId } }),
         });
       }
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: orpc.group.key() });
     },
   });
 
   const setVisibilityMutation = useMutation({
-    mutationFn: (data: { id: string; isPublic: boolean | null }) =>
-      client.bookmark.setVisibility(data),
+    ...orpc.bookmark.setVisibility.mutationOptions(),
     onMutate: async (data) => {
       const groupId = currentGroupId;
-      await queryClient.cancelQueries({ queryKey: ["bookmarks", groupId] });
+      await queryClient.cancelQueries({
+        queryKey: orpc.bookmark.list.queryKey({ input: { groupId: groupId ?? undefined } }),
+      });
 
-      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>([
-        "bookmarks",
-        groupId,
-      ]);
+      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>(
+        bookmarkListKey(groupId)
+      );
 
       queryClient.setQueryData<BookmarkItem[]>(
-        ["bookmarks", groupId],
+        bookmarkListKey(groupId),
         (old) =>
           old?.map((b) =>
             b.id === data.id ? { ...b, isPublic: data.isPublic } : b,
@@ -593,8 +603,8 @@ export function DashboardContent({
     },
     onError: (_err, _data, context) => {
       if (context?.previousBookmarks && context?.groupId) {
-        queryClient.setQueryData(
-          ["bookmarks", context.groupId],
+        queryClient.setQueryData<BookmarkItem[]>(
+          bookmarkListKey(context.groupId),
           context.previousBookmarks,
         );
       }
@@ -602,25 +612,27 @@ export function DashboardContent({
     },
     onSettled: (_data, _error, _variables, context) => {
       if (context?.groupId) {
-        queryClient.invalidateQueries({ queryKey: ["bookmarks", context.groupId] });
+        queryClient.invalidateQueries({
+          queryKey: orpc.bookmark.list.key({ input: { groupId: context.groupId } }),
+        });
       }
     },
   });
 
   const bulkSetVisibilityMutation = useMutation({
-    mutationFn: (data: { ids: string[]; isPublic: boolean | null }) =>
-      client.bookmark.bulkSetVisibility(data),
+    ...orpc.bookmark.bulkSetVisibility.mutationOptions(),
     onMutate: async (data) => {
       const groupId = currentGroupId;
-      await queryClient.cancelQueries({ queryKey: ["bookmarks", groupId] });
+      await queryClient.cancelQueries({
+        queryKey: orpc.bookmark.list.queryKey({ input: { groupId: groupId ?? undefined } }),
+      });
 
-      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>([
-        "bookmarks",
-        groupId,
-      ]);
+      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>(
+        bookmarkListKey(groupId)
+      );
 
       queryClient.setQueryData<BookmarkItem[]>(
-        ["bookmarks", groupId],
+        bookmarkListKey(groupId),
         (old) =>
           old?.map((b) =>
             data.ids.includes(b.id) ? { ...b, isPublic: data.isPublic } : b,
@@ -631,8 +643,8 @@ export function DashboardContent({
     },
     onError: (_err, _data, context) => {
       if (context?.previousBookmarks && context?.groupId) {
-        queryClient.setQueryData(
-          ["bookmarks", context.groupId],
+        queryClient.setQueryData<BookmarkItem[]>(
+          bookmarkListKey(context.groupId),
           context.previousBookmarks,
         );
       }
@@ -640,20 +652,21 @@ export function DashboardContent({
     },
     onSettled: (_data, _error, _variables, context) => {
       if (context?.groupId) {
-        queryClient.invalidateQueries({ queryKey: ["bookmarks", context.groupId] });
+        queryClient.invalidateQueries({
+          queryKey: orpc.bookmark.list.key({ input: { groupId: context.groupId } }),
+        });
       }
     },
   });
 
   const setGroupVisibilityMutation = useMutation({
-    mutationFn: (data: { id: string; isPublic: boolean }) =>
-      client.group.setVisibility(data),
+    ...orpc.group.setVisibility.mutationOptions(),
     onMutate: async (data) => {
-      await queryClient.cancelQueries({ queryKey: ["groups"] });
+      await queryClient.cancelQueries({ queryKey: orpc.group.list.queryKey() });
 
-      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
+      const previousGroups = queryClient.getQueryData<GroupItem[]>(groupListKey());
 
-      queryClient.setQueryData<GroupItem[]>(["groups"], (old) =>
+      queryClient.setQueryData<GroupItem[]>(groupListKey(), (old) =>
         old?.map((g) =>
           g.id === data.id ? { ...g, isPublic: data.isPublic } : g,
         ),
@@ -663,12 +676,12 @@ export function DashboardContent({
     },
     onError: (_err, _data, context) => {
       if (context?.previousGroups) {
-        queryClient.setQueryData(["groups"], context.previousGroups);
+        queryClient.setQueryData<GroupItem[]>(groupListKey(), context.previousGroups);
       }
       toast.error("Failed to update group visibility");
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: orpc.group.key() });
     },
   });
 
@@ -898,9 +911,9 @@ export function DashboardContent({
 
   const handleRefetchBookmark = useCallback(
     (id: string) => {
-      refetchBookmarkMutation.mutate({ id });
+      refetchBookmarkMutation.mutate({ id, groupId: currentGroupId ?? undefined });
     },
-    [refetchBookmarkMutation]
+    [refetchBookmarkMutation, currentGroupId]
   );
 
   const handleToggleBookmarkVisibility = useCallback(
@@ -954,12 +967,10 @@ export function DashboardContent({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (renamingIdRef.current) return;
 
-      // Allow all keyboard events when focus is on the search input
       if (document.activeElement === inputRef.current) {
         return;
       }
 
-      // Allow standard text editing shortcuts when focus is on any input/textarea
       const isInputFocused =
         document.activeElement instanceof HTMLInputElement ||
         document.activeElement instanceof HTMLTextAreaElement;

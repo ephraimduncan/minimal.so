@@ -20,7 +20,6 @@ const groupSelect = {
 } as const;
 
 const bookmarkSelect = {
-  id: true,
   title: true,
   url: true,
   favicon: true,
@@ -57,5 +56,14 @@ export const getPublicProfileData = cache(async (username: string) => {
     }),
   ]);
 
-  return { user, groups, bookmarks };
+  const groupNameById = new Map(groups.map((g) => [g.id, g.name]));
+
+  return {
+    user,
+    groups: groups.map(({ id: _, ...rest }) => rest),
+    bookmarks: bookmarks.map(({ groupId, ...rest }) => ({
+      ...rest,
+      groupName: groupNameById.get(groupId) ?? null,
+    })),
+  };
 });

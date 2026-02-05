@@ -66,7 +66,7 @@ async function PublicProfileData({
       user={data.user}
       groups={data.groups}
       bookmarks={data.bookmarks}
-      activeGroupId={activeGroupParam}
+      activeGroup={activeGroupParam}
       isLoggedIn={!!session}
     />
   );

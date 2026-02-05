@@ -13,19 +13,17 @@ interface PublicUser {
 }
 
 interface PublicGroup {
-  id: string;
   name: string;
   color: string;
 }
 
 interface PublicBookmark {
-  id: string;
   title: string;
   url: string | null;
   favicon: string | null;
   type: string;
   color: string | null;
-  groupId: string;
+  groupName: string | null;
   createdAt: Date | string;
 }
 
@@ -34,7 +32,7 @@ interface PublicProfileContentProps {
   user: PublicUser;
   groups: PublicGroup[];
   bookmarks: PublicBookmark[];
-  activeGroupId?: string;
+  activeGroup?: string;
   isLoggedIn: boolean;
 }
 
@@ -43,23 +41,23 @@ export function PublicProfileContent({
   user,
   groups,
   bookmarks,
-  activeGroupId,
+  activeGroup,
   isLoggedIn,
 }: PublicProfileContentProps) {
   const tabs: { value: string; label: string; color?: string }[] = [
     { value: "all", label: "All" },
-    ...groups.map((g) => ({ value: g.id, label: g.name, color: g.color })),
+    ...groups.map((g) => ({ value: g.name, label: g.name, color: g.color })),
   ];
 
   const activeTab =
-    activeGroupId && groups.some((g) => g.id === activeGroupId)
-      ? activeGroupId
+    activeGroup && groups.some((g) => g.name === activeGroup)
+      ? activeGroup
       : "all";
 
   const filteredBookmarks = (
     activeTab === "all"
       ? bookmarks
-      : bookmarks.filter((bookmark) => bookmark.groupId === activeTab)
+      : bookmarks.filter((bookmark) => bookmark.groupName === activeTab)
   ).map((bookmark) => ({
     ...bookmark,
     hostname: bookmark.url
@@ -206,7 +204,7 @@ export function PublicProfileContent({
               <div className="flex flex-col gap-0.5 -mx-3">
                 {filteredBookmarks.map((bookmark) => (
                   <a
-                    key={bookmark.id}
+                    key={bookmark.url ?? bookmark.title}
                     href={bookmark.url || undefined}
                     target="_blank"
                     rel="noopener noreferrer"

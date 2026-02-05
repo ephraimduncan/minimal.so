@@ -103,7 +103,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (existing) {
       const bookmark = await db.bookmark.update({
-        where: { id: existing.id },
+        where: { id: existing.id, userId: session.user.id },
         data: {
           title: metadata.title || existing.title,
           favicon: metadata.favicon || existing.favicon,

@@ -7,7 +7,7 @@ export const DashboardDemoLazy = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[540px] rounded-xl border border-border bg-background" />
+      <div className="-mx-4 sm:mx-0 sm:w-[80vw] lg:w-[50vw] sm:relative sm:left-1/2 sm:-translate-x-1/2 h-[540px] rounded-xl border border-border bg-background" />
     ),
   },
 );

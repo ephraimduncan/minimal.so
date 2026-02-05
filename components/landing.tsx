@@ -19,12 +19,12 @@ export function Landing() {
   return (
     <main className="flex grow flex-col bg-white text-zinc-900" role="main">
       <article
-        className="mx-auto max-w-5xl p-4 sm:p-6"
+        className="mx-auto w-full max-w-5xl p-4 sm:p-6"
         aria-labelledby="landing-title"
       >
         <header className="mx-auto mb-8 mt-12 flex max-w-[400px] flex-col items-center justify-center text-center sm:mb-12 sm:mt-24">
           {LOGO_SVG}
-          <h1 id="landing-title" className="mb-1.5 text-2xl text-zinc-900">
+          <h1 id="landing-title" className="mb-1.5 text-2xl font-semibold text-zinc-900">
             minimal
           </h1>
           <p className="text-zinc-600">
@@ -64,11 +64,11 @@ export function Landing() {
           <h2 id="benefits-title" className="sr-only">
             Why minimal
           </h2>
-          <div className="space-y-7">
+          <div className="space-y-5 sm:space-y-7">
             <div className="flex items-start">
               {BOOKMARK_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
                   Save in seconds
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -79,7 +79,7 @@ export function Landing() {
             <div className="flex items-start">
               {AUTO_FETCH_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
                   Auto-fetch metadata
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -91,7 +91,7 @@ export function Landing() {
             <div className="flex items-start">
               {ORGANIZE_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
                   Organize with groups
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -103,7 +103,7 @@ export function Landing() {
             <div className="flex items-start">
               {SEARCH_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
                   Instant search
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -115,7 +115,7 @@ export function Landing() {
             <div className="flex items-start">
               {KEYBOARD_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
                   Keyboard shortcuts
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -127,7 +127,7 @@ export function Landing() {
             <div className="flex items-start">
               {PRIVACY_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
                   Private by default
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -139,7 +139,7 @@ export function Landing() {
             <div className="flex items-start">
               {MINIMAL_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
                   Minimal interface
                 </h3>
                 <p className="text-zinc-600 text-sm">
@@ -151,7 +151,7 @@ export function Landing() {
             <div className="flex items-start">
               {ACCESS_ANYWHERE_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
                   Access anywhere
                 </h3>
                 <p className="text-zinc-600 text-sm">

@@ -7,6 +7,7 @@
     "db:generate": "bunx prisma generate",
     "db:push": "bunx prisma db push",
     "db:studio": "bunx prisma studio",
+    "db:migrate:deploy": "sh -c 'turso db shell bmrks-production < prisma/migrations/$1/migration.sql' --",
     "dev": "next dev",
     "build": "bun run db:generate && bun run db:push && next build",
     "start": "bun run db:generate && bun run db:push && next start",

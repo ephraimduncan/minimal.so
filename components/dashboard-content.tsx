@@ -45,8 +45,6 @@ interface DashboardContentProps {
   profile: ProfileData;
 }
 
-// Untagged keys for getQueryData/setQueryData (strips ORPC DataTag to avoid
-// type conflict between server return types and UI-level BookmarkItem/GroupItem).
 const groupListKey = () =>
   orpc.group.list.queryKey() as readonly unknown[];
 const bookmarkListKey = (groupId?: string | null) =>

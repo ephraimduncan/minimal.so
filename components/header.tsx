@@ -356,7 +356,7 @@ export function Header({
           <AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle className="font-semibold text-xl<">
+                <AlertDialogTitle className="font-semibold text-xl">
                   Sign out?
                 </AlertDialogTitle>
                 <AlertDialogDescription>

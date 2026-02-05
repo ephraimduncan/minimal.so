@@ -672,6 +672,9 @@ export function DashboardContent({
 
       return { previousGroups };
     },
+    onSuccess: (_data, variables) => {
+      toast.success(variables.isPublic ? "Group is now public" : "Group is now private");
+    },
     onError: (_err, _data, context) => {
       if (context?.previousGroups) {
         queryClient.setQueryData<GroupItem[]>(groupListKey(), context.previousGroups);
@@ -956,7 +959,6 @@ export function DashboardContent({
   const handleToggleGroupVisibility = useCallback(
     (id: string, isPublic: boolean) => {
       setGroupVisibilityMutation.mutate({ id, isPublic });
-      toast.success(isPublic ? "Group is now public" : "Group is now private");
     },
     [setGroupVisibilityMutation],
   );
@@ -1061,6 +1063,7 @@ export function DashboardContent({
         onCreateGroup={handleCreateGroup}
         onDeleteGroup={handleDeleteGroup}
         onToggleGroupVisibility={hasUsername ? handleToggleGroupVisibility : undefined}
+        isTogglingGroupVisibility={setGroupVisibilityMutation.isPending}
         userName={session.user.name}
         userEmail={session.user.email}
         username={profile.username}
@@ -1111,8 +1114,8 @@ export function DashboardContent({
             onDelete={() => setDeleteDialogOpen(true)}
             onClose={handleExitSelectionMode}
             hasUsername={hasUsername}
-            onMakePublic={handleBulkMakePublic}
-            onMakePrivate={handleBulkMakePrivate}
+            onMakePublic={currentGroupId && publicGroupIds.has(currentGroupId) ? undefined : handleBulkMakePublic}
+            onMakePrivate={currentGroupId && publicGroupIds.has(currentGroupId) ? handleBulkMakePrivate : undefined}
           />
         )}
         <BulkMoveDialog

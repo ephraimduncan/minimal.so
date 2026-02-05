@@ -12,20 +12,34 @@ async function DashboardData() {
     redirect("/login");
   }
 
-  const groups = await db.group.findMany({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "asc" },
-    include: {
-      _count: {
-        select: { bookmarks: true },
+  const [groups, user] = await Promise.all([
+    db.group.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "asc" },
+      include: {
+        _count: {
+          select: { bookmarks: true },
+        },
       },
-    },
-  });
+    }),
+    db.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        username: true,
+        bio: true,
+        github: true,
+        twitter: true,
+        website: true,
+        isProfilePublic: true,
+      },
+    }),
+  ]);
 
   const groupItems: GroupItem[] = groups.map((g) => ({
     id: g.id,
     name: g.name,
     color: g.color,
+    isPublic: g.isPublic,
     bookmarkCount: g._count.bookmarks,
   }));
 
@@ -48,6 +62,7 @@ async function DashboardData() {
       favicon: b.favicon,
       type: b.type,
       color: b.color,
+      isPublic: b.isPublic,
       groupId: b.groupId,
       createdAt: b.createdAt,
     }));
@@ -58,6 +73,14 @@ async function DashboardData() {
       session={session}
       initialGroups={groupItems}
       initialBookmarks={initialBookmarks}
+      profile={{
+        username: user?.username ?? null,
+        bio: user?.bio ?? null,
+        github: user?.github ?? null,
+        twitter: user?.twitter ?? null,
+        website: user?.website ?? null,
+        isProfilePublic: user?.isProfilePublic ?? false,
+      }}
     />
   );
 }

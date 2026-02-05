@@ -19,7 +19,13 @@
       "Bash(bunx tsc:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(bun typecheck:*)",
-      "Bash(xargs ls:*)"
+      "Bash(xargs ls:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:x.com)",
+      "Bash(git commit:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx next build)",
+      "Bash(lsof:*)"
     ],
     "deny": [],
     "ask": []

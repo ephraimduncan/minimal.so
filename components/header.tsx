@@ -28,6 +28,9 @@ import {
   IconTrash,
   IconSettings,
   IconLogout,
+  IconWorld,
+  IconWorldOff,
+  IconUser,
 } from "@tabler/icons-react";
 import { signOut } from "@/lib/auth-client";
 import {
@@ -43,6 +46,7 @@ import { Form } from "@/components/ui/form";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { type GroupItem } from "@/lib/schema";
+import type { ProfileData } from "@/components/dashboard-content";
 
 const SettingsDialog = dynamic(
   () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
@@ -55,8 +59,11 @@ interface HeaderProps {
   onSelectGroup: (id: string) => void;
   onCreateGroup: (name: string) => void;
   onDeleteGroup?: (id: string) => void;
+  onToggleGroupVisibility?: (id: string, isPublic: boolean) => void;
   userName: string;
   userEmail: string;
+  username?: string | null;
+  profile?: ProfileData;
   readOnly?: boolean;
   showUserMenu?: boolean;
   logoSize?: number;
@@ -68,8 +75,11 @@ export function Header({
   onSelectGroup,
   onCreateGroup,
   onDeleteGroup,
+  onToggleGroupVisibility,
   userName,
   userEmail,
+  username,
+  profile,
   readOnly = false,
   showUserMenu = true,
   logoSize = 24,
@@ -194,6 +204,29 @@ export function Header({
               <IconPlus className="h-4 w-4 mr-0" />
               Create Group
             </DropdownMenuItem>
+            {!readOnly && onToggleGroupVisibility && (
+              <DropdownMenuItem
+                onClick={() =>
+                  onToggleGroupVisibility(
+                    selectedGroup.id,
+                    !selectedGroup.isPublic,
+                  )
+                }
+                className="rounded-lg"
+              >
+                {selectedGroup.isPublic ? (
+                  <>
+                    <IconWorldOff className="h-4 w-4" />
+                    Make Private
+                  </>
+                ) : (
+                  <>
+                    <IconWorld className="h-4 w-4" />
+                    Make Public
+                  </>
+                )}
+              </DropdownMenuItem>
+            )}
             {!readOnly && groups.length > 1 && (
               <DropdownMenuItem
                 onSelect={(e) => e.preventDefault()}
@@ -282,6 +315,17 @@ export function Header({
                 <IconSettings className="h-4 w-4" />
                 Settings
               </DropdownMenuItem>
+              {username && (
+                <DropdownMenuItem
+                  className="rounded-lg"
+                  render={
+                    <a href={`/u/${username}`} target="_blank" rel="noopener noreferrer" />
+                  }
+                >
+                  <IconUser className="h-4 w-4" />
+                  Public Profile
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 className="rounded-lg"
                 render={
@@ -324,6 +368,7 @@ export function Header({
             open={settingsOpen}
             onOpenChange={setSettingsOpen}
             user={{ name: userName, email: userEmail }}
+            profile={profile}
           />
         </>
       ) : null}

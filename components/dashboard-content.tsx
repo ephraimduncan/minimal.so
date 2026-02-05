@@ -18,16 +18,27 @@ import { useLatestRef } from "@/lib/hooks/use-latest-ref";
 import type { BookmarkType, GroupItem, BookmarkItem } from "@/lib/schema";
 import type { Session } from "@/lib/auth";
 
+export interface ProfileData {
+  username: string | null;
+  bio: string | null;
+  github: string | null;
+  twitter: string | null;
+  website: string | null;
+  isProfilePublic: boolean;
+}
+
 interface DashboardContentProps {
   session: NonNullable<Session>;
   initialGroups: GroupItem[];
   initialBookmarks: BookmarkItem[];
+  profile: ProfileData;
 }
 
 export function DashboardContent({
   session,
   initialGroups,
   initialBookmarks,
+  profile,
 }: DashboardContentProps) {
   const queryClient = useQueryClient();
 
@@ -51,6 +62,12 @@ export function DashboardContent({
   });
 
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data]);
+
+  const hasUsername = profile.username !== null;
+  const publicGroupIds = useMemo(
+    () => new Set(groups.filter((g) => g.isPublic).map((g) => g.id)),
+    [groups],
+  );
 
   useFocusRefetch(groups);
 
@@ -541,6 +558,109 @@ export function DashboardContent({
     },
   });
 
+  const setVisibilityMutation = useMutation({
+    mutationFn: (data: { id: string; isPublic: boolean | null }) =>
+      client.bookmark.setVisibility(data),
+    onMutate: async (data) => {
+      const groupId = currentGroupId;
+      await queryClient.cancelQueries({ queryKey: ["bookmarks", groupId] });
+
+      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>([
+        "bookmarks",
+        groupId,
+      ]);
+
+      queryClient.setQueryData<BookmarkItem[]>(
+        ["bookmarks", groupId],
+        (old) =>
+          old?.map((b) =>
+            b.id === data.id ? { ...b, isPublic: data.isPublic } : b,
+          ) ?? [],
+      );
+
+      return { previousBookmarks, groupId };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previousBookmarks && context?.groupId) {
+        queryClient.setQueryData(
+          ["bookmarks", context.groupId],
+          context.previousBookmarks,
+        );
+      }
+      toast.error("Failed to update visibility");
+    },
+    onSettled: (_data, _error, _variables, context) => {
+      if (context?.groupId) {
+        queryClient.invalidateQueries({ queryKey: ["bookmarks", context.groupId] });
+      }
+    },
+  });
+
+  const bulkSetVisibilityMutation = useMutation({
+    mutationFn: (data: { ids: string[]; isPublic: boolean | null }) =>
+      client.bookmark.bulkSetVisibility(data),
+    onMutate: async (data) => {
+      const groupId = currentGroupId;
+      await queryClient.cancelQueries({ queryKey: ["bookmarks", groupId] });
+
+      const previousBookmarks = queryClient.getQueryData<BookmarkItem[]>([
+        "bookmarks",
+        groupId,
+      ]);
+
+      queryClient.setQueryData<BookmarkItem[]>(
+        ["bookmarks", groupId],
+        (old) =>
+          old?.map((b) =>
+            data.ids.includes(b.id) ? { ...b, isPublic: data.isPublic } : b,
+          ) ?? [],
+      );
+
+      return { previousBookmarks, groupId };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previousBookmarks && context?.groupId) {
+        queryClient.setQueryData(
+          ["bookmarks", context.groupId],
+          context.previousBookmarks,
+        );
+      }
+      toast.error("Failed to update visibility");
+    },
+    onSettled: (_data, _error, _variables, context) => {
+      if (context?.groupId) {
+        queryClient.invalidateQueries({ queryKey: ["bookmarks", context.groupId] });
+      }
+    },
+  });
+
+  const setGroupVisibilityMutation = useMutation({
+    mutationFn: (data: { id: string; isPublic: boolean }) =>
+      client.group.setVisibility(data),
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: ["groups"] });
+
+      const previousGroups = queryClient.getQueryData<GroupItem[]>(["groups"]);
+
+      queryClient.setQueryData<GroupItem[]>(["groups"], (old) =>
+        old?.map((g) =>
+          g.id === data.id ? { ...g, isPublic: data.isPublic } : g,
+        ),
+      );
+
+      return { previousGroups };
+    },
+    onError: (_err, _data, context) => {
+      if (context?.previousGroups) {
+        queryClient.setQueryData(["groups"], context.previousGroups);
+      }
+      toast.error("Failed to update group visibility");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    },
+  });
+
   const selectedGroup =
     groups.find((g) => g.id === currentGroupId) || groups[0];
 
@@ -772,6 +892,53 @@ export function DashboardContent({
     [refetchBookmarkMutation]
   );
 
+  const handleToggleBookmarkVisibility = useCallback(
+    (id: string, currentIsPublic: boolean | null | undefined) => {
+      const isInPublicGroup = currentGroupId ? publicGroupIds.has(currentGroupId) : false;
+      const isEffectivelyPublic =
+        currentIsPublic === true || (isInPublicGroup && currentIsPublic !== false);
+
+      if (isEffectivelyPublic) {
+        setVisibilityMutation.mutate({
+          id,
+          isPublic: isInPublicGroup ? false : null,
+        });
+        toast.success("Bookmark hidden from public profile");
+      } else {
+        setVisibilityMutation.mutate({ id, isPublic: true });
+        toast.success("Bookmark visible on public profile");
+      }
+    },
+    [setVisibilityMutation, currentGroupId, publicGroupIds],
+  );
+
+  const handleBulkMakePublic = useCallback(() => {
+    bulkSetVisibilityMutation.mutate({
+      ids: Array.from(selectedIds),
+      isPublic: true,
+    });
+    handleExitSelectionMode();
+    toast.success(`${selectedIds.size} bookmarks made public`);
+  }, [bulkSetVisibilityMutation, selectedIds, handleExitSelectionMode]);
+
+  const handleBulkMakePrivate = useCallback(() => {
+    const isInPublicGroup = currentGroupId ? publicGroupIds.has(currentGroupId) : false;
+    bulkSetVisibilityMutation.mutate({
+      ids: Array.from(selectedIds),
+      isPublic: isInPublicGroup ? false : null,
+    });
+    handleExitSelectionMode();
+    toast.success(`${selectedIds.size} bookmarks made private`);
+  }, [bulkSetVisibilityMutation, selectedIds, currentGroupId, publicGroupIds, handleExitSelectionMode]);
+
+  const handleToggleGroupVisibility = useCallback(
+    (id: string, isPublic: boolean) => {
+      setGroupVisibilityMutation.mutate({ id, isPublic });
+      toast.success(isPublic ? "Group is now public" : "Group is now private");
+    },
+    [setGroupVisibilityMutation],
+  );
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (renamingIdRef.current) return;
@@ -873,8 +1040,11 @@ export function DashboardContent({
         onSelectGroup={handleSelectGroup}
         onCreateGroup={handleCreateGroup}
         onDeleteGroup={handleDeleteGroup}
+        onToggleGroupVisibility={hasUsername ? handleToggleGroupVisibility : undefined}
         userName={session.user.name}
         userEmail={session.user.email}
+        username={profile.username}
+        profile={profile}
       />
       <main className="mx-auto w-full max-w-2xl px-5 py-20">
         <BookmarkInput
@@ -907,6 +1077,9 @@ export function DashboardContent({
             onEnterSelectionMode={handleEnterSelectionMode}
             onBulkMove={handleConfirmMove}
             onBulkDelete={handleConfirmDelete}
+            hasUsername={hasUsername}
+            publicGroupIds={publicGroupIds}
+            onToggleVisibility={handleToggleBookmarkVisibility}
           />
         )}
         {selectionMode && selectedIds.size > 0 && (
@@ -917,6 +1090,9 @@ export function DashboardContent({
             onCopyUrls={handleCopyUrls}
             onDelete={() => setDeleteDialogOpen(true)}
             onClose={handleExitSelectionMode}
+            hasUsername={hasUsername}
+            onMakePublic={handleBulkMakePublic}
+            onMakePrivate={handleBulkMakePrivate}
           />
         )}
         <BulkMoveDialog

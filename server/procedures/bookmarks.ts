@@ -84,9 +84,21 @@ export const updateBookmark = authed
   .input(updateBookmarkSchema)
   .handler(async ({ context, input }) => {
     const { id, ...data } = input;
+    const updateData: Record<string, unknown> = { ...data };
+
+    if (data.groupId) {
+      const existing = await db.bookmark.findFirst({
+        where: { id, userId: context.user.id },
+        select: { groupId: true },
+      });
+      if (existing && existing.groupId !== data.groupId) {
+        updateData.isPublic = null;
+      }
+    }
+
     const bookmark = await db.bookmark.update({
       where: { id, userId: context.user.id },
-      data,
+      data: updateData,
     });
     return bookmark;
   });
@@ -114,6 +126,7 @@ export const listGroups = authed.handler(async ({ context }) => {
     id: g.id,
     name: g.name,
     color: g.color,
+    isPublic: g.isPublic,
     bookmarkCount: g._count.bookmarks,
   }));
 });
@@ -188,7 +201,46 @@ export const bulkMoveBookmarks = authed
   .handler(async ({ context, input }) => {
     const result = await db.bookmark.updateMany({
       where: { id: { in: input.ids }, userId: context.user.id },
-      data: { groupId: input.targetGroupId, updatedAt: new Date() },
+      data: {
+        groupId: input.targetGroupId,
+        isPublic: null,
+        updatedAt: new Date(),
+      },
     });
     return { success: true, count: result.count };
+  });
+
+export const setBookmarkVisibility = authed
+  .input(z.object({ id: z.string(), isPublic: z.boolean().nullable() }))
+  .handler(async ({ context, input }) => {
+    const bookmark = await db.bookmark.update({
+      where: { id: input.id, userId: context.user.id },
+      data: { isPublic: input.isPublic },
+    });
+    return bookmark;
+  });
+
+export const bulkSetVisibility = authed
+  .input(
+    z.object({
+      ids: z.array(z.string()).min(1),
+      isPublic: z.boolean().nullable(),
+    }),
+  )
+  .handler(async ({ context, input }) => {
+    const result = await db.bookmark.updateMany({
+      where: { id: { in: input.ids }, userId: context.user.id },
+      data: { isPublic: input.isPublic },
+    });
+    return { success: true, count: result.count };
+  });
+
+export const setGroupVisibility = authed
+  .input(z.object({ id: z.string(), isPublic: z.boolean() }))
+  .handler(async ({ context, input }) => {
+    const group = await db.group.update({
+      where: { id: input.id, userId: context.user.id },
+      data: { isPublic: input.isPublic },
+    });
+    return group;
   });

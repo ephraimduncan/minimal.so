@@ -26,6 +26,8 @@ model user {
   accounts  account[]
   bookmarks bookmark[]
   groups    group[]
+
+  @@index([createdAt])
 }
 
 model session {
@@ -105,4 +107,5 @@ model bookmark {
   @@index([userId])
   @@index([userId, isPublic])
   @@index([groupId])
+  @@index([createdAt])
 }

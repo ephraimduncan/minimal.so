@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { cacheLife, cacheTag } from "next/cache";
 import { getSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
 import {
@@ -20,20 +21,10 @@ import {
 } from "@/components/ui/table";
 import { SignupChart } from "./signup-chart";
 
-async function AdminData() {
-  const session = await getSession();
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (
-    !adminEmail ||
-    session.user.email.toLowerCase() !== adminEmail.toLowerCase()
-  ) {
-    notFound();
-  }
+async function getAdminData() {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("admin-stats");
 
   const now = new Date();
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -106,6 +97,90 @@ async function AdminData() {
     { label: "New Bookmarks (7d)", value: newBookmarks7d },
   ];
 
+  const formattedTopUsers = topUsers.map((user) => ({
+    name: user.name,
+    email: user.email,
+    bookmarks: user._count.bookmarks,
+    joined: user.createdAt.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+  }));
+
+  return {
+    stats,
+    avgBookmarks,
+    bookmarksByType,
+    signupData,
+    topUsers: formattedTopUsers,
+  };
+}
+
+function AdminSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Card key={i} size="sm">
+            <CardHeader>
+              <div className="h-4 w-24 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+              <div className="h-7 w-12 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+      <Card size="sm">
+        <CardHeader>
+          <div className="h-4 w-36 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+          <div className="h-7 w-12 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+        </CardHeader>
+      </Card>
+      <Card size="sm">
+        <CardHeader>
+          <div className="h-5 w-32 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex justify-between">
+                <div className="h-4 w-16 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+                <div className="h-4 w-8 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      <Card size="sm">
+        <CardHeader>
+          <div className="h-5 w-32 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+        </CardHeader>
+        <CardContent>
+          <div className="h-48 w-full animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+async function AdminData() {
+  const session = await getSession();
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (
+    !adminEmail ||
+    session.user.email.toLowerCase() !== adminEmail.toLowerCase()
+  ) {
+    notFound();
+  }
+
+  const { stats, avgBookmarks, bookmarksByType, signupData, topUsers } =
+    await getAdminData();
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
@@ -175,14 +250,10 @@ async function AdminData() {
                     {user.email}
                   </TableCell>
                   <TableCell className="text-right">
-                    {user._count.bookmarks}
+                    {user.bookmarks}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
-                    {user.createdAt.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {user.joined}
                   </TableCell>
                 </TableRow>
               ))}
@@ -223,7 +294,7 @@ export default function AdminPage() {
       </h1>
       <p className="mb-8 text-sm text-zinc-500">Usage statistics</p>
 
-      <Suspense>
+      <Suspense fallback={<AdminSkeleton />}>
         <AdminData />
       </Suspense>
     </div>

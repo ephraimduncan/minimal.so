@@ -188,24 +188,24 @@ export function Header({
                 key={group.id}
                 onClick={() => onSelectGroup(group.id)}
                 className={cn(
-                  "flex items-center justify-between rounded-lg",
+                  "flex items-start justify-between rounded-lg px-2 py-1.5",
                   group.id === selectedGroup.id && "bg-accent",
                 )}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2">
                   <span
-                    className="h-2.5 w-2.5 rounded-full"
+                    className="mt-[5px] h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: group.color }}
                   />
                   <span>{group.name}</span>
                   {group.isPublic && (
-                    <IconWorld className="h-3 w-3 text-muted-foreground" />
+                    <IconWorld className="mt-1 h-3 w-3 shrink-0 text-muted-foreground" />
                   )}
                 </div>
                 {group.id === selectedGroup.id ? (
-                  <IconCheck className="h-4 w-4" />
+                  <IconCheck className="mt-0.5 h-4 w-4 shrink-0" />
                 ) : (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="mt-0.5 shrink-0 text-xs text-muted-foreground">
                     {group.bookmarkCount ?? 0}
                   </span>
                 )}
@@ -216,7 +216,7 @@ export function Header({
                 if (!readOnly) setDialogOpen(true);
               }}
               disabled={readOnly}
-              className="rounded-lg w-full"
+              className="rounded-lg w-full px-2 py-1.5"
             >
               <IconPlus className="h-4 w-4 mr-0" />
               Create Group
@@ -231,7 +231,7 @@ export function Header({
                     setPublicDialogOpen(true);
                   }
                 }}
-                className="rounded-lg"
+                className="rounded-lg px-2 py-1.5"
               >
                 {selectedGroup.isPublic ? (
                   <>
@@ -254,7 +254,7 @@ export function Header({
                 onMouseLeave={cancelHold}
                 onTouchStart={() => startHold(selectedGroup.id)}
                 onTouchEnd={cancelHold}
-                className="relative overflow-hidden text-destructive focus:text-destructive rounded-lg"
+                className="relative overflow-hidden text-destructive focus:text-destructive rounded-lg px-2 py-1.5"
               >
                 {holdingGroupId === selectedGroup.id && (
                   <div

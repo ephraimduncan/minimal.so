@@ -40,6 +40,12 @@
       "WebFetch(domain:localhost)",
       "Bash(echo:*)",
       "Bash(git push)",
+      "Bash(but list:*)",
+      "Bash(but --help:*)",
+      "Bash(but status)",
+      "Bash(but stage:*)",
+      "Bash(git -C /Users/duncan/dev/bmrks log --oneline -5)",
+      "Bash(git -C /Users/duncan/dev/bmrks push -u origin admin-panel)"
       "Bash(git -C /Users/duncan/dev/bmrks diff)",
       "Bash(git -C /Users/duncan/dev/bmrks log --oneline -5)",
       "Bash(git -C /Users/duncan/dev/bmrks checkout -b feat/nuqs-url-state)",
@@ -56,5 +62,6 @@
   "enabledMcpjsonServers": [
     "shadcn"
   ],
-  "outputStyle": "Explanatory"
+  "outputStyle": "Explanatory",
+  "spinnerTipsEnabled": true
 }

@@ -62,10 +62,8 @@ export async function generateMetadata({
 
 async function PublicProfileData({
   paramsPromise,
-  searchParamsPromise,
 }: {
   paramsPromise: Promise<{ username: string }>;
-  searchParamsPromise?: Promise<{ group?: string | string[] }>;
 }) {
   const [{ username }, session] = await Promise.all([
     paramsPromise,
@@ -77,27 +75,21 @@ async function PublicProfileData({
     redirect("/dashboard");
   }
 
-  const resolvedSearchParams = await searchParamsPromise;
-  const activeGroupParam = resolveGroupParam(resolvedSearchParams?.group);
-
   return (
     <PublicProfileContent
-      profileUsername={username}
       user={data.user}
       groups={data.groups}
       bookmarks={data.bookmarks}
-      activeGroup={activeGroupParam}
       isLoggedIn={!!session}
     />
   );
 }
 
-export default function PublicProfilePage({ params, searchParams }: PageProps) {
+export default function PublicProfilePage({ params }: PageProps) {
   return (
     <Suspense>
       <PublicProfileData
         paramsPromise={params}
-        searchParamsPromise={searchParams}
       />
     </Suspense>
   );

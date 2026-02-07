@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useQueryState } from "nuqs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
@@ -58,7 +59,7 @@ export function DashboardContent({
 }: DashboardContentProps) {
   const queryClient = useQueryClient();
 
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useQueryState('group');
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);

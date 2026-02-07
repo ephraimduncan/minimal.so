@@ -22,7 +22,7 @@ const BulkDeleteDialog = dynamic(
   () => import("@/components/bulk-delete-dialog").then((m) => m.BulkDeleteDialog),
   { ssr: false }
 );
-import { parseColor, isUrl, normalizeUrl } from "@/lib/utils";
+import { parseColor, isUrl, normalizeUrl, slugify } from "@/lib/utils";
 import { client, orpc } from "@/lib/orpc";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useFocusRefetch } from "@/hooks/use-focus-refetch";
@@ -59,7 +59,7 @@ export function DashboardContent({
 }: DashboardContentProps) {
   const queryClient = useQueryClient();
 
-  const [selectedGroupId, setSelectedGroupId] = useQueryState('group');
+  const [groupSlug, setGroupSlug] = useQueryState('group');
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
@@ -86,6 +86,14 @@ export function DashboardContent({
   );
 
   useFocusRefetch(groups);
+
+  const groupIdBySlug = useMemo(
+    () => new Map(groups.map((g) => [slugify(g.name), g.id])),
+    [groups],
+  );
+  const groupIdBySlugRef = useLatestRef(groupIdBySlug);
+
+  const selectedGroupId = groupSlug ? (groupIdBySlug.get(groupSlug) ?? null) : null;
 
   const currentGroupId = selectedGroupId ?? groups[0]?.id ?? null;
 
@@ -325,7 +333,7 @@ export function DashboardContent({
       await queryClient.cancelQueries({ queryKey: orpc.group.list.queryKey() });
 
       const previousGroups = queryClient.getQueryData<GroupItem[]>(groupListKey());
-      const previousSelectedGroupId = selectedGroupId;
+      const previousGroupSlug = groupSlug;
 
       const optimisticGroup: GroupItem = {
         id: newGroup._optimisticId ?? `temp-${Date.now()}`,
@@ -339,12 +347,12 @@ export function DashboardContent({
         optimisticGroup,
       ]);
 
-      setSelectedGroupId(optimisticGroup.id);
+      setGroupSlug(slugify(newGroup.name));
       setSelectedIndex(-1);
 
       return {
         previousGroups,
-        previousSelectedGroupId,
+        previousGroupSlug,
         optimisticId: optimisticGroup.id,
       };
     },
@@ -352,8 +360,8 @@ export function DashboardContent({
       if (context?.previousGroups) {
         queryClient.setQueryData<GroupItem[]>(groupListKey(), context.previousGroups);
       }
-      if (context?.previousSelectedGroupId !== undefined) {
-        setSelectedGroupId(context.previousSelectedGroupId);
+      if (context?.previousGroupSlug !== undefined) {
+        setGroupSlug(context.previousGroupSlug);
       }
       toast.error("Failed to create group");
     },
@@ -368,7 +376,7 @@ export function DashboardContent({
       await queryClient.cancelQueries({ queryKey: orpc.group.list.queryKey() });
 
       const previousGroups = queryClient.getQueryData<GroupItem[]>(groupListKey());
-      const previousSelectedGroupId = selectedGroupId;
+      const previousGroupSlug = groupSlug;
 
       queryClient.setQueryData<GroupItem[]>(
         groupListKey(),
@@ -378,18 +386,18 @@ export function DashboardContent({
       if (currentGroupId === data.id) {
         const remainingGroups =
           previousGroups?.filter((g) => g.id !== data.id) ?? [];
-        setSelectedGroupId(remainingGroups[0]?.id ?? null);
+        setGroupSlug(remainingGroups[0] ? slugify(remainingGroups[0].name) : null);
         setSelectedIndex(-1);
       }
 
-      return { previousGroups, previousSelectedGroupId, deletedId: data.id };
+      return { previousGroups, previousGroupSlug, deletedId: data.id };
     },
     onError: (_err, _data, context) => {
       if (context?.previousGroups) {
         queryClient.setQueryData<GroupItem[]>(groupListKey(), context.previousGroups);
       }
-      if (context?.previousSelectedGroupId !== undefined) {
-        setSelectedGroupId(context.previousSelectedGroupId);
+      if (context?.previousGroupSlug !== undefined) {
+        setGroupSlug(context.previousGroupSlug);
       }
       toast.error("Failed to delete group");
     },
@@ -783,6 +791,7 @@ export function DashboardContent({
   }, [bulkDeleteMutation, selectedIds, currentGroupId, handleExitSelectionMode]);
 
   // Refs to store latest values for stable keyboard handler
+  const groupsRef = useLatestRef(groups);
   const filteredBookmarksRef = useLatestRef(filteredBookmarks);
   const selectedIndexRef = useLatestRef(selectedIndex);
   const hoveredIndexRef = useLatestRef(hoveredIndex);
@@ -799,11 +808,12 @@ export function DashboardContent({
 
   const handleSelectGroup = useCallback(
     (id: string) => {
-      setSelectedGroupId(id);
+      const group = groupsRef.current.find((g) => g.id === id);
+      setGroupSlug(group ? slugify(group.name) : null);
       setSelectedIndex(-1);
       handleExitSelectionMode();
     },
-    [handleExitSelectionMode]
+    [setGroupSlug, handleExitSelectionMode]
   );
 
   const handleAddBookmark = useCallback(
@@ -870,14 +880,7 @@ export function DashboardContent({
           ? availableColors[0]
           : palette[groups.length % palette.length];
 
-      createGroupMutation.mutate(
-        { name, color },
-        {
-          onSuccess: (newGroup) => {
-            setSelectedGroupId(newGroup.id);
-          },
-        }
-      );
+      createGroupMutation.mutate({ name, color });
     },
     [createGroupMutation, groups]
   );

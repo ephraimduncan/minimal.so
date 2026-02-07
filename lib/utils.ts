@@ -100,6 +100,14 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
+export function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
 export function isUrl(value: string): boolean {
   const trimmed = value.trim();
   if (!trimmed) return false;

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { IconBrandX, IconBrandGithub, IconWorld } from "@tabler/icons-react";
+import { useQueryState } from "nuqs";
 import { cn } from "@/lib/utils";
 
 interface PublicUser {
@@ -28,22 +31,19 @@ interface PublicBookmark {
 }
 
 interface PublicProfileContentProps {
-  profileUsername: string;
   user: PublicUser;
   groups: PublicGroup[];
   bookmarks: PublicBookmark[];
-  activeGroup?: string;
   isLoggedIn: boolean;
 }
 
 export function PublicProfileContent({
-  profileUsername,
   user,
   groups,
   bookmarks,
-  activeGroup,
   isLoggedIn,
 }: PublicProfileContentProps) {
+  const [activeGroup, setActiveGroup] = useQueryState('group');
   const tabs: { value: string; label: string; color?: string }[] = [
     { value: "all", label: "All" },
     ...groups.map((g) => ({ value: g.name, label: g.name, color: g.color })),
@@ -92,8 +92,6 @@ export function PublicProfileContent({
       label: "Website",
     },
   ].flatMap((s) => (s ? [s] : []));
-
-  const basePath = `/u/${encodeURIComponent(profileUsername)}`;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
@@ -165,13 +163,9 @@ export function PublicProfileContent({
           {tabs.length > 1 && (
             <div className="mb-8 flex items-center gap-1 flex-wrap">
               {tabs.map((tab) => (
-                <Link
+                <button
                   key={tab.value}
-                  href={
-                    tab.value === "all"
-                      ? basePath
-                      : `${basePath}?group=${encodeURIComponent(tab.value)}`
-                  }
+                  onClick={() => setActiveGroup(tab.value === "all" ? null : tab.value)}
                   className={cn(
                     "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
                     activeTab === tab.value
@@ -186,7 +180,7 @@ export function PublicProfileContent({
                     />
                   )}
                   {tab.label}
-                </Link>
+                </button>
               ))}
             </div>
           )}

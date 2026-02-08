@@ -263,7 +263,14 @@ function ProfileTab({
         <div className="relative">
           <Input
             value={username}
-            onChange={(e) => { markDirty("username"); setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "")); }}
+            onChange={(e) => {
+              markDirty("username");
+              const newValue = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+              if (newValue && !username && !isProfilePublic) {
+                setIsProfilePublic(true);
+              }
+              setUsername(newValue);
+            }}
             placeholder="your-username"
             type="text"
             className="pr-8"

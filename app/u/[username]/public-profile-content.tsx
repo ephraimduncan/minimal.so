@@ -4,6 +4,7 @@ import Link from "next/link";
 import { IconBrandX, IconBrandGithub, IconWorld } from "@tabler/icons-react";
 import { useQueryState } from "nuqs";
 import { cn } from "@/lib/utils";
+import { FaviconImage } from "@/components/favicon-image";
 
 interface PublicUser {
   name: string;
@@ -148,7 +149,7 @@ export function PublicProfileContent({
                   key={social.label}
                   href={social.href}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noopener"
                   aria-label={social.label}
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
@@ -201,7 +202,7 @@ export function PublicProfileContent({
                     key={bookmark.url ?? bookmark.title}
                     href={bookmark.url || undefined}
                     target="_blank"
-                    rel="noopener noreferrer"
+                    rel="noopener"
                     className={cn(
                       "group relative flex items-center justify-between rounded-xl px-4 py-3 text-left transition-transform duration-200",
                       bookmark.url
@@ -269,35 +270,7 @@ function BookmarkIcon({ bookmark }: { bookmark: PublicBookmark }) {
     );
   }
 
-  if (bookmark.favicon) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={bookmark.favicon}
-        alt=""
-        className="h-5 w-5 rounded object-contain shrink-0"
-      />
-    );
-  }
-
-  return (
-    <div className="flex h-5 w-5 items-center justify-center rounded bg-muted text-muted-foreground shrink-0">
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-        <polyline points="10 9 9 9 8 9" />
-      </svg>
-    </div>
-  );
+  return <FaviconImage url={bookmark.url} className="shrink-0" />;
 }
 
 function BmrksLogo() {

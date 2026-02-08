@@ -361,7 +361,7 @@ function RssFeedPicker({ username, activeTab, groups }: RssFeedPickerProps) {
                           ),
                         );
                       }}
-                      className="relative w-[14px] h-[14px] opacity-0 group-hover:opacity-100 cursor-pointer"
+                      className="relative w-[14px] h-[14px] opacity-0 group-hover:opacity-100 group-data-[highlighted]:opacity-100 cursor-pointer"
                       aria-label="Copy feed link"
                     >
                       <IconLink

@@ -31,12 +31,20 @@ function escapeXml(str: string): string {
 export function buildRssFeed(
   user: FeedUser,
   bookmarks: FeedBookmark[],
-  baseUrl: string
+  baseUrl: string,
+  groupName?: string
 ): string {
   const profileUrl = `${baseUrl}/u/${user.username}`;
+  const feedUrl = groupName
+    ? `${profileUrl}/feed.xml?group=${encodeURIComponent(groupName)}`
+    : `${profileUrl}/feed.xml`;
   const lastBuildDate = bookmarks.length > 0
     ? formatRssDate(bookmarks[0].updatedAt)
     : formatRssDate(new Date());
+
+  const title = groupName
+    ? `${escapeXml(user.name)}'s Bookmarks (${escapeXml(groupName)}) — minimal`
+    : `${escapeXml(user.name)}'s Bookmarks — minimal`;
 
   const items = bookmarks
     .map((bookmark) => {
@@ -59,11 +67,11 @@ export function buildRssFeed(
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>${escapeXml(user.name)}'s Bookmarks — minimal</title>
+    <title>${title}</title>
     <link>${profileUrl}</link>
     <description>${escapeXml(user.bio || `Public bookmarks shared by ${user.name}`)}</description>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
-    <atom:link href="${profileUrl}/feed.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="${feedUrl}" rel="self" type="application/rss+xml" />
 ${items}
   </channel>
 </rss>`;
@@ -72,13 +80,20 @@ ${items}
 export function buildAtomFeed(
   user: FeedUser,
   bookmarks: FeedBookmark[],
-  baseUrl: string
+  baseUrl: string,
+  groupName?: string
 ): string {
   const profileUrl = `${baseUrl}/u/${user.username}`;
-  const feedUrl = `${profileUrl}/feed.atom`;
+  const feedUrl = groupName
+    ? `${profileUrl}/feed.atom?group=${encodeURIComponent(groupName)}`
+    : `${profileUrl}/feed.atom`;
   const updated = bookmarks.length > 0
     ? formatAtomDate(bookmarks[0].updatedAt)
     : formatAtomDate(new Date());
+
+  const title = groupName
+    ? `${escapeXml(user.name)}'s Bookmarks (${escapeXml(groupName)}) — minimal`
+    : `${escapeXml(user.name)}'s Bookmarks — minimal`;
 
   const entries = bookmarks
     .map((bookmark) => {
@@ -102,7 +117,7 @@ export function buildAtomFeed(
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <title>${escapeXml(user.name)}'s Bookmarks — minimal</title>
+  <title>${title}</title>
   <link href="${profileUrl}" />
   <link href="${feedUrl}" rel="self" />
   <updated>${updated}</updated>

@@ -1,10 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { IconBrandX, IconBrandGithub, IconWorld, IconRss } from "@tabler/icons-react";
+import {
+  IconBrandX,
+  IconBrandGithub,
+  IconWorld,
+  IconRss,
+  IconCheck,
+  IconCopy,
+  IconLink,
+} from "@tabler/icons-react";
 import { useQueryState } from "nuqs";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { FaviconImage } from "@/components/favicon-image";
+import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 
 interface PublicUser {
   name: string;
@@ -44,7 +54,7 @@ export function PublicProfileContent({
   bookmarks,
   isLoggedIn,
 }: PublicProfileContentProps) {
-  const [activeGroup, setActiveGroup] = useQueryState('group');
+  const [activeGroup, setActiveGroup] = useQueryState("group");
   const tabs: { value: string; label: string; color?: string }[] = [
     { value: "all", label: "All" },
     ...groups.map((g) => ({ value: g.name, label: g.name, color: g.color })),
@@ -92,12 +102,12 @@ export function PublicProfileContent({
       icon: IconWorld,
       label: "Website",
     },
-    {
-      href: `/u/${user.username}/feed.xml`,
-      icon: IconRss,
-      label: "RSS Feed",
-    },
   ].flatMap((s) => (s ? [s] : []));
+
+  // Filter groups that have at least one bookmark
+  const groupsWithBookmarks = groups.filter((group) =>
+    bookmarks.some((b) => b.groupName === group.name),
+  );
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
@@ -147,7 +157,7 @@ export function PublicProfileContent({
           {user.bio && (
             <p className="mt-2 text-sm text-muted-foreground">{user.bio}</p>
           )}
-          {socials.length > 0 && (
+          {(socials.length > 0 || groupsWithBookmarks.length > 0) && (
             <div className="mt-4 flex gap-3">
               {socials.map((social) => (
                 <a
@@ -161,6 +171,11 @@ export function PublicProfileContent({
                   <social.icon size={18} strokeWidth={1.5} />
                 </a>
               ))}
+              <RssFeedPicker
+                username={user.username}
+                activeTab={activeTab}
+                groups={groupsWithBookmarks}
+              />
             </div>
           )}
         </aside>
@@ -171,7 +186,9 @@ export function PublicProfileContent({
               {tabs.map((tab) => (
                 <button
                   key={tab.value}
-                  onClick={() => setActiveGroup(tab.value === "all" ? null : tab.value)}
+                  onClick={() =>
+                    setActiveGroup(tab.value === "all" ? null : tab.value)
+                  }
                   className={cn(
                     "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
                     activeTab === tab.value
@@ -217,9 +234,7 @@ export function PublicProfileContent({
                   >
                     <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
                       <BookmarkIcon bookmark={bookmark} />
-                      <span className="text-sm truncate">
-                        {bookmark.title}
-                      </span>
+                      <span className="text-sm truncate">{bookmark.title}</span>
                       {bookmark.hostname && (
                         <span className="text-[13px] text-muted-foreground shrink-0">
                           {bookmark.hostname}
@@ -276,6 +291,109 @@ function BookmarkIcon({ bookmark }: { bookmark: PublicBookmark }) {
   }
 
   return <FaviconImage url={bookmark.url} className="shrink-0" />;
+}
+
+interface RssFeedPickerProps {
+  username: string | null;
+  activeTab: string;
+  groups: PublicGroup[];
+}
+
+function RssFeedPicker({ username, activeTab, groups }: RssFeedPickerProps) {
+  const [copiedOption, setCopiedOption] = useState<string | null>(null);
+
+  const getFeedUrl = (groupName?: string) => {
+    const base = `/u/${username}/feed.atom`;
+    return groupName ? `${base}?group=${encodeURIComponent(groupName)}` : base;
+  };
+
+  const feedOptions = [
+    { value: "all", label: "All", color: undefined },
+    ...groups.map((g) => ({ value: g.name, label: g.name, color: g.color })),
+  ];
+
+  const handleCopy = async (optionValue: string, feedUrl: string) => {
+    await navigator.clipboard.writeText(window.location.origin + feedUrl);
+    setCopiedOption(optionValue);
+    setTimeout(() => setCopiedOption(null), 1500);
+  };
+
+  return (
+    <MenuPrimitive.Root>
+      <MenuPrimitive.Trigger
+        aria-label="RSS Feed"
+        className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      >
+        <IconRss size={18} strokeWidth={1.5} />
+      </MenuPrimitive.Trigger>
+      <MenuPrimitive.Portal>
+        <MenuPrimitive.Positioner side="bottom" align="center" sideOffset={8}>
+          <MenuPrimitive.Popup className="min-w-40 bg-foreground text-background border-0 rounded-xl p-1.5 shadow-lg data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--transform-origin)">
+            {feedOptions.map((option) => (
+              <MenuPrimitive.Item
+                key={option.value}
+                className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-background/20 focus:bg-background/15 outline-none"
+                render={
+                  <a
+                    href={getFeedUrl(
+                      option.value === "all" ? undefined : option.value,
+                    )}
+                    target="_blank"
+                    rel="noopener"
+                    className="flex items-center gap-2 w-full"
+                  >
+                    {option.color && (
+                      <span
+                        className="h-2 w-2 rounded-full shrink-0"
+                        style={{ backgroundColor: option.color }}
+                      />
+                    )}
+                    {!option.color && <span className="w-2 shrink-0" />}
+                    <span className="flex-1">{option.label}</span>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleCopy(
+                          option.value,
+                          getFeedUrl(
+                            option.value === "all" ? undefined : option.value,
+                          ),
+                        );
+                      }}
+                      className="relative w-[14px] h-[14px] opacity-0 group-hover:opacity-100 cursor-pointer"
+                      aria-label="Copy feed link"
+                    >
+                      <IconLink
+                        size={14}
+                        strokeWidth={2}
+                        className={cn(
+                          "absolute inset-0 text-background/70 transition-[opacity,scale] duration-150 ease-out",
+                          copiedOption === option.value
+                            ? "opacity-0 scale-75"
+                            : "opacity-100 scale-100",
+                        )}
+                      />
+                      <IconCheck
+                        size={14}
+                        strokeWidth={2}
+                        className={cn(
+                          "absolute inset-0 text-background/70 transition-[opacity,scale] duration-150 ease-out",
+                          copiedOption === option.value
+                            ? "opacity-100 scale-125"
+                            : "opacity-0 scale-75",
+                        )}
+                      />
+                    </button>
+                  </a>
+                }
+              />
+            ))}
+          </MenuPrimitive.Popup>
+        </MenuPrimitive.Positioner>
+      </MenuPrimitive.Portal>
+    </MenuPrimitive.Root>
+  );
 }
 
 function BmrksLogo() {

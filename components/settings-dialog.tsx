@@ -73,7 +73,7 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>Manage your account settings.</DialogDescription>
@@ -96,7 +96,7 @@ export function SettingsDialog({
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
+                  placeholder="duncan"
                   type="text"
                 />
               </Field>
@@ -271,7 +271,7 @@ function ProfileTab({
               }
               setUsername(newValue);
             }}
-            placeholder="your-username"
+            placeholder="duncan"
             type="text"
             className="pr-8"
           />
@@ -293,7 +293,7 @@ function ProfileTab({
         <Textarea
           value={bio}
           onChange={(e) => { markDirty("bio"); setBio(e.target.value); }}
-          placeholder="A short bio"
+          placeholder="Building cool things on the web"
           rows={2}
           maxLength={160}
           className="resize-none"
@@ -307,7 +307,7 @@ function ProfileTab({
         <Input
           value={github}
           onChange={(e) => { markDirty("github"); setGithub(e.target.value); }}
-          placeholder="username"
+          placeholder="ephraimduncan"
           type="text"
         />
         {fieldErrors.github && (
@@ -319,7 +319,7 @@ function ProfileTab({
         <Input
           value={twitter}
           onChange={(e) => { markDirty("twitter"); setTwitter(e.target.value); }}
-          placeholder="username"
+          placeholder="ephraimduncan"
           type="text"
         />
         {fieldErrors.twitter && (
@@ -335,7 +335,7 @@ function ProfileTab({
           <Input
             value={website}
             onChange={(e) => { markDirty("website"); setWebsite(e.target.value.replace(/^https?:\/\//, "")); }}
-            placeholder="example.com"
+            placeholder="ephraimduncan.com"
             type="text"
             className="rounded-l-none px-2"
           />

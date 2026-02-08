@@ -273,7 +273,7 @@ export function Header({
           </DropdownMenuContent>
         </DropdownMenu>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-sm">
+          <DialogContent className="sm:max-w-sm" showCloseButton={false}>
             <Form
               className="contents"
               onSubmit={(e) => {
@@ -317,13 +317,13 @@ export function Header({
               render={
                 <Button
                   variant="ghost"
-                  className="w-44 justify-between gap-2 px-2"
+                  className="w-44 justify-start gap-2 px-2"
                 />
               }
             >
               <UserAvatar name={userName} />
               <span className="truncate">{userName}</span>
-              <IconSelector className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <IconSelector className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="rounded-2xl">
               <DropdownMenuItem

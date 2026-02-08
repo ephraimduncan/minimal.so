@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IconBrandX, IconBrandGithub, IconWorld } from "@tabler/icons-react";
+import { IconBrandX, IconBrandGithub, IconWorld, IconRss } from "@tabler/icons-react";
 import { useQueryState } from "nuqs";
 import { cn } from "@/lib/utils";
 import { FaviconImage } from "@/components/favicon-image";
@@ -91,6 +91,11 @@ export function PublicProfileContent({
       href: user.website,
       icon: IconWorld,
       label: "Website",
+    },
+    {
+      href: `/u/${user.username}/feed.xml`,
+      icon: IconRss,
+      label: "RSS Feed",
     },
   ].flatMap((s) => (s ? [s] : []));
 

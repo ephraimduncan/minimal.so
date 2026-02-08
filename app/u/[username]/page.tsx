@@ -44,6 +44,12 @@ export async function generateMetadata({
   return {
     title,
     description,
+    alternates: {
+      types: {
+        "application/rss+xml": `${baseUrl}/u/${username}/feed.xml`,
+        "application/atom+xml": `${baseUrl}/u/${username}/feed.atom`,
+      },
+    },
     openGraph: {
       title,
       description,

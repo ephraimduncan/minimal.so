@@ -203,14 +203,16 @@ function ProfileTab({
   const handleSubmit = () => {
     if (username && usernameStatus !== "available") return;
 
-    const result = updateProfileSchema.safeParse({
+    const payload = {
       username: username || null,
       bio: bio || null,
       github: github || null,
       twitter: twitter || null,
       website: website || null,
       isProfilePublic,
-    });
+    };
+
+    const result = updateProfileSchema.safeParse(payload);
 
     if (!result.success) {
       const errors: Record<string, string> = {};
@@ -225,24 +227,15 @@ function ProfileTab({
     }
 
     setFieldErrors({});
-    updateMutation.mutate({
-      username: username || null,
-      bio: bio || null,
-      github: github || null,
-      twitter: twitter || null,
-      website: website || null,
-      isProfilePublic,
-    });
+    updateMutation.mutate(result.data);
   };
 
-  const profileUrl = username ? `${typeof window !== "undefined" ? window.location.origin : ""}/u/${username}` : "";
-
   const handleCopyLink = useCallback(() => {
-    if (profileUrl) {
-      navigator.clipboard.writeText(profileUrl);
+    if (username) {
+      navigator.clipboard.writeText(`${window.location.origin}/u/${username}`);
       toast.success("Link copied");
     }
-  }, [profileUrl]);
+  }, [username]);
 
   return (
     <Form

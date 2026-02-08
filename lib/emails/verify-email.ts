@@ -1,6 +1,6 @@
 import { emailLayout } from "../email";
 
-export function verifyEmailEmail(name: string, url: string) {
+export function verificationEmail(name: string, url: string) {
   const firstName = name.split(" ")[0];
   return {
     subject: "verify your email",

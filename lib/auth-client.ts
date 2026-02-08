@@ -10,4 +10,3 @@ export const {
   requestPasswordReset,
   sendVerificationEmail,
 } = authClient;
-

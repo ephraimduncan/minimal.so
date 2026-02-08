@@ -5,7 +5,7 @@ import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
 import { sendEmail } from "./email";
 import { welcomeEmail } from "./emails/welcome";
-import { verifyEmailEmail } from "./emails/verify-email";
+import { verificationEmail } from "./emails/verify-email";
 import { resetPasswordEmail } from "./emails/reset-password";
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, CHROME_EXTENSION_ID } =
@@ -35,16 +35,14 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
-      const { subject, html } = resetPasswordEmail(user.name, url);
-      void sendEmail({ to: user.email, subject, html });
+      void sendEmail({ to: user.email, ...resetPasswordEmail(user.name, url) });
     },
   },
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
-      const { subject, html } = verifyEmailEmail(user.name, url);
-      void sendEmail({ to: user.email, subject, html });
+      void sendEmail({ to: user.email, ...verificationEmail(user.name, url) });
     },
   },
   ...(googleOAuthEnabled && {
@@ -68,8 +66,7 @@ export const auth = betterAuth({
       const isNewUser =
         Date.now() - new Date(session.user.createdAt).getTime() < 60_000;
       if (isNewUser) {
-        const { subject, html } = welcomeEmail(session.user.name);
-        void sendEmail({ to: session.user.email, subject, html });
+        void sendEmail({ to: session.user.email, ...welcomeEmail(session.user.name) });
       }
     }),
   },

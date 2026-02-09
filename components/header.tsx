@@ -92,8 +92,9 @@ export function Header({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
-  const [publicDialogOpen, setPublicDialogOpen] = useState(false);
-  const [pendingPublicGroupId, setPendingPublicGroupId] = useState<string | null>(null);
+  const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
+  const [pendingVisibilityGroupId, setPendingVisibilityGroupId] = useState<string | null>(null);
+  const [pendingVisibilityTarget, setPendingVisibilityTarget] = useState<boolean | null>(null);
   const [holdingGroupId, setHoldingGroupId] = useState<string | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -103,8 +104,12 @@ export function Header({
   useEffect(() => {
     if (!isTogglingGroupVisibility && initiatedToggleRef.current) {
       initiatedToggleRef.current = false;
-      setPublicDialogOpen(false);
-      setPendingPublicGroupId(null);
+      const timer = setTimeout(() => {
+        setVisibilityDialogOpen(false);
+        setPendingVisibilityGroupId(null);
+        setPendingVisibilityTarget(null);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isTogglingGroupVisibility]);
 
@@ -225,12 +230,9 @@ export function Header({
             {!readOnly && onToggleGroupVisibility && (
               <DropdownMenuItem
                 onClick={() => {
-                  if (selectedGroup.isPublic) {
-                    onToggleGroupVisibility(selectedGroup.id, false);
-                  } else {
-                    setPendingPublicGroupId(selectedGroup.id);
-                    setPublicDialogOpen(true);
-                  }
+                  setPendingVisibilityGroupId(selectedGroup.id);
+                  setPendingVisibilityTarget(!selectedGroup.isPublic);
+                  setVisibilityDialogOpen(true);
                 }}
                 className="rounded-lg px-2 py-1.5"
               >
@@ -385,18 +387,25 @@ export function Header({
             </AlertDialogContent>
           </AlertDialog>
           <AlertDialog
-            open={publicDialogOpen}
+            open={visibilityDialogOpen}
             onOpenChange={(open) => {
-              if (!isTogglingGroupVisibility) setPublicDialogOpen(open);
+              if (isTogglingGroupVisibility) return;
+              setVisibilityDialogOpen(open);
+              if (!open) {
+                setPendingVisibilityGroupId(null);
+                setPendingVisibilityTarget(null);
+              }
             }}
           >
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle className="font-semibold text-xl">
-                  Make group public?
+                  {pendingVisibilityTarget ? "Make group public?" : "Make group private?"}
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  All bookmarks in this group will become publicly visible on your profile.
+                  {pendingVisibilityTarget
+                    ? "All bookmarks in this group will become publicly visible on your profile."
+                    : "All bookmarks in this group will no longer be publicly visible on your profile."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -404,8 +413,9 @@ export function Header({
                   variant="ghost"
                   disabled={isTogglingGroupVisibility}
                   onClick={() => {
-                    setPublicDialogOpen(false);
-                    setPendingPublicGroupId(null);
+                    setVisibilityDialogOpen(false);
+                    setPendingVisibilityGroupId(null);
+                    setPendingVisibilityTarget(null);
                   }}
                 >
                   Cancel
@@ -413,8 +423,14 @@ export function Header({
                 <Button
                   disabled={isTogglingGroupVisibility}
                   onClick={() => {
-                    if (pendingPublicGroupId) {
-                      onToggleGroupVisibility?.(pendingPublicGroupId, true);
+                    if (
+                      pendingVisibilityGroupId &&
+                      pendingVisibilityTarget !== null
+                    ) {
+                      onToggleGroupVisibility?.(
+                        pendingVisibilityGroupId,
+                        pendingVisibilityTarget,
+                      );
                       initiatedToggleRef.current = true;
                     }
                   }}
@@ -422,7 +438,7 @@ export function Header({
                   {isTogglingGroupVisibility && (
                     <IconLoader2 className="h-4 w-4 animate-spin" />
                   )}
-                  Make Public
+                  {pendingVisibilityTarget ? "Make Public" : "Make Private"}
                 </Button>
               </AlertDialogFooter>
             </AlertDialogContent>

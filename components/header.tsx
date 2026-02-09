@@ -109,6 +109,7 @@ export function Header({
   }, [isTogglingGroupVisibility]);
 
   const handleSignOut = async () => {
+    setSignOutOpen(false);
     await signOut();
     router.push("/login");
   };

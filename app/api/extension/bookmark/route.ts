@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
-import { getUrlMetadata } from "@/lib/url-metadata";
+import { getUrlMetadata, isArxivHost } from "@/lib/url-metadata";
 import { normalizeUrl } from "@/lib/utils";
 import { z } from "zod";
 
@@ -125,7 +125,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const title = providedTitle || metadata.title || normalizedUrl;
+    const title = isArxivHost(normalizedUrl)
+      ? metadata.title || providedTitle || normalizedUrl
+      : providedTitle || metadata.title || normalizedUrl;
 
     const bookmark = await db.bookmark.create({
       data: {

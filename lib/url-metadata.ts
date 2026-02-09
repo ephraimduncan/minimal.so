@@ -4,18 +4,13 @@ export interface UrlMetadata {
   fetchedAt: number;
 }
 
-function getHostname(url: string): string | null {
-  try {
-    return new URL(url).hostname.toLowerCase();
-  } catch {
-    return null;
-  }
-}
-
 export function isArxivHost(url: string): boolean {
-  const hostname = getHostname(url);
-  if (!hostname) return false;
-  return hostname === "arxiv.org" || hostname.endsWith(".arxiv.org");
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname === "arxiv.org" || hostname.endsWith(".arxiv.org");
+  } catch {
+    return false;
+  }
 }
 
 export function extractArxivId(url: string): string | null {
@@ -27,29 +22,25 @@ export function extractArxivId(url: string): string | null {
   }
 
   const path = parsed.pathname.replace(/\/+$/, "");
-  let candidate: string | null = null;
 
+  let raw: string;
   if (path.startsWith("/pdf/")) {
-    candidate = path.slice("/pdf/".length).replace(/\.pdf$/i, "");
+    raw = path.slice("/pdf/".length).replace(/\.pdf$/i, "");
   } else if (path.startsWith("/abs/")) {
-    candidate = path.slice("/abs/".length);
+    raw = path.slice("/abs/".length);
   } else {
     return null;
   }
 
-  candidate = decodeURIComponent(candidate).trim();
+  const candidate = decodeURIComponent(raw).trim();
   if (!candidate) return null;
 
-  // New-style IDs, e.g. 1512.02595 or 1512.02595v1.
   const modernIdPattern = /^\d{4}\.\d{4,5}(v\d+)?$/i;
-  // Legacy IDs, e.g. cs/0112017 or math.GT/0309136.
   const legacyIdPattern = /^[a-z-]+(?:\.[a-z-]+)*\/\d{7}(v\d+)?$/i;
 
-  if (modernIdPattern.test(candidate) || legacyIdPattern.test(candidate)) {
-    return candidate;
-  }
-
-  return null;
+  return modernIdPattern.test(candidate) || legacyIdPattern.test(candidate)
+    ? candidate
+    : null;
 }
 
 export function toArxivAbsUrl(url: string): string | null {

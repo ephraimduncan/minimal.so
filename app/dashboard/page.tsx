@@ -25,6 +25,7 @@ async function DashboardData() {
     db.user.findUnique({
       where: { id: session.user.id },
       select: {
+        image: true,
         username: true,
         bio: true,
         github: true,
@@ -73,6 +74,7 @@ async function DashboardData() {
       initialBookmarks={initialBookmarks}
       profile={
         user ?? {
+          image: session.user.image ?? null,
           username: null,
           bio: null,
           github: null,

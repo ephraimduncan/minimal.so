@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
-import { orpc } from "@/lib/orpc";
+import { client, orpc } from "@/lib/orpc";
 import type { ProfileData } from "@/components/dashboard-content";
 import {
   Dialog,
@@ -188,7 +188,7 @@ export function SettingsDialog({
                   <div className="group relative">
                     <Avatar
                       size="lg"
-                      className="overflow-hidden [&>[data-slot=avatar-image]]:transition-[filter] [&>[data-slot=avatar-fallback]]:transition-[filter] sm:group-hover:[&>[data-slot=avatar-image]]:blur-sm sm:group-hover:[&>[data-slot=avatar-fallback]]:blur-sm"
+                      className="overflow-hidden *:data-[slot=avatar-image]:transition-[filter] *:data-[slot=avatar-fallback]:transition-[filter] sm:group-hover:*:data-[slot=avatar-image]:blur-sm sm:group-hover:*:data-[slot=avatar-fallback]:blur-sm"
                     >
                       <AvatarImage
                         src={avatarUrl ?? undefined}
@@ -327,7 +327,8 @@ function ProfileTab({ profile, onOpenChange }: ProfileTabProps) {
   );
 
   const updateMutation = useMutation({
-    ...orpc.profile.update.mutationOptions(),
+    mutationFn: (data: Parameters<typeof client.profile.update>[0]) =>
+      client.profile.update(data),
     onSuccess: () => {
       toast.success("Profile updated");
       onOpenChange(false);
@@ -579,13 +580,14 @@ function getStatus(
   username: string,
   debouncedUsername: string,
   parseResult: ReturnType<typeof usernameSchema.safeParse>,
-  availabilityQuery: { isPending: boolean; data?: { available: boolean } },
+  availabilityQuery: { isPending: boolean; data?: unknown },
 ): UsernameStatus {
   if (!username) return "idle";
   if (!parseResult.success) return "invalid";
   if (username !== debouncedUsername) return "checking";
   if (availabilityQuery.isPending) return "checking";
-  if (availabilityQuery.data?.available) return "available";
+  const data = availabilityQuery.data as { available?: boolean } | undefined;
+  if (data?.available) return "available";
   return "taken";
 }
 

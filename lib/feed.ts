@@ -39,11 +39,13 @@ export function buildRssFeed(
   user: FeedUser,
   bookmarks: FeedBookmark[],
   baseUrl: string,
-  groupName?: string
+  groupName?: string,
+  groupSlug?: string,
 ): string {
   const profileUrl = `${baseUrl}/u/${user.username}`;
-  const feedUrl = groupName
-    ? `${profileUrl}/feed.xml?group=${encodeURIComponent(groupName)}`
+  const slug = groupSlug ?? groupName;
+  const feedUrl = slug
+    ? `${profileUrl}/feed.xml?group=${encodeURIComponent(slug)}`
     : `${profileUrl}/feed.xml`;
   const lastBuildDate = bookmarks.length > 0
     ? formatRssDate(bookmarks[0].updatedAt)
@@ -86,11 +88,13 @@ export function buildAtomFeed(
   user: FeedUser,
   bookmarks: FeedBookmark[],
   baseUrl: string,
-  groupName?: string
+  groupName?: string,
+  groupSlug?: string,
 ): string {
   const profileUrl = `${baseUrl}/u/${user.username}`;
-  const feedUrl = groupName
-    ? `${profileUrl}/feed.atom?group=${encodeURIComponent(groupName)}`
+  const slug = groupSlug ?? groupName;
+  const feedUrl = slug
+    ? `${profileUrl}/feed.atom?group=${encodeURIComponent(slug)}`
     : `${profileUrl}/feed.atom`;
   const updated = bookmarks.length > 0
     ? formatAtomDate(bookmarks[0].updatedAt)

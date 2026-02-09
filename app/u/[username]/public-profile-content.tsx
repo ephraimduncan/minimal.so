@@ -6,14 +6,16 @@ import {
   IconBrandGithub,
   IconWorld,
   IconRss,
-  IconCheck,
-  IconLink,
 } from "@tabler/icons-react";
 import { useQueryState } from "nuqs";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn, slugify } from "@/lib/utils";
 import { FaviconImage } from "@/components/favicon-image";
-import { Menu as MenuPrimitive } from "@base-ui/react/menu";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface PublicUser {
   name: string;
@@ -56,18 +58,23 @@ export function PublicProfileContent({
   const [activeGroup, setActiveGroup] = useQueryState("group");
   const tabs: { value: string; label: string; color?: string }[] = [
     { value: "all", label: "All" },
-    ...groups.map((g) => ({ value: g.name, label: g.name, color: g.color })),
+    ...groups.map((g) => ({ value: slugify(g.name), label: g.name, color: g.color })),
   ];
 
   const activeTab =
-    activeGroup && groups.some((g) => g.name === activeGroup)
+    activeGroup && groups.some((g) => slugify(g.name) === activeGroup)
       ? activeGroup
       : "all";
 
+  const activeGroupName =
+    activeTab !== "all"
+      ? groups.find((g) => slugify(g.name) === activeTab)?.name
+      : undefined;
+
   const filteredBookmarks = (
-    activeTab === "all"
-      ? bookmarks
-      : bookmarks.filter((bookmark) => bookmark.groupName === activeTab)
+    activeGroupName
+      ? bookmarks.filter((bookmark) => bookmark.groupName === activeGroupName)
+      : bookmarks
   ).map((bookmark) => ({
     ...bookmark,
     hostname: bookmark.url
@@ -102,9 +109,8 @@ export function PublicProfileContent({
       label: "Website",
     },
   ].flatMap((s) => (s ? [s] : []));
-
   const groupsWithBookmarks = groups.filter((group) =>
-    bookmarks.some((b) => b.groupName === group.name),
+    bookmarks.some((bookmark) => bookmark.groupName === group.name),
   );
 
   return (
@@ -155,26 +161,24 @@ export function PublicProfileContent({
           {user.bio && (
             <p className="mt-2 text-sm text-muted-foreground">{user.bio}</p>
           )}
-          {(socials.length > 0 || groupsWithBookmarks.length > 0) && (
-            <div className="mt-4 flex gap-3">
-              {socials.map((social) => (
-                <a
-                  key={social.label}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener"
-                  aria-label={social.label}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <social.icon size={18} strokeWidth={1.5} />
-                </a>
-              ))}
-              <RssFeedPicker
-                username={user.username}
-                groups={groupsWithBookmarks}
-              />
-            </div>
-          )}
+          <div className="mt-4 flex gap-3">
+            {socials.map((social) => (
+              <a
+                key={social.label}
+                href={social.href}
+                target="_blank"
+                rel="noopener"
+                aria-label={social.label}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <social.icon size={18} strokeWidth={1.5} />
+              </a>
+            ))}
+            <RssFeedMenu
+              username={user.username}
+              groups={groupsWithBookmarks}
+            />
+          </div>
         </aside>
 
         <div className="min-w-0 flex-1">
@@ -290,105 +294,63 @@ function BookmarkIcon({ bookmark }: { bookmark: PublicBookmark }) {
   return <FaviconImage url={bookmark.url} className="shrink-0" />;
 }
 
-interface RssFeedPickerProps {
+interface RssFeedMenuProps {
   username: string;
   groups: PublicGroup[];
 }
 
-function RssFeedPicker({ username, groups }: RssFeedPickerProps) {
-  const [copiedOption, setCopiedOption] = useState<string | null>(null);
-
-  const getFeedUrl = (groupName?: string) => {
+function RssFeedMenu({ username, groups }: RssFeedMenuProps) {
+  const getFeedUrl = (groupSlug?: string) => {
     const base = `/u/${username}/feed.atom`;
-    return groupName ? `${base}?group=${encodeURIComponent(groupName)}` : base;
-  };
-
-  const feedOptions = [
-    { value: "all", label: "All", color: undefined },
-    ...groups.map((g) => ({ value: g.name, label: g.name, color: g.color })),
-  ];
-
-  const handleCopy = async (optionValue: string, feedUrl: string) => {
-    await navigator.clipboard.writeText(window.location.origin + feedUrl);
-    setCopiedOption(optionValue);
-    setTimeout(() => setCopiedOption(null), 1500);
+    return groupSlug ? `${base}?group=${encodeURIComponent(groupSlug)}` : base;
   };
 
   return (
-    <MenuPrimitive.Root>
-      <MenuPrimitive.Trigger
-        aria-label="RSS Feed"
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="RSS feeds"
         className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
       >
         <IconRss size={18} strokeWidth={1.5} />
-      </MenuPrimitive.Trigger>
-      <MenuPrimitive.Portal>
-        <MenuPrimitive.Positioner side="bottom" align="center" sideOffset={8}>
-          <MenuPrimitive.Popup className="min-w-40 bg-foreground text-background border-0 rounded-xl p-1.5 shadow-lg data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--transform-origin)">
-            {feedOptions.map((option) => (
-              <MenuPrimitive.Item
-                key={option.value}
-                className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer hover:bg-background/20 focus:bg-background/15 outline-none"
-                render={
-                  <a
-                    href={getFeedUrl(
-                      option.value === "all" ? undefined : option.value,
-                    )}
-                    target="_blank"
-                    rel="noopener"
-                    className="flex items-center gap-2 w-full"
-                  >
-                    {option.color && (
-                      <span
-                        className="h-2 w-2 rounded-full shrink-0"
-                        style={{ backgroundColor: option.color }}
-                      />
-                    )}
-                    {!option.color && <span className="w-2 shrink-0" />}
-                    <span className="flex-1">{option.label}</span>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleCopy(
-                          option.value,
-                          getFeedUrl(
-                            option.value === "all" ? undefined : option.value,
-                          ),
-                        );
-                      }}
-                      className="relative w-[14px] h-[14px] opacity-0 group-hover:opacity-100 group-data-[highlighted]:opacity-100 cursor-pointer"
-                      aria-label="Copy feed link"
-                    >
-                      <IconLink
-                        size={14}
-                        strokeWidth={2}
-                        className={cn(
-                          "absolute inset-0 text-background/70 transition-[opacity,scale] duration-150 ease-out",
-                          copiedOption === option.value
-                            ? "opacity-0 scale-75"
-                            : "opacity-100 scale-100",
-                        )}
-                      />
-                      <IconCheck
-                        size={14}
-                        strokeWidth={2}
-                        className={cn(
-                          "absolute inset-0 text-background/70 transition-[opacity,scale] duration-150 ease-out",
-                          copiedOption === option.value
-                            ? "opacity-100 scale-125"
-                            : "opacity-0 scale-75",
-                        )}
-                      />
-                    </button>
-                  </a>
-                }
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-48 space-y-1 rounded-xl">
+        <DropdownMenuItem
+          className="rounded-lg"
+          render={
+            <a
+              href={getFeedUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+            />
+          }
+        >
+          <IconRss />
+          All feeds
+        </DropdownMenuItem>
+        {groups.map((group) => {
+          const groupSlug = slugify(group.name);
+          return (
+            <DropdownMenuItem
+              key={group.name}
+              className="rounded-lg"
+              render={
+                <a
+                  href={getFeedUrl(groupSlug)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <span
+                className="size-2 rounded-full"
+                style={{ backgroundColor: group.color }}
               />
-            ))}
-          </MenuPrimitive.Popup>
-        </MenuPrimitive.Positioner>
-      </MenuPrimitive.Portal>
-    </MenuPrimitive.Root>
+              {group.name}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

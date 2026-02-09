@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPublicProfileData } from "@/server/queries/public-profile";
 import { buildRssFeed, buildAtomFeed } from "@/lib/feed";
+import { slugify } from "@/lib/utils";
 
 const FEED_FORMATS = {
   rss: {
@@ -25,15 +26,13 @@ export async function generateFeedResponse(
   }
 
   const { searchParams } = new URL(request.url);
-  const groupName = searchParams.get("group");
+  const groupSlug = searchParams.get("group") ?? undefined;
+  const matchedGroup = groupSlug
+    ? data.groups.find((g) => slugify(g.name) === groupSlug)
+    : undefined;
 
-  const validGroup =
-    groupName && data.groups.some((g) => g.name === groupName)
-      ? groupName
-      : undefined;
-
-  const bookmarks = validGroup
-    ? data.bookmarks.filter((b) => b.groupName === validGroup)
+  const bookmarks = matchedGroup
+    ? data.bookmarks.filter((b) => b.groupName === matchedGroup.name)
     : data.bookmarks;
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://minimal.so";
@@ -43,7 +42,7 @@ export async function generateFeedResponse(
     bio: data.user.bio,
   };
   const { builder, contentType } = FEED_FORMATS[format];
-  const xml = builder(user, bookmarks, baseUrl, validGroup);
+  const xml = builder(user, bookmarks, baseUrl, matchedGroup?.name, matchedGroup ? groupSlug : undefined);
 
   return new NextResponse(xml, {
     headers: {

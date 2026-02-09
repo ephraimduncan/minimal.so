@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
 import { getPublicProfileData } from "@/server/queries/public-profile";
+import { slugify } from "@/lib/utils";
 
 const colors = {
   bg: "#ffffff",
@@ -160,7 +161,13 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
 
-  const group = data.groups.find((g) => g.name === searchParams.get("group"));
+  const groupParam = searchParams.get("group");
+  const groups = data.groups as Array<{ name: string; color: string }>;
+  const group = groupParam
+    ? groups.find(
+      (entry) => slugify(entry.name) === groupParam || entry.name === groupParam,
+    )
+    : undefined;
   const heroText = group ? group.name : data.user.name;
   const subtitle = group
     ? `by @${data.user.username}`

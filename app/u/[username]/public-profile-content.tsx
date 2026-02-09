@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { IconBrandX, IconBrandGithub, IconWorld } from "@tabler/icons-react";
 import { useQueryState } from "nuqs";
-import { cn } from "@/lib/utils";
+import { cn, slugify } from "@/lib/utils";
 import { FaviconImage } from "@/components/favicon-image";
 
 interface PublicUser {
@@ -45,20 +46,44 @@ export function PublicProfileContent({
   isLoggedIn,
 }: PublicProfileContentProps) {
   const [activeGroup, setActiveGroup] = useQueryState('group');
+  const groupsBySlug = useMemo(
+    () => new Map(groups.map((g) => [slugify(g.name), g])),
+    [groups],
+  );
+  const groupSlugByName = useMemo(
+    () => new Map(groups.map((g) => [g.name, slugify(g.name)])),
+    [groups],
+  );
+
+  const normalizedActiveGroup =
+    activeGroup && groupsBySlug.has(activeGroup)
+      ? activeGroup
+      : activeGroup
+        ? (groupSlugByName.get(activeGroup) ?? null)
+        : null;
+
+  useEffect(() => {
+    if (activeGroup && normalizedActiveGroup && activeGroup !== normalizedActiveGroup) {
+      setActiveGroup(normalizedActiveGroup);
+    }
+  }, [activeGroup, normalizedActiveGroup, setActiveGroup]);
+
   const tabs: { value: string; label: string; color?: string }[] = [
     { value: "all", label: "All" },
-    ...groups.map((g) => ({ value: g.name, label: g.name, color: g.color })),
+    ...groups.map((g) => ({
+      value: slugify(g.name),
+      label: g.name,
+      color: g.color,
+    })),
   ];
 
-  const activeTab =
-    activeGroup && groups.some((g) => g.name === activeGroup)
-      ? activeGroup
-      : "all";
+  const activeTab = normalizedActiveGroup ?? "all";
+  const activeGroupName = activeTab === "all" ? null : groupsBySlug.get(activeTab)?.name ?? null;
 
   const filteredBookmarks = (
     activeTab === "all"
       ? bookmarks
-      : bookmarks.filter((bookmark) => bookmark.groupName === activeTab)
+      : bookmarks.filter((bookmark) => bookmark.groupName === activeGroupName)
   ).map((bookmark) => ({
     ...bookmark,
     hostname: bookmark.url

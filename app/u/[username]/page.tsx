@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicProfileData } from "@/server/queries/public-profile";
 import { getSession } from "@/lib/auth-server";
+import { slugify } from "@/lib/utils";
 import { PublicProfileContent } from "./public-profile-content";
 
 interface PageProps {
@@ -26,7 +27,14 @@ export async function generateMetadata({
 
   if (!data) return {};
 
-  const group = resolveGroupParam(resolvedSearchParams?.group);
+  const groupParam = resolveGroupParam(resolvedSearchParams?.group);
+  const groups = data.groups as Array<{ name: string }>;
+  const matchingGroup = groupParam
+    ? groups.find(
+      (group) => slugify(group.name) === groupParam || group.name === groupParam,
+    )
+    : undefined;
+  const group = matchingGroup ? slugify(matchingGroup.name) : groupParam;
 
   const title = `${data.user.name} (@${data.user.username}) — bmrks`;
   const description =

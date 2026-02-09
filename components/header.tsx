@@ -51,7 +51,7 @@ import type { ProfileData } from "@/components/dashboard-content";
 
 const SettingsDialog = dynamic(
   () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
-  { ssr: false }
+  { ssr: false },
 );
 
 interface HeaderProps {
@@ -64,6 +64,7 @@ interface HeaderProps {
   isTogglingGroupVisibility?: boolean;
   userName: string;
   userEmail: string;
+  userImage?: string | null;
   username?: string | null;
   profile?: ProfileData;
   readOnly?: boolean;
@@ -81,6 +82,7 @@ export function Header({
   isTogglingGroupVisibility,
   userName,
   userEmail,
+  userImage,
   username,
   profile,
   readOnly = false,
@@ -93,7 +95,9 @@ export function Header({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [publicDialogOpen, setPublicDialogOpen] = useState(false);
-  const [pendingPublicGroupId, setPendingPublicGroupId] = useState<string | null>(null);
+  const [pendingPublicGroupId, setPendingPublicGroupId] = useState<
+    string | null
+  >(null);
   const [holdingGroupId, setHoldingGroupId] = useState<string | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -164,7 +168,12 @@ export function Header({
   }, []);
 
   return (
-    <header className={cn("flex items-center justify-between", readOnly ? "px-4 py-2" : "px-6 py-3")}>
+    <header
+      className={cn(
+        "flex items-center justify-between",
+        readOnly ? "px-4 py-2" : "px-6 py-3",
+      )}
+    >
       <div className="flex items-center gap-2">
         <BmrksLogo size={logoSize} />
         <span className="text-muted-foreground">/</span>
@@ -318,11 +327,11 @@ export function Header({
               render={
                 <Button
                   variant="ghost"
-                  className="w-44 justify-start gap-2 px-2"
+                  className="w-44 justify-start gap-2 px-2 border-0"
                 />
               }
             >
-              <UserAvatar name={userName} />
+              <UserAvatar name={userName} image={userImage} />
               <span className="truncate">{userName}</span>
               <IconSelector className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
             </DropdownMenuTrigger>
@@ -339,7 +348,11 @@ export function Header({
                 <DropdownMenuItem
                   className="rounded-lg"
                   render={
-                    <a href={`/u/${username}`} target="_blank" rel="noopener noreferrer" />
+                    <a
+                      href={`/u/${username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    />
                   }
                 >
                   <IconUser className="h-4 w-4" />
@@ -378,7 +391,10 @@ export function Header({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel variant="ghost">Cancel</AlertDialogCancel>
-                <AlertDialogAction variant="destructive" onClick={handleSignOut}>
+                <AlertDialogAction
+                  variant="destructive"
+                  onClick={handleSignOut}
+                >
                   Sign out
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -396,7 +412,8 @@ export function Header({
                   Make group public?
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  All bookmarks in this group will become publicly visible on your profile.
+                  All bookmarks in this group will become publicly visible on
+                  your profile.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -430,7 +447,11 @@ export function Header({
           <SettingsDialog
             open={settingsOpen}
             onOpenChange={setSettingsOpen}
-            user={{ name: userName, email: userEmail }}
+            user={{
+              name: userName,
+              email: userEmail,
+              image: userImage ?? null,
+            }}
             profile={profile}
           />
         </>
@@ -460,9 +481,20 @@ function BmrksLogo({ size = 24 }: { size?: number }) {
   );
 }
 
-function UserAvatar({ name }: { name: string }) {
+function UserAvatar({ name, image }: { name: string; image?: string | null }) {
+  if (image) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={image}
+        alt={name}
+        className="size-4.5 shrink-0 rounded-full object-cover"
+      />
+    );
+  }
+
   return (
-    <svg viewBox="0 0 32 32" fill="none" width="24" height="24">
+    <svg viewBox="0 0 32 32" fill="none" width="18" height="18">
       <rect width="32" height="32" rx="16" fill="#74B06F" />
       <text
         x="50%"

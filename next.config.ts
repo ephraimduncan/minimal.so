@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
     "@libsql/isomorphic-ws",
     "libsql",
     "@prisma/adapter-libsql",
+    "sharp",
   ],
   async redirects() {
     return [

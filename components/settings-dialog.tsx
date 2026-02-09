@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  type ChangeEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -22,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form } from "@/components/ui/form";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import {
   IconCheck,
@@ -30,8 +37,18 @@ import {
   IconCopy,
   IconExternalLink,
 } from "@tabler/icons-react";
+import { ImagePlusIcon } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usernameSchema, updateProfileSchema } from "@/lib/schema";
+
+const ACCEPTED_AVATAR_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
+
+const MAX_AVATAR_FILE_SIZE_BYTES = 2 * 1024 * 1024;
 
 interface SettingsDialogProps {
   open: boolean;
@@ -39,6 +56,7 @@ interface SettingsDialogProps {
   user: {
     name: string;
     email: string;
+    image: string | null;
   };
   profile?: ProfileData;
 }
@@ -51,10 +69,98 @@ export function SettingsDialog({
 }: SettingsDialogProps) {
   const router = useRouter();
   const [name, setName] = useState(user.name);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user.image);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const initial = name.trim().charAt(0).toUpperCase() || "?";
+
+  useEffect(() => {
+    if (!open) return;
+    setName(user.name);
+    setAvatarUrl(user.image);
+  }, [open, user.name, user.image]);
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!ACCEPTED_AVATAR_TYPES.has(file.type)) {
+      toast.error("Only PNG, JPEG, WebP, and GIF files are supported");
+      return;
+    }
+
+    if (file.size > MAX_AVATAR_FILE_SIZE_BYTES) {
+      toast.error("Avatar must be 2MB or smaller");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/avatar", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(data?.message ?? "Failed to upload avatar");
+      }
+
+      const data = (await response.json()) as { url?: string };
+      if (!data.url) {
+        throw new Error("Invalid upload response");
+      }
+
+      setAvatarUrl(data.url);
+      toast.success("Avatar updated");
+      router.refresh();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to upload avatar";
+      toast.error(message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    await handleAvatarUpload(file);
+    event.target.value = "";
+  };
+
+  const handleAvatarRemove = async () => {
+    setIsUploading(true);
+    try {
+      const response = await fetch("/api/avatar", { method: "DELETE" });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(data?.message ?? "Failed to remove avatar");
+      }
+
+      setAvatarUrl(null);
+      toast.success("Avatar removed");
+      router.refresh();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to remove avatar";
+      toast.error(message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleSaveName = async () => {
     if (name.trim() === user.name) {
+      onOpenChange(false);
       return;
     }
 
@@ -68,6 +174,7 @@ export function SettingsDialog({
     }
 
     toast.success("Name updated");
+    onOpenChange(false);
     router.refresh();
   };
 
@@ -91,6 +198,51 @@ export function SettingsDialog({
                 handleSaveName();
               }}
             >
+              <Field>
+                <FieldLabel>Profile Picture</FieldLabel>
+                <div className="flex items-center gap-3">
+                  <div className="group relative">
+                    <Avatar
+                      size="lg"
+                      className="overflow-hidden [&>[data-slot=avatar-image]]:transition-[filter] [&>[data-slot=avatar-fallback]]:transition-[filter] sm:group-hover:[&>[data-slot=avatar-image]]:blur-sm sm:group-hover:[&>[data-slot=avatar-fallback]]:blur-sm"
+                    >
+                      <AvatarImage
+                        src={avatarUrl ?? undefined}
+                        alt={name || user.name}
+                      />
+                      <AvatarFallback>{initial}</AvatarFallback>
+                    </Avatar>
+                    <button
+                      type="button"
+                      disabled={isUploading}
+                      className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 hover:bg-black/55 text-white opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 disabled:opacity-100 cursor-pointer outline-none"
+                      onClick={
+                        avatarUrl
+                          ? handleAvatarRemove
+                          : () => fileInputRef.current?.click()
+                      }
+                    >
+                      {isUploading ? (
+                        <IconLoader2 className="size-4 animate-spin" />
+                      ) : avatarUrl ? (
+                        <IconX className="size-4" />
+                      ) : (
+                        <ImagePlusIcon className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Upload a photo
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={handleAvatarChange}
+                  />
+                </div>
+              </Field>
               <Field>
                 <FieldLabel>Name</FieldLabel>
                 <Input
@@ -125,19 +277,17 @@ export function SettingsDialog({
                 <DialogClose render={<Button variant="ghost" />}>
                   Cancel
                 </DialogClose>
-                <Button type="submit" disabled={isSaving || !name.trim()}>
+                <Button
+                  type="submit"
+                  disabled={isSaving || isUploading || !name.trim()}
+                >
                   {isSaving ? "Saving..." : "Save"}
                 </Button>
               </DialogFooter>
             </Form>
           </TabsContent>
           <TabsContent value="profile">
-            {profile && (
-              <ProfileTab
-                profile={profile}
-                onOpenChange={onOpenChange}
-              />
-            )}
+            {profile && <ProfileTab profile={profile} onOpenChange={onOpenChange} />}
           </TabsContent>
         </Tabs>
       </DialogContent>
@@ -145,21 +295,19 @@ export function SettingsDialog({
   );
 }
 
-function ProfileTab({
-  profile,
-  onOpenChange,
-}: {
-  profile: ProfileData;
-  onOpenChange: (open: boolean) => void;
-}) {
+function ProfileTab({ profile, onOpenChange }: { profile: ProfileData; onOpenChange: (open: boolean) => void }) {
   const router = useRouter();
 
   const [username, setUsername] = useState(profile.username ?? "");
   const [bio, setBio] = useState(profile.bio ?? "");
   const [github, setGithub] = useState(profile.github ?? "");
   const [twitter, setTwitter] = useState(profile.twitter ?? "");
-  const [website, setWebsite] = useState(profile.website?.replace(/^https?:\/\//, "") ?? "");
-  const [isProfilePublic, setIsProfilePublic] = useState(profile.isProfilePublic);
+  const [website, setWebsite] = useState(
+    profile.website?.replace(/^https?:\/\//, "") ?? "",
+  );
+  const [isProfilePublic, setIsProfilePublic] = useState(
+    profile.isProfilePublic,
+  );
   const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set());
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -174,10 +322,13 @@ function ProfileTab({
 
   const debouncedUsername = useDebounce(username, 400);
   const usernameParseResult = usernameSchema.safeParse(debouncedUsername);
-  const isUsernameValid = debouncedUsername.length > 0 && usernameParseResult.success;
+  const isUsernameValid =
+    debouncedUsername.length > 0 && usernameParseResult.success;
 
   const availabilityQuery = useQuery({
-    ...orpc.profile.checkUsername.queryOptions({ input: { username: debouncedUsername } }),
+    ...orpc.profile.checkUsername.queryOptions({
+      input: { username: debouncedUsername },
+    }),
     enabled: isUsernameValid,
     staleTime: 10_000,
   });
@@ -193,6 +344,7 @@ function ProfileTab({
     ...orpc.profile.update.mutationOptions(),
     onSuccess: () => {
       toast.success("Profile updated");
+      onOpenChange(false);
       router.refresh();
     },
     onError: (err) => {
@@ -202,6 +354,20 @@ function ProfileTab({
 
   const handleSubmit = () => {
     if (username && usernameStatus !== "available") return;
+
+    const originalWebsite = profile.website?.replace(/^https?:\/\//, "") ?? "";
+    const hasChanges =
+      username !== (profile.username ?? "") ||
+      bio !== (profile.bio ?? "") ||
+      github !== (profile.github ?? "") ||
+      twitter !== (profile.twitter ?? "") ||
+      website !== originalWebsite ||
+      isProfilePublic !== profile.isProfilePublic;
+
+    if (!hasChanges) {
+      onOpenChange(false);
+      return;
+    }
 
     const payload = {
       username: username || null,
@@ -248,7 +414,11 @@ function ProfileTab({
       <Field>
         <div className="flex items-center justify-between">
           <FieldLabel>Public Profile</FieldLabel>
-          <Switch checked={isProfilePublic} onCheckedChange={setIsProfilePublic} size="sm" />
+          <Switch
+            checked={isProfilePublic}
+            onCheckedChange={setIsProfilePublic}
+            size="sm"
+          />
         </div>
       </Field>
       <Field>
@@ -258,7 +428,9 @@ function ProfileTab({
             value={username}
             onChange={(e) => {
               markDirty("username");
-              const newValue = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+              const newValue = e.target.value
+                .toLowerCase()
+                .replace(/[^a-z0-9-]/g, "");
               if (newValue && !username && !isProfilePublic) {
                 setIsProfilePublic(true);
               }
@@ -272,20 +444,27 @@ function ProfileTab({
             <UsernameStatusIcon status={usernameStatus} />
           </div>
         </div>
-        {dirtyFields.has("username") && username && usernameStatus === "invalid" && (
-          <p className="text-xs text-destructive mt-1">
-            {usernameParseResult.error?.issues[0]?.message}
-          </p>
-        )}
-        {dirtyFields.has("username") && username && usernameStatus === "taken" && (
-          <p className="text-xs text-destructive mt-1">Username is taken</p>
-        )}
+        {dirtyFields.has("username") &&
+          username &&
+          usernameStatus === "invalid" && (
+            <p className="text-xs text-destructive mt-1">
+              {usernameParseResult.error?.issues[0]?.message}
+            </p>
+          )}
+        {dirtyFields.has("username") &&
+          username &&
+          usernameStatus === "taken" && (
+            <p className="text-xs text-destructive mt-1">Username is taken</p>
+          )}
       </Field>
       <Field>
         <FieldLabel>Bio</FieldLabel>
         <Textarea
           value={bio}
-          onChange={(e) => { markDirty("bio"); setBio(e.target.value); }}
+          onChange={(e) => {
+            markDirty("bio");
+            setBio(e.target.value);
+          }}
           placeholder="Building cool things on the web"
           rows={2}
           maxLength={160}
@@ -299,7 +478,10 @@ function ProfileTab({
         <FieldLabel>GitHub</FieldLabel>
         <Input
           value={github}
-          onChange={(e) => { markDirty("github"); setGithub(e.target.value); }}
+          onChange={(e) => {
+            markDirty("github");
+            setGithub(e.target.value);
+          }}
           placeholder="ephraimduncan"
           type="text"
         />
@@ -311,7 +493,10 @@ function ProfileTab({
         <FieldLabel>X (Twitter)</FieldLabel>
         <Input
           value={twitter}
-          onChange={(e) => { markDirty("twitter"); setTwitter(e.target.value); }}
+          onChange={(e) => {
+            markDirty("twitter");
+            setTwitter(e.target.value);
+          }}
           placeholder="ephraimduncan"
           type="text"
         />
@@ -327,7 +512,10 @@ function ProfileTab({
           </span>
           <Input
             value={website}
-            onChange={(e) => { markDirty("website"); setWebsite(e.target.value.replace(/^https?:\/\//, "")); }}
+            onChange={(e) => {
+              markDirty("website");
+              setWebsite(e.target.value.replace(/^https?:\/\//, ""));
+            }}
             placeholder="ephraimduncan.com"
             type="text"
             className="rounded-l-none px-2"
@@ -339,7 +527,13 @@ function ProfileTab({
       </Field>
       {username && usernameStatus === "available" && (
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={handleCopyLink}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={handleCopyLink}
+          >
             <IconCopy className="h-3.5 w-3.5" />
             Copy Profile Link
           </Button>
@@ -390,7 +584,9 @@ function getStatus(
 function UsernameStatusIcon({ status }: { status: UsernameStatus }) {
   switch (status) {
     case "checking":
-      return <IconLoader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+      return (
+        <IconLoader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      );
     case "available":
       return <IconCheck className="h-4 w-4 text-green-600" />;
     case "taken":

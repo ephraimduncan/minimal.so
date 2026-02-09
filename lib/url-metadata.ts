@@ -4,6 +4,52 @@ export interface UrlMetadata {
   fetchedAt: number;
 }
 
+export function isArxivHost(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname === "arxiv.org" || hostname.endsWith(".arxiv.org");
+  } catch {
+    return false;
+  }
+}
+
+export function extractArxivId(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+
+  const path = parsed.pathname.replace(/\/+$/, "");
+
+  let raw: string;
+  if (path.startsWith("/pdf/")) {
+    raw = path.slice("/pdf/".length).replace(/\.pdf$/i, "");
+  } else if (path.startsWith("/abs/")) {
+    raw = path.slice("/abs/".length);
+  } else {
+    return null;
+  }
+
+  const candidate = decodeURIComponent(raw).trim();
+  if (!candidate) return null;
+
+  const modernIdPattern = /^\d{4}\.\d{4,5}(v\d+)?$/i;
+  const legacyIdPattern = /^[a-z-]+(?:\.[a-z-]+)*\/\d{7}(v\d+)?$/i;
+
+  return modernIdPattern.test(candidate) || legacyIdPattern.test(candidate)
+    ? candidate
+    : null;
+}
+
+export function toArxivAbsUrl(url: string): string | null {
+  if (!isArxivHost(url)) return null;
+  const arxivId = extractArxivId(url);
+  if (!arxivId) return null;
+  return `https://arxiv.org/abs/${arxivId}`;
+}
+
 function isAllowedUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
@@ -64,7 +110,7 @@ async function fetchUrlMetadata(url: string): Promise<FetchResult> {
       Accept: "text/html,application/xhtml+xml",
     };
 
-    let currentUrl = url;
+    let currentUrl = toArxivAbsUrl(url) ?? url;
     const maxRedirects = 5;
 
     for (let i = 0; i <= maxRedirects; i++) {
@@ -118,19 +164,19 @@ async function fetchUrlMetadata(url: string): Promise<FetchResult> {
 
 function parseHtmlMetadata(
   html: string,
-  baseUrl: string
+  baseUrl: string,
 ): Omit<UrlMetadata, "fetchedAt"> {
   let title: string | null = null;
   let favicon: string | null = null;
 
   const ogTitleMatch = html.match(
-    /<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i
+    /<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i,
   );
   if (ogTitleMatch) {
     title = decodeHtmlEntities(ogTitleMatch[1]);
   } else {
     const ogTitleMatchAlt = html.match(
-      /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i
+      /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["']/i,
     );
     if (ogTitleMatchAlt) {
       title = decodeHtmlEntities(ogTitleMatchAlt[1]);

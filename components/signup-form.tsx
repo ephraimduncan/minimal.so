@@ -62,7 +62,7 @@ export function SignupForm({
       return;
     }
 
-    router.push("/");
+    router.push("/dashboard");
   };
 
   return (

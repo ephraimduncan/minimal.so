@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   IconBrandX,
@@ -55,26 +56,45 @@ export function PublicProfileContent({
   bookmarks,
   isLoggedIn,
 }: PublicProfileContentProps) {
-  const [activeGroup, setActiveGroup] = useQueryState("group");
+  const [activeGroup, setActiveGroup] = useQueryState('group');
+  const groupsBySlug = useMemo(
+    () => new Map(groups.map((g) => [slugify(g.name), g])),
+    [groups],
+  );
+  const groupSlugByName = useMemo(
+    () => new Map(groups.map((g) => [g.name, slugify(g.name)])),
+    [groups],
+  );
+
+  const normalizedActiveGroup =
+    activeGroup && groupsBySlug.has(activeGroup)
+      ? activeGroup
+      : activeGroup
+        ? (groupSlugByName.get(activeGroup) ?? null)
+        : null;
+
+  useEffect(() => {
+    if (activeGroup && normalizedActiveGroup && activeGroup !== normalizedActiveGroup) {
+      setActiveGroup(normalizedActiveGroup);
+    }
+  }, [activeGroup, normalizedActiveGroup, setActiveGroup]);
+
   const tabs: { value: string; label: string; color?: string }[] = [
     { value: "all", label: "All" },
-    ...groups.map((g) => ({ value: slugify(g.name), label: g.name, color: g.color })),
+    ...groups.map((g) => ({
+      value: slugify(g.name),
+      label: g.name,
+      color: g.color,
+    })),
   ];
 
-  const activeTab =
-    activeGroup && groups.some((g) => slugify(g.name) === activeGroup)
-      ? activeGroup
-      : "all";
-
-  const activeGroupName =
-    activeTab !== "all"
-      ? groups.find((g) => slugify(g.name) === activeTab)?.name
-      : undefined;
+  const activeTab = normalizedActiveGroup ?? "all";
+  const activeGroupName = activeTab === "all" ? null : groupsBySlug.get(activeTab)?.name ?? null;
 
   const filteredBookmarks = (
-    activeGroupName
-      ? bookmarks.filter((bookmark) => bookmark.groupName === activeGroupName)
-      : bookmarks
+    activeTab === "all"
+      ? bookmarks
+      : bookmarks.filter((bookmark) => bookmark.groupName === activeGroupName)
   ).map((bookmark) => ({
     ...bookmark,
     hostname: bookmark.url

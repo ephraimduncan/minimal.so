@@ -3,6 +3,10 @@ import { createAuthMiddleware } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
+import { sendEmail } from "./email";
+import { welcomeEmail } from "./emails/welcome";
+import { verificationEmail } from "./emails/verify-email";
+import { resetPasswordEmail } from "./emails/reset-password";
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, CHROME_EXTENSION_ID } =
   process.env;
@@ -28,7 +32,19 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
   },
-  emailAndPassword: { enabled: true },
+  emailAndPassword: {
+    enabled: true,
+    sendResetPassword: async ({ user, url }) => {
+      void sendEmail({ to: user.email, ...resetPasswordEmail(user.name, url) });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      void sendEmail({ to: user.email, ...verificationEmail(user.name, url) });
+    },
+  },
   ...(googleOAuthEnabled && {
     socialProviders: {
       google: {
@@ -42,8 +58,15 @@ export const auth = betterAuth({
   },
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
-      if (ctx.context.newSession) {
-        await ensureDefaultGroup(ctx.context.newSession.user.id);
+      const session = ctx.context.newSession;
+      if (!session) return;
+
+      await ensureDefaultGroup(session.user.id);
+
+      const isNewUser =
+        Date.now() - new Date(session.user.createdAt).getTime() < 60_000;
+      if (isNewUser) {
+        void sendEmail({ to: session.user.email, ...welcomeEmail(session.user.name) });
       }
     }),
   },

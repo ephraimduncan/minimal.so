@@ -38,9 +38,9 @@ import { type BookmarkItem, type GroupItem } from "@/lib/schema";
 import { FaviconImage } from "@/components/favicon-image";
 
 const EMPTY_STATE = (
-  <Empty className="border-none py-16">
-    <EmptyMedia>
-      <IconBookmark className="size-5 text-muted-foreground fill-muted-foreground" />
+  <Empty className="border-none py-16 gap-2">
+    <EmptyMedia className="mb-0">
+      <IconBookmark className="size-8 text-muted-foreground fill-muted-foreground" />
     </EmptyMedia>
     <EmptyTitle>No bookmarks here</EmptyTitle>
     <EmptyDescription>Add some cool links to get started</EmptyDescription>

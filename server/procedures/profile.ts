@@ -8,6 +8,7 @@ export const getProfile = authed.handler(async ({ context }) => {
   const user = await db.user.findUniqueOrThrow({
     where: { id: context.user.id },
     select: {
+      image: true,
       username: true,
       bio: true,
       github: true,
@@ -31,7 +32,9 @@ export const updateProfile = authed
       });
 
       if (existing && existing.id !== context.user.id) {
-        throw new ORPCError("CONFLICT", { message: "Username is already taken" });
+        throw new ORPCError("CONFLICT", {
+          message: "Username is already taken",
+        });
       }
     }
 
@@ -46,6 +49,7 @@ export const updateProfile = authed
         isProfilePublic: input.isProfilePublic,
       },
       select: {
+        image: true,
         username: true,
         bio: true,
         github: true,

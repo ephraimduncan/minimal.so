@@ -8,10 +8,15 @@ interface FaviconImageProps {
   className?: string;
 }
 
-function getHostname(url: string | null): string | null {
+function getFaviconSrc(url: string | null): string | null {
   if (!url) return null;
   try {
-    return new URL(url).hostname;
+    const urlObj = new URL(url);
+    if (urlObj.hostname === "x.com" || urlObj.hostname === "twitter.com") {
+      const username = urlObj.pathname.split("/").filter(Boolean)[0];
+      if (username) return `https://unavatar.io/twitter/${username}`;
+    }
+    return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=64`;
   } catch {
     return null;
   }
@@ -19,9 +24,9 @@ function getHostname(url: string | null): string | null {
 
 export function FaviconImage({ url, className }: FaviconImageProps) {
   const [errorUrl, setErrorUrl] = useState<string | null>(null);
-  const hostname = getHostname(url);
+  const src = getFaviconSrc(url);
 
-  if (!hostname || errorUrl === url) {
+  if (!src || errorUrl === url) {
     return (
       <div
         className={cn("flex h-5 w-5 items-center justify-center rounded bg-muted text-muted-foreground", className)}
@@ -47,7 +52,7 @@ export function FaviconImage({ url, className }: FaviconImageProps) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=64`}
+      src={src}
       alt=""
       className={cn("h-5 w-5 rounded object-contain", className)}
       onError={() => setErrorUrl(url)}

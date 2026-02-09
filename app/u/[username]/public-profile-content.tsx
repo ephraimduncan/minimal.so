@@ -2,15 +2,26 @@
 
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
-import { IconBrandX, IconBrandGithub, IconWorld } from "@tabler/icons-react";
+import {
+  IconBrandX,
+  IconBrandGithub,
+  IconWorld,
+  IconRss,
+} from "@tabler/icons-react";
 import { useQueryState } from "nuqs";
 import { cn, slugify } from "@/lib/utils";
 import { FaviconImage } from "@/components/favicon-image";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface PublicUser {
   name: string;
   image: string | null;
-  username: string | null;
+  username: string;
   bio: string | null;
   github: string | null;
   twitter: string | null;
@@ -118,6 +129,9 @@ export function PublicProfileContent({
       label: "Website",
     },
   ].flatMap((s) => (s ? [s] : []));
+  const groupsWithBookmarks = groups.filter((group) =>
+    bookmarks.some((bookmark) => bookmark.groupName === group.name),
+  );
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
@@ -167,22 +181,24 @@ export function PublicProfileContent({
           {user.bio && (
             <p className="mt-2 text-sm text-muted-foreground">{user.bio}</p>
           )}
-          {socials.length > 0 && (
-            <div className="mt-4 flex gap-3">
-              {socials.map((social) => (
-                <a
-                  key={social.label}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener"
-                  aria-label={social.label}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <social.icon size={18} strokeWidth={1.5} />
-                </a>
-              ))}
-            </div>
-          )}
+          <div className="mt-4 flex gap-3">
+            {socials.map((social) => (
+              <a
+                key={social.label}
+                href={social.href}
+                target="_blank"
+                rel="noopener"
+                aria-label={social.label}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <social.icon size={18} strokeWidth={1.5} />
+              </a>
+            ))}
+            <RssFeedMenu
+              username={user.username}
+              groups={groupsWithBookmarks}
+            />
+          </div>
         </aside>
 
         <div className="min-w-0 flex-1">
@@ -191,7 +207,9 @@ export function PublicProfileContent({
               {tabs.map((tab) => (
                 <button
                   key={tab.value}
-                  onClick={() => setActiveGroup(tab.value === "all" ? null : tab.value)}
+                  onClick={() =>
+                    setActiveGroup(tab.value === "all" ? null : tab.value)
+                  }
                   className={cn(
                     "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
                     activeTab === tab.value
@@ -237,9 +255,7 @@ export function PublicProfileContent({
                   >
                     <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
                       <BookmarkIcon bookmark={bookmark} />
-                      <span className="text-sm truncate">
-                        {bookmark.title}
-                      </span>
+                      <span className="text-sm truncate">{bookmark.title}</span>
                       {bookmark.hostname && (
                         <span className="text-[13px] text-muted-foreground shrink-0">
                           {bookmark.hostname}
@@ -296,6 +312,66 @@ function BookmarkIcon({ bookmark }: { bookmark: PublicBookmark }) {
   }
 
   return <FaviconImage url={bookmark.url} className="shrink-0" />;
+}
+
+interface RssFeedMenuProps {
+  username: string;
+  groups: PublicGroup[];
+}
+
+function RssFeedMenu({ username, groups }: RssFeedMenuProps) {
+  const getFeedUrl = (groupSlug?: string) => {
+    const base = `/u/${username}/feed.atom`;
+    return groupSlug ? `${base}?group=${encodeURIComponent(groupSlug)}` : base;
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="RSS feeds"
+        className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+      >
+        <IconRss size={18} strokeWidth={1.5} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-48 space-y-1 rounded-xl">
+        <DropdownMenuItem
+          className="rounded-lg"
+          render={
+            <a
+              href={getFeedUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+            />
+          }
+        >
+          <IconRss />
+          All feeds
+        </DropdownMenuItem>
+        {groups.map((group) => {
+          const groupSlug = slugify(group.name);
+          return (
+            <DropdownMenuItem
+              key={group.name}
+              className="rounded-lg"
+              render={
+                <a
+                  href={getFeedUrl(groupSlug)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }
+            >
+              <span
+                className="size-2 rounded-full"
+                style={{ backgroundColor: group.color }}
+              />
+              {group.name}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 function BmrksLogo() {

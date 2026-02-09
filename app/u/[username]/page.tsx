@@ -52,6 +52,12 @@ export async function generateMetadata({
   return {
     title,
     description,
+    alternates: {
+      types: {
+        "application/rss+xml": `${baseUrl}/u/${username}/feed.xml`,
+        "application/atom+xml": `${baseUrl}/u/${username}/feed.atom`,
+      },
+    },
     openGraph: {
       title,
       description,
@@ -79,13 +85,15 @@ async function PublicProfileData({
   ]);
   const data = await getPublicProfileData(username);
 
-  if (!data) {
+  if (!data?.user.username) {
     redirect("/dashboard");
   }
 
+  const user = { ...data.user, username: data.user.username };
+
   return (
     <PublicProfileContent
-      user={data.user}
+      user={user}
       groups={data.groups}
       bookmarks={data.bookmarks}
       isLoggedIn={!!session}

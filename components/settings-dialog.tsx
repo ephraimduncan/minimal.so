@@ -102,25 +102,16 @@ export function SettingsDialog({
         body: formData,
       });
 
-      if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as {
-          message?: string;
-        } | null;
-        throw new Error(data?.message ?? "Failed to upload avatar");
-      }
+      if (!response.ok) throw await responseError(response, "Failed to upload avatar");
 
       const data = (await response.json()) as { url?: string };
-      if (!data.url) {
-        throw new Error("Invalid upload response");
-      }
+      if (!data.url) throw new Error("Invalid upload response");
 
       setAvatarUrl(data.url);
       toast.success("Avatar updated");
       router.refresh();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to upload avatar";
-      toast.error(message);
+      toast.error(error instanceof Error ? error.message : "Failed to upload avatar");
     } finally {
       setIsUploading(false);
     }
@@ -139,20 +130,13 @@ export function SettingsDialog({
     try {
       const response = await fetch("/api/avatar", { method: "DELETE" });
 
-      if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as {
-          message?: string;
-        } | null;
-        throw new Error(data?.message ?? "Failed to remove avatar");
-      }
+      if (!response.ok) throw await responseError(response, "Failed to remove avatar");
 
       setAvatarUrl(null);
       toast.success("Avatar removed");
       router.refresh();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to remove avatar";
-      toast.error(message);
+      toast.error(error instanceof Error ? error.message : "Failed to remove avatar");
     } finally {
       setIsUploading(false);
     }
@@ -222,13 +206,10 @@ export function SettingsDialog({
                           : () => fileInputRef.current?.click()
                       }
                     >
-                      {isUploading ? (
-                        <IconLoader2 className="size-4 animate-spin" />
-                      ) : avatarUrl ? (
-                        <IconX className="size-4" />
-                      ) : (
-                        <ImagePlusIcon className="size-4" />
-                      )}
+                      <AvatarOverlayIcon
+                        isUploading={isUploading}
+                        hasAvatar={!!avatarUrl}
+                      />
                     </button>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -295,7 +276,12 @@ export function SettingsDialog({
   );
 }
 
-function ProfileTab({ profile, onOpenChange }: { profile: ProfileData; onOpenChange: (open: boolean) => void }) {
+interface ProfileTabProps {
+  profile: ProfileData;
+  onOpenChange: (open: boolean) => void;
+}
+
+function ProfileTab({ profile, onOpenChange }: ProfileTabProps) {
   const router = useRouter();
 
   const [username, setUsername] = useState(profile.username ?? "");
@@ -563,6 +549,28 @@ function ProfileTab({ profile, onOpenChange }: { profile: ProfileData; onOpenCha
       </DialogFooter>
     </Form>
   );
+}
+
+async function responseError(
+  response: Response,
+  fallback: string,
+): Promise<Error> {
+  const data = (await response.json().catch(() => null)) as {
+    message?: string;
+  } | null;
+  return new Error(data?.message ?? fallback);
+}
+
+function AvatarOverlayIcon({
+  isUploading,
+  hasAvatar,
+}: {
+  isUploading: boolean;
+  hasAvatar: boolean;
+}) {
+  if (isUploading) return <IconLoader2 className="size-4 animate-spin" />;
+  if (hasAvatar) return <IconX className="size-4" />;
+  return <ImagePlusIcon className="size-4" />;
 }
 
 type UsernameStatus = "idle" | "checking" | "available" | "taken" | "invalid";

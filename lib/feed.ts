@@ -1,6 +1,6 @@
 interface FeedUser {
   name: string;
-  username: string | null;
+  username: string;
   bio: string | null;
 }
 
@@ -8,15 +8,15 @@ interface FeedBookmark {
   title: string;
   url: string | null;
   groupName: string | null;
-  updatedAt: Date | string;
+  updatedAt: Date;
 }
 
-function formatRssDate(date: Date | string): string {
-  return new Date(date).toUTCString();
+function formatRssDate(date: Date): string {
+  return date.toUTCString();
 }
 
-function formatAtomDate(date: Date | string): string {
-  return new Date(date).toISOString();
+function formatAtomDate(date: Date): string {
+  return date.toISOString();
 }
 
 function escapeXml(str: string): string {
@@ -26,6 +26,13 @@ function escapeXml(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+}
+
+function feedTitle(userName: string, groupName?: string): string {
+  const name = escapeXml(userName);
+  return groupName
+    ? `${name}'s Bookmarks (${escapeXml(groupName)}) — minimal`
+    : `${name}'s Bookmarks — minimal`;
 }
 
 export function buildRssFeed(
@@ -42,9 +49,7 @@ export function buildRssFeed(
     ? formatRssDate(bookmarks[0].updatedAt)
     : formatRssDate(new Date());
 
-  const title = groupName
-    ? `${escapeXml(user.name)}'s Bookmarks (${escapeXml(groupName)}) — minimal`
-    : `${escapeXml(user.name)}'s Bookmarks — minimal`;
+  const title = feedTitle(user.name, groupName);
 
   const items = bookmarks
     .map((bookmark) => {
@@ -68,10 +73,10 @@ export function buildRssFeed(
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>${title}</title>
-    <link>${profileUrl}</link>
+    <link>${escapeXml(profileUrl)}</link>
     <description>${escapeXml(user.bio || `Public bookmarks shared by ${user.name}`)}</description>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
-    <atom:link href="${feedUrl}" rel="self" type="application/rss+xml" />
+    <atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml" />
 ${items}
   </channel>
 </rss>`;
@@ -91,9 +96,7 @@ export function buildAtomFeed(
     ? formatAtomDate(bookmarks[0].updatedAt)
     : formatAtomDate(new Date());
 
-  const title = groupName
-    ? `${escapeXml(user.name)}'s Bookmarks (${escapeXml(groupName)}) — minimal`
-    : `${escapeXml(user.name)}'s Bookmarks — minimal`;
+  const title = feedTitle(user.name, groupName);
 
   const entries = bookmarks
     .map((bookmark) => {
@@ -118,13 +121,13 @@ export function buildAtomFeed(
   return `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>${title}</title>
-  <link href="${profileUrl}" />
-  <link href="${feedUrl}" rel="self" />
+  <link href="${escapeXml(profileUrl)}" />
+  <link href="${escapeXml(feedUrl)}" rel="self" />
   <updated>${updated}</updated>
   <author>
     <name>${escapeXml(user.name)}</name>
   </author>
-  <id>${profileUrl}</id>
+  <id>${escapeXml(profileUrl)}</id>
 ${entries}
 </feed>`;
 }

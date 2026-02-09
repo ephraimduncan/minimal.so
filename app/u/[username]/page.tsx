@@ -77,13 +77,15 @@ async function PublicProfileData({
   ]);
   const data = await getPublicProfileData(username);
 
-  if (!data) {
+  if (!data?.user.username) {
     redirect("/dashboard");
   }
 
+  const user = { ...data.user, username: data.user.username };
+
   return (
     <PublicProfileContent
-      user={data.user}
+      user={user}
       groups={data.groups}
       bookmarks={data.bookmarks}
       isLoggedIn={!!session}

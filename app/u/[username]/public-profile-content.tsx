@@ -7,7 +7,6 @@ import {
   IconWorld,
   IconRss,
   IconCheck,
-  IconCopy,
   IconLink,
 } from "@tabler/icons-react";
 import { useQueryState } from "nuqs";
@@ -19,7 +18,7 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 interface PublicUser {
   name: string;
   image: string | null;
-  username: string | null;
+  username: string;
   bio: string | null;
   github: string | null;
   twitter: string | null;
@@ -104,7 +103,6 @@ export function PublicProfileContent({
     },
   ].flatMap((s) => (s ? [s] : []));
 
-  // Filter groups that have at least one bookmark
   const groupsWithBookmarks = groups.filter((group) =>
     bookmarks.some((b) => b.groupName === group.name),
   );
@@ -173,7 +171,6 @@ export function PublicProfileContent({
               ))}
               <RssFeedPicker
                 username={user.username}
-                activeTab={activeTab}
                 groups={groupsWithBookmarks}
               />
             </div>
@@ -294,12 +291,11 @@ function BookmarkIcon({ bookmark }: { bookmark: PublicBookmark }) {
 }
 
 interface RssFeedPickerProps {
-  username: string | null;
-  activeTab: string;
+  username: string;
   groups: PublicGroup[];
 }
 
-function RssFeedPicker({ username, activeTab, groups }: RssFeedPickerProps) {
+function RssFeedPicker({ username, groups }: RssFeedPickerProps) {
   const [copiedOption, setCopiedOption] = useState<string | null>(null);
 
   const getFeedUrl = (groupName?: string) => {

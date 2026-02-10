@@ -26,6 +26,11 @@ const BulkDeleteDialog = dynamic(
     import("@/components/bulk-delete-dialog").then((m) => m.BulkDeleteDialog),
   { ssr: false },
 );
+const ExportDialog = dynamic(
+  () => import("@/components/export-dialog").then((m) => m.ExportDialog),
+  { ssr: false },
+);
+import { handleQuickExport } from "@/components/export-dialog";
 import { parseColor, isUrl, normalizeUrl, slugify } from "@/lib/utils";
 import { client, orpc } from "@/lib/orpc";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -76,6 +81,7 @@ export function DashboardContent({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   const groupsQuery = useQuery({
     ...orpc.group.list.queryOptions(),
@@ -118,6 +124,18 @@ export function DashboardContent({
   const bookmarks = useMemo(
     () => bookmarksQuery.data ?? [],
     [bookmarksQuery.data],
+  );
+
+  const allBookmarksQuery = useQuery({
+    ...orpc.bookmark.list.queryOptions({
+      input: {},
+    }),
+    enabled: exportDialogOpen,
+  });
+
+  const allBookmarks = useMemo(
+    () => allBookmarksQuery.data ?? [],
+    [allBookmarksQuery.data],
   );
 
   useEffect(() => {
@@ -878,6 +896,19 @@ export function DashboardContent({
     handleExitSelectionMode,
   ]);
 
+  const handleQuickExportAction = useCallback(
+    (format: "csv" | "json") => {
+      const groupsMap = new Map(groups.map((g) => [g.id, g.name]));
+      handleQuickExport(format, bookmarks, selectedIds, groupsMap);
+      handleExitSelectionMode();
+    },
+    [bookmarks, selectedIds, groups, handleExitSelectionMode],
+  );
+
+  const handleOpenExportDialog = useCallback(() => {
+    setExportDialogOpen(true);
+  }, []);
+
   // Refs to store latest values for stable keyboard handler
   const groupsRef = useLatestRef(groups);
   const filteredBookmarksRef = useLatestRef(filteredBookmarks);
@@ -1177,6 +1208,7 @@ export function DashboardContent({
         userImage={profile.image}
         username={profile.username}
         profile={profile}
+        onExport={handleOpenExportDialog}
       />
       <main className="mx-auto w-full max-w-2xl px-5 py-20">
         <BookmarkInput
@@ -1220,6 +1252,7 @@ export function DashboardContent({
             onSelectAll={handleSelectAll}
             onMove={() => setMoveDialogOpen(true)}
             onCopyUrls={handleCopyUrls}
+            onExport={handleQuickExportAction}
             onDelete={() => setDeleteDialogOpen(true)}
             onClose={handleExitSelectionMode}
             hasUsername={hasUsername}
@@ -1248,6 +1281,13 @@ export function DashboardContent({
           onOpenChange={setDeleteDialogOpen}
           count={selectedIds.size}
           onConfirm={handleConfirmDelete}
+        />
+        <ExportDialog
+          open={exportDialogOpen}
+          onOpenChange={setExportDialogOpen}
+          mode="settings"
+          bookmarks={allBookmarks}
+          groups={groups}
         />
       </main>
     </div>

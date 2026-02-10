@@ -59,6 +59,7 @@ interface SettingsDialogProps {
     image: string | null;
   };
   profile?: ProfileData;
+  onExport?: () => void;
 }
 
 export function SettingsDialog({
@@ -66,6 +67,7 @@ export function SettingsDialog({
   onOpenChange,
   user,
   profile,
+  onExport,
 }: SettingsDialogProps) {
   const router = useRouter();
   const [name, setName] = useState(user.name);
@@ -254,6 +256,19 @@ export function SettingsDialog({
                   <span>Get the Chrome Extension</span>
                 </a>
               </Field>
+              {onExport && (
+                <Field>
+                  <FieldLabel>Data</FieldLabel>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onExport}
+                    className="w-fit"
+                  >
+                    Export
+                  </Button>
+                </Field>
+              )}
               <DialogFooter>
                 <DialogClose render={<Button variant="ghost" />}>
                   Cancel

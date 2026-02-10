@@ -3,11 +3,20 @@
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   IconListCheck,
   IconX,
   IconDragDrop,
   IconCopyCheckFilled,
   IconTrash,
+  IconFileExport,
+  IconFileTypeCsv,
+  IconJson,
   IconWorld,
   IconWorldOff,
 } from "@tabler/icons-react";
@@ -17,6 +26,7 @@ interface MultiSelectToolbarProps {
   onSelectAll: () => void;
   onMove: () => void;
   onCopyUrls: () => void;
+  onExport: (format: "csv" | "json") => void;
   onDelete: () => void;
   onClose: () => void;
   hasUsername?: boolean;
@@ -29,6 +39,7 @@ export function MultiSelectToolbar({
   onSelectAll,
   onMove,
   onCopyUrls,
+  onExport,
   onDelete,
   onClose,
   hasUsername,
@@ -41,7 +52,7 @@ export function MultiSelectToolbar({
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50"
+      className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 motion-reduce:transition-none motion-reduce:animate-none"
     >
       <div className="flex items-center rounded-lg bg-popover text-popover-foreground p-1 shadow-md ring-1 ring-foreground/10">
         <Button
@@ -72,6 +83,30 @@ export function MultiSelectToolbar({
           <IconCopyCheckFilled className="h-4 w-4" />
           Copy URLs
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-[13px] hover:bg-accent hover:text-accent-foreground"
+              />
+            }
+          >
+            <IconFileExport className="h-4 w-4" />
+            Export
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="w-40">
+            <DropdownMenuItem onClick={() => onExport("csv")} className="whitespace-nowrap">
+              <IconFileTypeCsv className="h-4 w-4" />
+              Export as CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onExport("json")} className="whitespace-nowrap">
+              <IconJson className="h-4 w-4" />
+              Export as JSON
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         {hasUsername && onMakePublic && (
           <Button
             variant="ghost"

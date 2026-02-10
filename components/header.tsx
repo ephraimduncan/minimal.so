@@ -67,6 +67,7 @@ interface HeaderProps {
   userImage?: string | null;
   username?: string | null;
   profile?: ProfileData;
+  onExport?: () => void;
   readOnly?: boolean;
   showUserMenu?: boolean;
   logoSize?: number;
@@ -85,6 +86,7 @@ export function Header({
   userImage,
   username,
   profile,
+  onExport,
   readOnly = false,
   showUserMenu = true,
   logoSize = 24,
@@ -470,6 +472,7 @@ export function Header({
               image: userImage ?? null,
             }}
             profile={profile}
+            onExport={onExport}
           />
         </>
       ) : null}

@@ -29,7 +29,7 @@ export function OAuthButton({ provider, mode }: OAuthButtonProps) {
     startTransition(async () => {
       const { error } = await signIn.social({
         provider,
-        callbackURL: "/",
+        callbackURL: "/dashboard",
       });
 
       if (error) {

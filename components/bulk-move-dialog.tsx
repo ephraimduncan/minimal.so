@@ -60,7 +60,7 @@ export function BulkMoveDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xs">
+      <DialogContent className="sm:max-w-xs" showCloseButton={false}>
         <Form
           className="contents"
           onSubmit={(e) => {

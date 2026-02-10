@@ -59,10 +59,10 @@ export const BookmarkInput = forwardRef<HTMLInputElement, BookmarkInputProps>(
           onPaste={handlePaste}
           placeholder="Insert a link, color, or just plain text..."
         />
-        <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
+        <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-2.5 text-muted-foreground/80 peer-disabled:opacity-50">
           <IconPlus size={16} />
         </div>
-        <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-3 text-muted-foreground/80 peer-disabled:opacity-50">
+        <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center justify-center pe-2 text-muted-foreground/80 peer-disabled:opacity-50">
           <KbdGroup>
             <Kbd>⌘</Kbd>
             <Kbd>F</Kbd>
@@ -70,5 +70,5 @@ export const BookmarkInput = forwardRef<HTMLInputElement, BookmarkInputProps>(
         </div>
       </div>
     );
-  }
+  },
 );

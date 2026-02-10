@@ -8,7 +8,6 @@
       "Bash(bun install:*)",
       "Bash(convert:*)",
       "Bash(bunx next build:*)",
-      "Bash(bun install:*)",
       "Bash(bun add:*)",
       "mcp__context7__query-docs",
       "Bash(git rm:*)",
@@ -18,14 +17,105 @@
       "mcp__plugin_context7_context7__query-docs",
       "Bash(bunx tsc:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(git commit:*)"
+      "Bash(bun typecheck:*)",
+      "Bash(xargs ls:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:x.com)",
+      "Bash(git commit:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx next build)",
+      "Bash(lsof:*)",
+      "Bash(git stash:*)",
+      "Bash(npm pack geist@1.3.1)",
+      "Bash(tar:*)",
+      "Bash(command tar xzf /tmp/geist-1.3.1.tgz -C /tmp)",
+      "WebFetch(domain:localhost)",
+      "Bash(echo:*)",
+      "Bash(git push)",
+      "Bash(git checkout:*)"
     ],
-    "deny": [],
+    "deny": ["Read(./.entire/metadata/**)"],
     "ask": []
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "shadcn"
-  ],
-  "outputStyle": "Explanatory"
+  "enabledMcpjsonServers": ["shadcn"],
+  "outputStyle": "Explanatory",
+  "spinnerTipsEnabled": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "entire hooks claude-code session-start"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "entire hooks claude-code session-end"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "entire hooks claude-code user-prompt-submit"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "entire hooks claude-code stop"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "entire hooks claude-code pre-task"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "entire hooks claude-code post-task"
+          }
+        ]
+      },
+      {
+        "matcher": "TodoWrite",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "entire hooks claude-code post-todo"
+          }
+        ]
+      }
+    ]
+  }
 }

@@ -59,11 +59,6 @@
     background-position: -200% 0;
     }
   }
-  @keyframes skeleton {
-  to {
-    background-position: -200% 0;
-    }
-  }
 }
 
 :root {
@@ -185,4 +180,31 @@ input:not(:-webkit-autofill) {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility bg-link-article {
+  background-color: #3b82f6;
+}
+
+@utility bg-link-video {
+  background-color: #ef4444;
+}
+
+@utility bg-link-tool {
+  background-color: #22c55e;
+}
+
+@utility bg-link-podcast {
+  background-color: #a855f7;
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
-import { getUrlMetadata } from "@/lib/url-metadata";
+import { getUrlMetadata, isArxivHost } from "@/lib/url-metadata";
 import { normalizeUrl } from "@/lib/utils";
 import { z } from "zod";
 
@@ -90,6 +90,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const normalizedUrl = normalizeUrl(url);
+    const metadataPromise = getUrlMetadata(normalizedUrl);
 
     const existing = await db.bookmark.findFirst({
       where: {
@@ -98,11 +99,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         url: normalizedUrl,
       },
     });
+    const metadata = await metadataPromise;
 
     if (existing) {
-      const metadata = await getUrlMetadata(normalizedUrl);
       const bookmark = await db.bookmark.update({
-        where: { id: existing.id },
+        where: { id: existing.id, userId: session.user.id },
         data: {
           title: metadata.title || existing.title,
           favicon: metadata.favicon || existing.favicon,
@@ -124,8 +125,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const metadata = await getUrlMetadata(normalizedUrl);
-    const title = providedTitle || metadata.title || normalizedUrl;
+    const title = isArxivHost(normalizedUrl)
+      ? metadata.title || providedTitle || normalizedUrl
+      : providedTitle || metadata.title || normalizedUrl;
 
     const bookmark = await db.bookmark.create({
       data: {

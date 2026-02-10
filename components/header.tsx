@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,10 @@ import {
   IconTrash,
   IconSettings,
   IconLogout,
+  IconWorld,
+  IconWorldOff,
+  IconUser,
+  IconLoader2,
 } from "@tabler/icons-react";
 import { signOut } from "@/lib/auth-client";
 import {
@@ -42,7 +47,12 @@ import { Form } from "@/components/ui/form";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { type GroupItem } from "@/lib/schema";
-import { SettingsDialog } from "@/components/settings-dialog";
+import type { ProfileData } from "@/components/dashboard-content";
+
+const SettingsDialog = dynamic(
+  () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
+  { ssr: false },
+);
 
 interface HeaderProps {
   groups: GroupItem[];
@@ -50,9 +60,17 @@ interface HeaderProps {
   onSelectGroup: (id: string) => void;
   onCreateGroup: (name: string) => void;
   onDeleteGroup?: (id: string) => void;
+  onToggleGroupVisibility?: (id: string, isPublic: boolean) => void;
+  isTogglingGroupVisibility?: boolean;
   userName: string;
   userEmail: string;
+  userImage?: string | null;
+  username?: string | null;
+  profile?: ProfileData;
   onExport?: () => void;
+  readOnly?: boolean;
+  showUserMenu?: boolean;
+  logoSize?: number;
 }
 
 export function Header({
@@ -61,21 +79,50 @@ export function Header({
   onSelectGroup,
   onCreateGroup,
   onDeleteGroup,
+  onToggleGroupVisibility,
+  isTogglingGroupVisibility,
   userName,
   userEmail,
+  userImage,
+  username,
+  profile,
   onExport,
+  readOnly = false,
+  showUserMenu = true,
+  logoSize = 24,
 }: HeaderProps) {
   const router = useRouter();
   const [newGroupName, setNewGroupName] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
+  const [pendingVisibilityGroupId, setPendingVisibilityGroupId] = useState<
+    string | null
+  >(null);
+  const [pendingVisibilityTarget, setPendingVisibilityTarget] = useState<
+    boolean | null
+  >(null);
   const [holdingGroupId, setHoldingGroupId] = useState<string | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartRef = useRef<number>(0);
+  const initiatedToggleRef = useRef(false);
+
+  useEffect(() => {
+    if (!isTogglingGroupVisibility && initiatedToggleRef.current) {
+      initiatedToggleRef.current = false;
+      const timer = setTimeout(() => {
+        setVisibilityDialogOpen(false);
+        setPendingVisibilityGroupId(null);
+        setPendingVisibilityTarget(null);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [isTogglingGroupVisibility]);
 
   const handleSignOut = async () => {
+    setSignOutOpen(false);
     await signOut();
     router.push("/login");
   };
@@ -98,6 +145,7 @@ export function Header({
 
   const startHold = useCallback(
     (groupId: string) => {
+      if (readOnly) return;
       if (groups.length <= 1) return;
       setHoldingGroupId(groupId);
       holdStartRef.current = Date.now();
@@ -117,7 +165,7 @@ export function Header({
 
       holdTimerRef.current = setTimeout(updateProgress, 16);
     },
-    [groups.length, onDeleteGroup, cancelHold],
+    [groups.length, onDeleteGroup, cancelHold, readOnly],
   );
 
   useEffect(() => {
@@ -129,9 +177,14 @@ export function Header({
   }, []);
 
   return (
-    <header className="flex items-center justify-between px-6 py-3">
+    <header
+      className={cn(
+        "flex items-center justify-between",
+        readOnly ? "px-4 py-2" : "px-6 py-3",
+      )}
+    >
       <div className="flex items-center gap-2">
-        <BmrksLogo />
+        <BmrksLogo size={logoSize} />
         <span className="text-muted-foreground">/</span>
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -154,34 +207,62 @@ export function Header({
                 key={group.id}
                 onClick={() => onSelectGroup(group.id)}
                 className={cn(
-                  "flex items-center justify-between rounded-lg",
+                  "flex items-start justify-between rounded-lg px-2 py-1.5",
                   group.id === selectedGroup.id && "bg-accent",
                 )}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2">
                   <span
-                    className="h-2.5 w-2.5 rounded-full"
+                    className="mt-[5px] h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: group.color }}
                   />
                   <span>{group.name}</span>
+                  {group.isPublic && (
+                    <IconWorld className="mt-1 h-3 w-3 shrink-0 text-muted-foreground" />
+                  )}
                 </div>
                 {group.id === selectedGroup.id ? (
-                  <IconCheck className="h-4 w-4" />
+                  <IconCheck className="mt-0.5 h-4 w-4 shrink-0" />
                 ) : (
-                  <span className="text-xs text-muted-foreground">
+                  <span className="mt-0.5 shrink-0 text-xs text-muted-foreground">
                     {group.bookmarkCount ?? 0}
                   </span>
                 )}
               </DropdownMenuItem>
             ))}
             <DropdownMenuItem
-              onClick={() => setDialogOpen(true)}
-              className="rounded-lg w-full"
+              onClick={() => {
+                if (!readOnly) setDialogOpen(true);
+              }}
+              disabled={readOnly}
+              className="rounded-lg w-full px-2 py-1.5"
             >
               <IconPlus className="h-4 w-4 mr-0" />
               Create Group
             </DropdownMenuItem>
-            {groups.length > 1 && (
+            {!readOnly && onToggleGroupVisibility && (
+              <DropdownMenuItem
+                onClick={() => {
+                  setPendingVisibilityGroupId(selectedGroup.id);
+                  setPendingVisibilityTarget(!selectedGroup.isPublic);
+                  setVisibilityDialogOpen(true);
+                }}
+                className="rounded-lg px-2 py-1.5"
+              >
+                {selectedGroup.isPublic ? (
+                  <>
+                    <IconWorldOff className="h-4 w-4" />
+                    Make Private
+                  </>
+                ) : (
+                  <>
+                    <IconWorld className="h-4 w-4" />
+                    Make Public
+                  </>
+                )}
+              </DropdownMenuItem>
+            )}
+            {!readOnly && groups.length > 1 && (
               <DropdownMenuItem
                 onSelect={(e) => e.preventDefault()}
                 onMouseDown={() => startHold(selectedGroup.id)}
@@ -189,7 +270,7 @@ export function Header({
                 onMouseLeave={cancelHold}
                 onTouchStart={() => startHold(selectedGroup.id)}
                 onTouchEnd={cancelHold}
-                className="relative overflow-hidden text-destructive focus:text-destructive rounded-lg"
+                className="relative overflow-hidden text-destructive focus:text-destructive rounded-lg px-2 py-1.5"
               >
                 {holdingGroupId === selectedGroup.id && (
                   <div
@@ -208,7 +289,7 @@ export function Header({
           </DropdownMenuContent>
         </DropdownMenu>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="sm:max-w-sm">
+          <DialogContent className="sm:max-w-sm" showCloseButton={false}>
             <Form
               className="contents"
               onSubmit={(e) => {
@@ -244,80 +325,167 @@ export function Header({
         </Dialog>
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="rounded-xl"
-          render={
-            <Button
-              variant="ghost"
-              className="w-44 justify-between gap-2 px-2"
-            />
-          }
-        >
-          <UserAvatar name={userName} />
-          <span className="truncate">{userName}</span>
-          <IconSelector className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="rounded-2xl">
-          <DropdownMenuItem
-            className="rounded-lg"
-            onClick={() => setSettingsOpen(true)}
+      {showUserMenu ? (
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="rounded-xl"
+              render={
+                <Button
+                  variant="ghost"
+                  className="w-44 justify-start gap-2 px-2 border-0"
+                />
+              }
+            >
+              <UserAvatar name={userName} image={userImage} />
+              <span className="truncate">{userName}</span>
+              <IconSelector className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-2xl">
+              <DropdownMenuItem
+                className="rounded-lg"
+                onClick={() => setSettingsOpen(true)}
+                disabled={readOnly}
+              >
+                <IconSettings className="h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              {username && (
+                <DropdownMenuItem
+                  className="rounded-lg"
+                  render={
+                    <a
+                      href={`/u/${username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    />
+                  }
+                >
+                  <IconUser className="h-4 w-4" />
+                  Public Profile
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                className="rounded-lg"
+                render={
+                  <a href="/chrome" target="_blank" rel="noopener noreferrer" />
+                }
+                disabled={readOnly}
+              >
+                <ChromeIcon />
+                Chrome Extension
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="rounded-lg"
+                onClick={() => setSignOutOpen(true)}
+                disabled={readOnly}
+              >
+                <IconLogout className="h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="font-semibold text-xl">
+                  Sign out?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  You will need to sign in again to access your bookmarks.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel variant="ghost">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  onClick={handleSignOut}
+                >
+                  Sign out
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <AlertDialog
+            open={visibilityDialogOpen}
+            onOpenChange={(open) => {
+              if (isTogglingGroupVisibility) return;
+              setVisibilityDialogOpen(open);
+              if (!open) {
+                setPendingVisibilityGroupId(null);
+                setPendingVisibilityTarget(null);
+              }
+            }}
           >
-            <IconSettings className="h-4 w-4" />
-            Settings
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="rounded-lg"
-            render={
-              <a href="/chrome" target="_blank" rel="noopener noreferrer" />
-            }
-          >
-            <ChromeIcon />
-            Chrome Extension
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="rounded-lg"
-            onClick={() => setSignOutOpen(true)}
-          >
-            <IconLogout className="h-4 w-4" />
-            Sign out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-semibold text-xl">
-              Sign out?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              You will need to sign in again to access your bookmarks.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel variant="ghost">Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={handleSignOut}>
-              Sign out
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        user={{ name: userName, email: userEmail }}
-        onExport={onExport}
-      />
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="font-semibold text-xl">
+                  {pendingVisibilityTarget ? "Make group public?" : "Make group private?"}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {pendingVisibilityTarget
+                    ? "All bookmarks in this group will become publicly visible on your profile."
+                    : "All bookmarks in this group will no longer be publicly visible on your profile."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <Button
+                  variant="ghost"
+                  disabled={isTogglingGroupVisibility}
+                  onClick={() => {
+                    setVisibilityDialogOpen(false);
+                    setPendingVisibilityGroupId(null);
+                    setPendingVisibilityTarget(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={isTogglingGroupVisibility}
+                  onClick={() => {
+                    if (
+                      pendingVisibilityGroupId &&
+                      pendingVisibilityTarget !== null
+                    ) {
+                      onToggleGroupVisibility?.(
+                        pendingVisibilityGroupId,
+                        pendingVisibilityTarget,
+                      );
+                      initiatedToggleRef.current = true;
+                    }
+                  }}
+                >
+                  {isTogglingGroupVisibility && (
+                    <IconLoader2 className="h-4 w-4 animate-spin" />
+                  )}
+                  {pendingVisibilityTarget ? "Make Public" : "Make Private"}
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <SettingsDialog
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            user={{
+              name: userName,
+              email: userEmail,
+              image: userImage ?? null,
+            }}
+            profile={profile}
+            onExport={onExport}
+          />
+        </>
+      ) : null}
     </header>
   );
 }
 
-function BmrksLogo() {
+function BmrksLogo({ size = 24 }: { size?: number }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -333,9 +501,20 @@ function BmrksLogo() {
   );
 }
 
-function UserAvatar({ name }: { name: string }) {
+function UserAvatar({ name, image }: { name: string; image?: string | null }) {
+  if (image) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={image}
+        alt={name}
+        className="size-4.5 shrink-0 rounded-full object-cover"
+      />
+    );
+  }
+
   return (
-    <svg viewBox="0 0 32 32" fill="none" width="24" height="24">
+    <svg viewBox="0 0 32 32" fill="none" width="18" height="18">
       <rect width="32" height="32" rx="16" fill="#74B06F" />
       <text
         x="50%"

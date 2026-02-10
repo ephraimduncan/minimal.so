@@ -13,6 +13,17 @@ import {
 import { getUrlMetadata } from "@/lib/url-metadata";
 import { normalizeUrl } from "@/lib/utils";
 import { z } from "zod";
+import { ORPCError } from "@orpc/server";
+
+async function assertGroupOwnership(groupId: string, userId: string) {
+  const group = await db.group.findFirst({
+    where: { id: groupId, userId },
+    select: { id: true },
+  });
+  if (!group) {
+    throw new ORPCError("NOT_FOUND", { message: "Group not found" });
+  }
+}
 
 export const listBookmarks = authed
   .input(listBookmarksInputSchema)
@@ -30,6 +41,7 @@ export const listBookmarks = authed
 export const createBookmark = authed
   .input(createBookmarkSchema)
   .handler(async ({ context, input }) => {
+    await assertGroupOwnership(input.groupId, context.user.id);
     let title = input.title;
     let favicon: string | null = null;
     let url = input.url || null;
@@ -49,7 +61,7 @@ export const createBookmark = authed
       if (existing) {
         const metadata = await getUrlMetadata(normalizedUrl);
         const bookmark = await db.bookmark.update({
-          where: { id: existing.id },
+          where: { id: existing.id, userId: context.user.id },
           data: {
             title: metadata.title || existing.title,
             favicon: metadata.favicon || existing.favicon,
@@ -84,9 +96,22 @@ export const updateBookmark = authed
   .input(updateBookmarkSchema)
   .handler(async ({ context, input }) => {
     const { id, ...data } = input;
+    const updateData: Record<string, unknown> = { ...data };
+
+    if (data.groupId) {
+      await assertGroupOwnership(data.groupId, context.user.id);
+      const existing = await db.bookmark.findFirst({
+        where: { id, userId: context.user.id },
+        select: { groupId: true },
+      });
+      if (existing && existing.groupId !== data.groupId) {
+        updateData.isPublic = null;
+      }
+    }
+
     const bookmark = await db.bookmark.update({
       where: { id, userId: context.user.id },
-      data,
+      data: updateData,
     });
     return bookmark;
   });
@@ -114,6 +139,7 @@ export const listGroups = authed.handler(async ({ context }) => {
     id: g.id,
     name: g.name,
     color: g.color,
+    isPublic: g.isPublic,
     bookmarkCount: g._count.bookmarks,
   }));
 });
@@ -186,9 +212,49 @@ export const bulkDeleteBookmarks = authed
 export const bulkMoveBookmarks = authed
   .input(bulkMoveBookmarksSchema)
   .handler(async ({ context, input }) => {
+    await assertGroupOwnership(input.targetGroupId, context.user.id);
     const result = await db.bookmark.updateMany({
       where: { id: { in: input.ids }, userId: context.user.id },
-      data: { groupId: input.targetGroupId, updatedAt: new Date() },
+      data: {
+        groupId: input.targetGroupId,
+        isPublic: null,
+        updatedAt: new Date(),
+      },
     });
     return { success: true, count: result.count };
+  });
+
+export const setBookmarkVisibility = authed
+  .input(z.object({ id: z.string(), isPublic: z.boolean().nullable() }))
+  .handler(async ({ context, input }) => {
+    const bookmark = await db.bookmark.update({
+      where: { id: input.id, userId: context.user.id },
+      data: { isPublic: input.isPublic },
+    });
+    return bookmark;
+  });
+
+export const bulkSetVisibility = authed
+  .input(
+    z.object({
+      ids: z.array(z.string()).min(1),
+      isPublic: z.boolean().nullable(),
+    }),
+  )
+  .handler(async ({ context, input }) => {
+    const result = await db.bookmark.updateMany({
+      where: { id: { in: input.ids }, userId: context.user.id },
+      data: { isPublic: input.isPublic },
+    });
+    return { success: true, count: result.count };
+  });
+
+export const setGroupVisibility = authed
+  .input(z.object({ id: z.string(), isPublic: z.boolean() }))
+  .handler(async ({ context, input }) => {
+    const group = await db.group.update({
+      where: { id: input.id, userId: context.user.id },
+      data: { isPublic: input.isPublic },
+    });
+    return group;
   });

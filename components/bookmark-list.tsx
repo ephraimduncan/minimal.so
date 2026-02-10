@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useEffect } from "react";
+import { memo, startTransition, useEffect, useState } from "react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -23,6 +23,8 @@ import {
   IconCheck,
   IconBookmark,
   IconSquaresSelected,
+  IconWorld,
+  IconWorldOff,
 } from "@tabler/icons-react";
 import { ContextMenuSeparator } from "@/components/ui/context-menu";
 import {
@@ -33,16 +35,19 @@ import {
 } from "@/components/ui/empty";
 import { cn, parseColor } from "@/lib/utils";
 import { type BookmarkItem, type GroupItem } from "@/lib/schema";
+import { FaviconImage } from "@/components/favicon-image";
 
 const EMPTY_STATE = (
-  <Empty className="border-none py-16">
-    <EmptyMedia>
-      <IconBookmark className="size-5 text-muted-foreground fill-muted-foreground" />
+  <Empty className="border-none py-16 gap-2">
+    <EmptyMedia className="mb-0">
+      <IconBookmark className="size-8 text-muted-foreground fill-muted-foreground" />
     </EmptyMedia>
     <EmptyTitle>No bookmarks here</EmptyTitle>
     <EmptyDescription>Add some cool links to get started</EmptyDescription>
   </Empty>
 );
+
+const EMPTY_SET = new Set<string>();
 
 interface BookmarkListProps {
   bookmarks: BookmarkItem[];
@@ -65,6 +70,11 @@ interface BookmarkListProps {
   onEnterSelectionMode?: (initialId?: string) => void;
   onBulkMove?: (targetGroupId: string) => void;
   onBulkDelete?: () => void;
+  readOnly?: boolean;
+  onLinkClick?: (bookmark: BookmarkItem) => void;
+  hasUsername?: boolean;
+  publicGroupIds?: Set<string>;
+  onToggleVisibility?: (id: string, currentIsPublic: boolean | null | undefined) => void;
 }
 
 export function BookmarkList({
@@ -83,22 +93,43 @@ export function BookmarkList({
   onHoverChange,
   hoveredIndex,
   selectionMode = false,
-  selectedIds = new Set(),
+  selectedIds = EMPTY_SET,
   onToggleSelection,
   onEnterSelectionMode,
   onBulkMove,
   onBulkDelete,
+  readOnly = false,
+  onLinkClick,
+  hasUsername = false,
+  publicGroupIds,
+  onToggleVisibility,
 }: BookmarkListProps) {
   const [editValue, setEditValue] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [contextMenuOpenId, setContextMenuOpenId] = useState<string | null>(
-    null
+    null,
   );
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    startTransition(() => {
+      setCurrentYear(new Date().getFullYear());
+    });
+  }, []);
 
   const formatDate = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
-    const now = new Date();
-    const isCurrentYear = d.getFullYear() === now.getFullYear();
+
+    // During SSR, currentYear is null - always show year to avoid new Date()
+    if (currentYear === null) {
+      return d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
+
+    const isCurrentYear = d.getFullYear() === currentYear;
 
     if (isCurrentYear) {
       return d.toLocaleDateString("en-US", {
@@ -131,6 +162,18 @@ export function BookmarkList({
       setCopiedId(bookmark.id);
       setTimeout(() => setCopiedId(null), 1000);
     }
+  };
+
+  const handleRowClick = (bookmark: BookmarkItem, index: number) => {
+    if (onLinkClick && bookmark.url) {
+      onLinkClick(bookmark);
+      return;
+    }
+    if (readOnly) {
+      onSelect(index);
+      return;
+    }
+    handleClick(bookmark);
   };
 
   const handleCopy = (bookmark: BookmarkItem) => {
@@ -175,7 +218,7 @@ export function BookmarkList({
               render={
                 <Button
                   variant="ghost"
-                  onClick={() => handleClick(bookmark)}
+                  onClick={() => handleRowClick(bookmark, index)}
                   onMouseEnter={() => onHoverChange(index)}
                   onMouseLeave={() => onHoverChange(-1)}
                   className={cn(
@@ -185,72 +228,72 @@ export function BookmarkList({
                       : "hover:bg-muted/50",
                     renamingId &&
                       renamingId !== bookmark.id &&
-                      "opacity-30 pointer-events-none"
+                      "opacity-30 pointer-events-none",
                   )}
                 />
               }
             >
-                <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
-                  {selectionMode ? (
-                    <Checkbox
-                      checked={selectedIds.has(bookmark.id)}
-                      onCheckedChange={() => onToggleSelection?.(bookmark.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  ) : (
-                    <BookmarkIcon
-                      bookmark={bookmark}
-                      isCopied={copiedId === bookmark.id}
-                    />
-                  )}
-                  {renamingId === bookmark.id ? (
-                    <Input
-                      type="text"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={() => handleFinishRename(bookmark.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleFinishRename(bookmark.id);
-                        if (e.key === "Escape") {
-                          onFinishRename();
-                          setEditValue("");
-                        }
-                      }}
-                      autoFocus
-                      className="h-auto flex-1 max-w-[60%] border-none bg-transparent px-0 py-0 text-sm font-normal shadow-none selection:bg-primary/20 focus-visible:ring-0"
-                      onClick={(e) => e.stopPropagation()}
-                      onFocus={(e) => {
-                        const val = e.target.value;
-                        e.target.value = "";
-                        e.target.value = val;
-                      }}
-                    />
-                  ) : (
-                    <span className="text-sm font-normal truncate">
-                      {copiedId === bookmark.id ? "Copied" : bookmark.title}
+              <div className="flex flex-1 items-center gap-2 min-w-0 mr-4">
+                {selectionMode ? (
+                  <Checkbox
+                    checked={selectedIds.has(bookmark.id)}
+                    onCheckedChange={() => onToggleSelection?.(bookmark.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <BookmarkIcon
+                    bookmark={bookmark}
+                    isCopied={copiedId === bookmark.id}
+                  />
+                )}
+                {renamingId === bookmark.id ? (
+                  <Input
+                    type="text"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onBlur={() => handleFinishRename(bookmark.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleFinishRename(bookmark.id);
+                      if (e.key === "Escape") {
+                        onFinishRename();
+                        setEditValue("");
+                      }
+                    }}
+                    autoFocus
+                    className="h-auto flex-1 max-w-[60%] border-none bg-transparent px-0 py-0 text-sm font-normal shadow-none selection:bg-primary/20 focus-visible:ring-0"
+                    onClick={(e) => e.stopPropagation()}
+                    onFocus={(e) => e.target.select()}
+                  />
+                ) : (
+                  <span className="text-sm font-normal truncate">
+                    {copiedId === bookmark.id ? "Copied" : bookmark.title}
+                  </span>
+                )}
+                {bookmark.url && !renamingId && copiedId !== bookmark.id ? (
+                  <span className="text-[13px] text-muted-foreground">
+                    {new URL(bookmark.url).hostname.replace("www.", "")}
+                  </span>
+                ) : null}
+              </div>
+              <div className="relative w-[100px] h-5 flex items-center justify-end gap-1.5">
+                {(selectedIndex === index || hoveredIndex === index) &&
+                !renamingId ? (
+                  <KbdGroup>
+                    <Kbd>⌘</Kbd>
+                    <Kbd>Enter</Kbd>
+                  </KbdGroup>
+                ) : (
+                  <>
+                    {hasUsername && !renamingId && bookmark.isPublic === true && (
+                      <IconWorld className="h-2.5 w-2.5 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className="text-[13px] text-muted-foreground whitespace-nowrap">
+                      {formatDate(bookmark.createdAt)}
                     </span>
-                  )}
-                  {bookmark.url && !renamingId && copiedId !== bookmark.id ? (
-                    <span className="text-[13px] text-muted-foreground">
-                      {new URL(bookmark.url).hostname.replace("www.", "")}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="relative w-[90px] h-5 flex items-center justify-end">
-                  {(() => {
-                    const isActive = (selectedIndex === index || hoveredIndex === index) && !renamingId;
-                    return isActive ? (
-                      <KbdGroup>
-                        <Kbd>⌘</Kbd>
-                        <Kbd>Enter</Kbd>
-                      </KbdGroup>
-                    ) : (
-                      <span className="text-[13px] text-muted-foreground whitespace-nowrap">
-                        {formatDate(bookmark.createdAt)}
-                      </span>
-                    );
-                  })()}
-                </div>
+                  </>
+                )}
+              </div>
             </ContextMenuTrigger>
             <ContextMenuContent className="w-48">
               <ContextMenuItem onClick={() => handleCopy(bookmark)}>
@@ -271,7 +314,11 @@ export function BookmarkList({
               </ContextMenuItem>
               <ContextMenuItem
                 onClick={() => {
-                  if (selectionMode && selectedIds.has(bookmark.id) && onBulkDelete) {
+                  if (
+                    selectionMode &&
+                    selectedIds.has(bookmark.id) &&
+                    onBulkDelete
+                  ) {
                     onBulkDelete();
                   } else {
                     onDelete(bookmark.id);
@@ -292,6 +339,23 @@ export function BookmarkList({
                   <span>Refetch</span>
                 </ContextMenuItem>
               ) : null}
+              {hasUsername && onToggleVisibility && (
+                <ContextMenuItem
+                  onClick={() => onToggleVisibility(bookmark.id, bookmark.isPublic)}
+                >
+                  {isBookmarkPublic(bookmark, currentGroupId, publicGroupIds) ? (
+                    <>
+                      <IconWorldOff className="mr-2 h-4 w-4" />
+                      <span>Make Private</span>
+                    </>
+                  ) : (
+                    <>
+                      <IconWorld className="mr-2 h-4 w-4" />
+                      <span>Make Public</span>
+                    </>
+                  )}
+                </ContextMenuItem>
+              )}
               {groups.length > 1 ? (
                 <ContextMenuSub>
                   <ContextMenuSubTrigger>
@@ -305,7 +369,11 @@ export function BookmarkList({
                         <ContextMenuItem
                           key={group.id}
                           onClick={() => {
-                            if (selectionMode && selectedIds.has(bookmark.id) && onBulkMove) {
+                            if (
+                              selectionMode &&
+                              selectedIds.has(bookmark.id) &&
+                              onBulkMove
+                            ) {
                               onBulkMove(group.id);
                             } else {
                               onMove(bookmark.id, group.id);
@@ -325,7 +393,9 @@ export function BookmarkList({
               {!selectionMode && onEnterSelectionMode && (
                 <>
                   <ContextMenuSeparator />
-                  <ContextMenuItem onClick={() => onEnterSelectionMode(bookmark.id)}>
+                  <ContextMenuItem
+                    onClick={() => onEnterSelectionMode(bookmark.id)}
+                  >
                     <IconSquaresSelected className="mr-2 h-4 w-4" />
                     <span>Select Multiple</span>
                   </ContextMenuItem>
@@ -339,6 +409,15 @@ export function BookmarkList({
   );
 }
 
+function isBookmarkPublic(
+  bookmark: BookmarkItem,
+  currentGroupId: string,
+  publicGroupIds?: Set<string>,
+): boolean {
+  const groupIsPublic = publicGroupIds?.has(currentGroupId) ?? false;
+  return bookmark.isPublic === true || groupIsPublic;
+}
+
 const BookmarkIcon = memo(function BookmarkIcon({
   bookmark,
   isCopied,
@@ -346,12 +425,6 @@ const BookmarkIcon = memo(function BookmarkIcon({
   bookmark: BookmarkItem;
   isCopied?: boolean;
 }) {
-  const [faviconError, setFaviconError] = useState(false);
-
-  useEffect(() => {
-    setFaviconError(false);
-  }, [bookmark.id, bookmark.favicon]);
-
   if (isCopied) {
     return (
       <div className="flex h-5 w-5 items-center justify-center">
@@ -381,34 +454,5 @@ const BookmarkIcon = memo(function BookmarkIcon({
     }
   }
 
-  if (bookmark.favicon && !faviconError) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={bookmark.favicon}
-        alt=""
-        className="h-5 w-5 rounded object-contain"
-        onError={() => setFaviconError(true)}
-      />
-    );
-  }
-
-  return (
-    <div className="flex h-5 w-5 items-center justify-center rounded bg-muted text-muted-foreground">
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-        <polyline points="10 9 9 9 8 9" />
-      </svg>
-    </div>
-  );
+  return <FaviconImage url={bookmark.url} />;
 });

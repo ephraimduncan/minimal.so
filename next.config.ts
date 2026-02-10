@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["*.trycloudflare.com"],
   experimental: {
     optimizePackageImports: ["@tabler/icons-react"],
   },
@@ -13,6 +14,7 @@ const nextConfig: NextConfig = {
     "@libsql/isomorphic-ws",
     "libsql",
     "@prisma/adapter-libsql",
+    "sharp",
   ],
   async redirects() {
     return [

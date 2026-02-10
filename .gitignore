@@ -53,3 +53,6 @@ prisma/generated
 /extension-dist
 
 .ami/
+
+# local avatar uploads
+/public/uploads/avatars/

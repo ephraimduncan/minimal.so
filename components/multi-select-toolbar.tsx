@@ -17,6 +17,8 @@ import {
   IconFileExport,
   IconFileTypeCsv,
   IconJson,
+  IconWorld,
+  IconWorldOff,
 } from "@tabler/icons-react";
 
 interface MultiSelectToolbarProps {
@@ -27,6 +29,9 @@ interface MultiSelectToolbarProps {
   onExport: (format: "csv" | "json") => void;
   onDelete: () => void;
   onClose: () => void;
+  hasUsername?: boolean;
+  onMakePublic?: () => void;
+  onMakePrivate?: () => void;
 }
 
 export function MultiSelectToolbar({
@@ -37,6 +42,9 @@ export function MultiSelectToolbar({
   onExport,
   onDelete,
   onClose,
+  hasUsername,
+  onMakePublic,
+  onMakePrivate,
 }: MultiSelectToolbarProps) {
   return (
     <motion.div
@@ -99,6 +107,28 @@ export function MultiSelectToolbar({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {hasUsername && onMakePublic && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onMakePublic}
+            className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-[13px] hover:bg-accent hover:text-accent-foreground"
+          >
+            <IconWorld className="h-4 w-4" />
+            Public
+          </Button>
+        )}
+        {hasUsername && onMakePrivate && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onMakePrivate}
+            className="gap-1.5 rounded-md px-1.5 py-1 h-auto text-[13px] hover:bg-accent hover:text-accent-foreground"
+          >
+            <IconWorldOff className="h-4 w-4" />
+            Private
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"

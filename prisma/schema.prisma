@@ -13,6 +13,12 @@ model user {
   email         String   @unique
   emailVerified Boolean  @default(false)
   image         String?
+  username      String?  @unique
+  bio           String?
+  github        String?
+  twitter       String?
+  website       String?
+  isProfilePublic Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -20,6 +26,8 @@ model user {
   accounts  account[]
   bookmarks bookmark[]
   groups    group[]
+
+  @@index([createdAt])
 }
 
 model session {
@@ -68,6 +76,7 @@ model group {
   id        String   @id @default(cuid())
   name      String
   color     String
+  isPublic  Boolean  @default(false)
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -76,6 +85,7 @@ model group {
   bookmarks bookmark[]
 
   @@index([userId])
+  @@index([userId, isPublic])
 }
 
 model bookmark {
@@ -85,6 +95,7 @@ model bookmark {
   favicon   String?
   type      String   @default("link")
   color     String?
+  isPublic  Boolean?
   groupId   String
   userId    String
   createdAt DateTime @default(now())
@@ -94,5 +105,7 @@ model bookmark {
   user  user  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, isPublic])
   @@index([groupId])
+  @@index([createdAt])
 }

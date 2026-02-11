@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "fa77f4f2c6ea",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 6,
+  "files_touched": [
+    "components/export-dialog.tsx",
+    "components/header.tsx",
+    "components/keyboard-shortcuts-dialog.tsx",
+    "components/settings-dialog.tsx"
+  ],
+  "sessions": [
+    {
+      "metadata": "/fa/77f4f2c6ea/0/metadata.json",
+      "transcript": "/fa/77f4f2c6ea/0/full.jsonl",
+      "context": "/fa/77f4f2c6ea/0/context.md",
+      "content_hash": "/fa/77f4f2c6ea/0/content_hash.txt",
+      "prompt": "/fa/77f4f2c6ea/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1583,
+    "cache_creation_tokens": 147763,
+    "cache_read_tokens": 3514313,
+    "output_tokens": 3289,
+    "api_call_count": 46
+  }
+}

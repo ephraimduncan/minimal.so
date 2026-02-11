@@ -1,0 +1,68 @@
+[Request interrupted by user for tool use]
+
+---
+
+Implement the following plan:
+
+# Merge `main` into `feat/export`
+
+## Context
+
+`feat/export` adds bookmark export (CSV/JSON) via 5 commits. Meanwhile `main` diverged with ~35 commits adding public profiles, avatar uploads, nuqs URL state, visibility toggles, RSS feeds, admin dashboard, etc. 5 files conflict. Goal: keep everything from both branches.
+
+## Strategy
+
+Merge `main` into `feat/export`. For each conflict, use **main's architecture as the base** and graft feat/export's export features into it. Two new files (`components/export-dialog.tsx`, `lib/export.ts`) come in cleanly with no conflicts.
+
+## File-by-file resolution
+
+### 1. `.claude/settings.local.json`
+- **Take main's version** (superset of feat/export's additions — both added `Bash(git commit:*)`, main also added hooks, deny rules, more permissions)
+
+### 2. `components/dashboard-content.tsx`
+Main rewrote this heavily (nuqs, orpc query keys, dynamic imports, profile/visibility features). Graft export into main's version:
+- Add `ExportDialog` and `handleQuickExport` imports
+- Add `exportDialogOpen` state
+- Add `allBookmarksQuery` (fetch all bookmarks when dialog opens) — adapt to use `orpc` query key pattern
+- Add `allBookmarks` memo
+- Add `handleQuickExportAction` callback
+- Add `handleOpenExportDialog` callback
+- Pass `onExport` to `<Header>` and `<MultiSelectToolbar>`
+- Render `<ExportDialog>` at bottom
+
+### 3. `components/header.tsx`
+Main added visibility, profile, readOnly, dynamic SettingsDialog import. Graft:
+- Add `onExport?: () => void` to `HeaderProps`
+- Destructure `onExport`
+- Pass `onExport` to `<SettingsDialog>`
+
+### 4. `components/multi-select-toolbar.tsx`
+Main added `hasUsername`, `onMakePublic`, `onMakePrivate`. Graft:
+- Add export-related imports (`DropdownMenu*`, `IconFileExport`, `IconFileTypeCsv`, `IconJson`)
+- Add `onExport: (format: "csv" | "json") => void` prop
+- Add export dropdown between "Copy URLs" and visibility buttons
+- Keep `motion-reduce` classes from feat/export
+
+### 5. `components/settings-dialog.tsx`
+Main completely redesigned to tabbed layout with avatar upload and ProfileTab. Graft:
+- Add `onExport?: () => void` to `SettingsDialogProps`
+- Destructure `onExport`
+- Add "Data" `<Field>` with Export button in the General tab (after Chrome Extension field, before `<DialogFooter>`)
+
+## Steps
+
+1. `git merge main` (will stop with conflicts)
+2. For `.claude/settings.local.json` — accept main's version (`git checkout main -- .claude/settings.local.json`)
+3. For each component file — start from main's version, then add export features
+4. `git add` resolved files and commit
+
+## Verification
+
+- `bunx tsc --noEmit` — type check
+- `bunx next build` — full build
+- Manual: open dashboard, verify export button in settings, export dropdown in multi-select toolbar
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/duncan/.REDACTED.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.

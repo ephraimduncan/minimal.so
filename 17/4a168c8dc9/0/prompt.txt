@@ -1,0 +1,382 @@
+Implement the following plan:
+
+# Plan: Fix useEffect Anti-Patterns
+
+## Context
+Audit found **17 useEffect instances** across 16 files. 9 are legitimate (external system sync, event listeners, timers). **8 are improvable** — ranging from clear anti-patterns to minor cleanup. One has an actual bug (missing dependency).
+
+---
+
+## Fixes (by priority)
+
+### 1. `hooks/use-mobile.ts` — useSyncExternalStore ⬆️ HIGH
+**Anti-pattern**: useEffect + useState subscribing to `window.matchMedia`
+**Fix**: Replace with `useSyncExternalStore` — the React-recommended API for subscribing to browser APIs. Provides SSR-safe server snapshot (`false`) and eliminates the intermediate `undefined` state.
+
+### 2. `components/header.tsx:118` — Move to mutation callback ⬆️ HIGH
+**Anti-pattern**: useEffect watching `isTogglingGroupVisibility` + ref flag + setTimeout(0) to close dialog after mutation
+**Fix**: Move dialog-close logic into the `onToggleGroupVisibility` callback's mutation `onSettled`/`onSuccess`. Eliminates the ref, the setTimeout, and the effect entirely. Need to trace where `onToggleGroupVisibility` is wired up — likely `dashboard-content.tsx` mutation.
+
+### 3. `components/dashboard-content.tsx:152` — Reset in event handlers ⬆️ MEDIUM
+**Anti-pattern**: useEffect resets `selectedIndex`/`hoveredIndex` when `bookmarks` or `currentGroupId` change
+**Bug**: `bookmarks` ref changes on _every_ mutation (optimistic update), so keyboard selection resets after create/delete/move — poor UX.
+**Fix**:
+- Reset in the group-switch handler (when `setGroupSlug` is called)
+- Remove `bookmarks` from deps entirely — index should be adjusted (not reset) in mutation callbacks where needed
+
+### 4. `components/bulk-move-dialog.tsx:47` — Fix bug + init pattern ⬆️ MEDIUM
+**Bug**: `availableGroups` used inside effect but missing from dependency array → stale closure
+**Anti-pattern**: useEffect for form init on dialog open
+**Fix**: Compute `initialTargetGroupId` during render (derived from `open` + `availableGroups`). Or use `key={open}` on inner content to auto-reset.
+
+### 5. `components/settings-dialog.tsx:80` — Key prop reset ⬆️ MEDIUM
+**Anti-pattern**: useEffect syncs form state (`name`, `avatarUrl`) when dialog opens
+**Fix**: Use `key={String(open)}` on DialogContent's inner wrapper, or reset in `onOpenChange` handler. Key prop is cleanest since it resets all form state atomically.
+
+### 6. `components/export-dialog.tsx:66` — Key prop reset ⬆️ MEDIUM
+**Anti-pattern**: Same as settings-dialog — useEffect inits form state on open
+**Fix**: Same approach — key prop on inner content, or compute initial state from props. Slightly trickier since it only applies when `mode === "settings"`.
+
+### 7. `app/u/[username]/public-profile-content.tsx:76` — Derive instead ⬇️ LOW
+**Pattern**: useEffect normalizes stale group slug in URL query param
+**Assessment**: This is URL migration logic — borderline legitimate. The normalized value is already computed (`normalizedActiveGroup`). Could just use `normalizedActiveGroup` for rendering and skip the URL update, or use nuqs `parse` to normalize on read.
+
+### 8. `components/bookmark-list.tsx:114` — Acceptable ⬇️ LOW
+**Pattern**: useEffect + startTransition to set `currentYear` client-side for SSR hydration safety
+**Assessment**: Standard SSR hydration workaround. Could use `useSyncExternalStore` with server snapshot, but marginal benefit for one number.
+
+---
+
+## Kept As-Is (legitimate)
+
+| File | Line | Why it's correct |
+|------|------|-----------------|
+| `dashboard-content.tsx` | 1114 | Global keyboard listener + cleanup |
+| `dashboard-content.tsx` | 105 | Preloading dynamic imports |
+| `bookmark-input.tsx` | 17 | Cmd+F keyboard shortcut + cleanup |
+| `sidebar.tsx` | 97 | Cmd+B keyboard shortcut + cleanup |
+| `use-focus-refetch.ts` | 30 | Visibility/focus listener + cleanup |
+| `use-autofill.ts` | 42 | CSS animation listener + cleanup |
+| `use-debounce.ts` | 14 | Timer-based debounce + cleanup |
+| `header.tsx` | 177 | Cleanup-only (hold timer) |
+| `calendar.tsx` | 187 | Focus management for a11y |
+
+**Vendor note**: `carousel.tsx` (shadcn/ui) has a missing `reInit` listener cleanup — noted but not touching vendor code.
+
+---
+
+## Files Modified
+
+1. `hooks/use-mobile.ts` — rewrite
+2. `components/header.tsx` — remove effect, move logic to mutation site
+3. `components/dashboard-content.tsx` — move resets to event handlers
+4. `components/bulk-move-dialog.tsx` — fix bug + remove effect
+5. `components/settings-dialog.tsx` — remove effect, add key prop
+6. `components/export-dialog.tsx` — remove effect, add key prop or derive
+
+## Verification
+- `pnpm build` — no type errors
+- Manual test: switch groups (keyboard selection resets), open/close dialogs (form state resets), resize window (mobile detection works), toggle group visibility (dialog closes after)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/duncan/.REDACTED.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.
+
+---
+
+## Context
+
+- Current git status: On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   .claude/settings.local.json
+	modified:   components/bulk-move-dialog.tsx
+	modified:   components/dashboard-content.tsx
+	modified:   components/export-dialog.tsx
+	modified:   components/header.tsx
+	modified:   components/settings-dialog.tsx
+	modified:   hooks/use-mobile.ts
+
+no changes added to commit (use "git add" and/or "git commit -a")
+- Current git diff (staged and unstaged changes): diff --git a/.claude/settings.local.json b/.claude/settings.local.json
+index f59ac00..7d8a34d 100644
+--- a/.claude/settings.local.json
++++ b/.claude/settings.local.json
+@@ -36,7 +36,9 @@
+       "Bash(git push:*)",
+       "Bash(git tag:*)",
+       "Bash(git pull:*)",
+-      "Bash(npx next build:*)"
++      "Bash(npx next build:*)",
++      "Bash(node:*)",
++      "Bash(git reset:*)"
+     ],
+     "deny": [
+       "Read(./.entire/metadata/**)"
+diff --git a/components/bulk-move-dialog.tsx b/components/bulk-move-dialog.tsx
+index c5e60a8..c5756ef 100644
+--- a/components/bulk-move-dialog.tsx
++++ b/components/bulk-move-dialog.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useState, useEffect } from "react";
++import { useState } from "react";
+ import {
+   Dialog,
+   DialogClose,
+@@ -44,11 +44,13 @@ export function BulkMoveDialog({
+   const [targetGroupId, setTargetGroupId] = useState<string>(availableGroups[0]?.id ?? "");
+   const selectedGroup = availableGroups.find((g) => g.id === targetGroupId);
+ 
+-  useEffect(() => {
+-    if (open && availableGroups.length > 0) {
+-      setTargetGroupId(availableGroups[0].id);
+-    }
+-  }, [open]);
++  const [prevOpen, setPrevOpen] = useState(open);
++  if (open && !prevOpen && availableGroups.length > 0) {
++    setTargetGroupId(availableGroups[0].id);
++  }
++  if (open !== prevOpen) {
++    setPrevOpen(open);
++  }
+ 
+   const handleConfirm = () => {
+     if (targetGroupId) {
+diff --git a/components/dashboard-content.tsx b/components/dashboard-content.tsx
+index 51a3222..248899b 100644
+--- a/components/dashboard-content.tsx
++++ b/components/dashboard-content.tsx
+@@ -149,11 +149,6 @@ export function DashboardContent({
+     [allBookmarksQuery.data],
+   );
+ 
+-  useEffect(() => {
+-    setSelectedIndex(-1);
+-    setHoveredIndex(-1);
+-  }, [bookmarks, currentGroupId]);
+-
+   const createBookmarkMutation = useMutation({
+     ...orpc.bookmark.create.mutationOptions(),
+     onMutate: async (newBookmark) => {
+@@ -410,6 +405,7 @@ export function DashboardContent({
+ 
+       setGroupSlug(slugify(newGroup.name));
+       setSelectedIndex(-1);
++      setHoveredIndex(-1);
+ 
+       return {
+         previousGroups,
+@@ -455,6 +451,7 @@ export function DashboardContent({
+           remainingGroups[0] ? slugify(remainingGroups[0].name) : null,
+         );
+         setSelectedIndex(-1);
++        setHoveredIndex(-1);
+       }
+ 
+       return { previousGroups, previousGroupSlug, deletedId: data.id };
+@@ -941,6 +938,7 @@ export function DashboardContent({
+       const group = groupsRef.current.find((g) => g.id === id);
+       setGroupSlug(group ? slugify(group.name) : null);
+       setSelectedIndex(-1);
++      setHoveredIndex(-1);
+       handleExitSelectionMode();
+     },
+     [setGroupSlug, handleExitSelectionMode],
+@@ -1105,8 +1103,8 @@ export function DashboardContent({
+   ]);
+ 
+   const handleToggleGroupVisibility = useCallback(
+-    (id: string, isPublic: boolean) => {
+-      setGroupVisibilityMutation.mutate({ id, isPublic });
++    (id: string, isPublic: boolean, onSettled?: () => void) => {
++      setGroupVisibilityMutation.mutate({ id, isPublic }, { onSettled });
+     },
+     [setGroupVisibilityMutation],
+   );
+diff --git a/components/export-dialog.tsx b/components/export-dialog.tsx
+index bf5f27a..fd31186 100644
+--- a/components/export-dialog.tsx
++++ b/components/export-dialog.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useState, useEffect, useMemo } from "react";
++import { useState, useMemo } from "react";
+ import {
+   Dialog,
+   DialogClose,
+@@ -55,6 +55,16 @@ export function ExportDialog({
+   const [includeNonLinks, setIncludeNonLinks] = useState(true);
+   const [format, setFormat] = useState<"csv" | "json">("csv");
+ 
++  const [prevOpen, setPrevOpen] = useState(open);
++  if (open && !prevOpen && mode === "settings") {
++    setSelectedGroupIds(new Set(groups.map((g) => g.id)));
++    setIncludeNonLinks(true);
++    setFormat("csv");
++  }
++  if (open !== prevOpen) {
++    setPrevOpen(open);
++  }
++
+   const groupsMap = useMemo(() => {
+     return new Map(groups.map((g) => [g.id, g.name]));
+   }, [groups]);
+@@ -63,14 +73,6 @@ export function ExportDialog({
+     return groups.filter((g) => (g.bookmarkCount ?? 0) > 0);
+   }, [groups]);
+ 
+-  useEffect(() => {
+-    if (open && mode === "settings") {
+-      setSelectedGroupIds(new Set(groups.map((g) => g.id)));
+-      setIncludeNonLinks(true);
+-      setFormat("csv");
+-    }
+-  }, [open, mode, groups]);
+-
+   const filteredBookmarks = useMemo(() => {
+     let filtered = bookmarks;
+ 
+diff --git a/components/header.tsx b/components/header.tsx
+index 6a72396..bd80eb6 100644
+--- a/components/header.tsx
++++ b/components/header.tsx
+@@ -65,7 +65,7 @@ interface HeaderProps {
+   onSelectGroup: (id: string) => void;
+   onCreateGroup: (name: string) => void;
+   onDeleteGroup?: (id: string) => void;
+-  onToggleGroupVisibility?: (id: string, isPublic: boolean) => void;
++  onToggleGroupVisibility?: (id: string, isPublic: boolean, onSettled?: () => void) => void;
+   isTogglingGroupVisibility?: boolean;
+   userName: string;
+   userEmail: string;
+@@ -113,20 +113,6 @@ export function Header({
+   const [holdProgress, setHoldProgress] = useState(0);
+   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
+   const holdStartRef = useRef<number>(0);
+-  const initiatedToggleRef = useRef(false);
+-
+-  useEffect(() => {
+-    if (!isTogglingGroupVisibility && initiatedToggleRef.current) {
+-      initiatedToggleRef.current = false;
+-      const timer = setTimeout(() => {
+-        setVisibilityDialogOpen(false);
+-        setPendingVisibilityGroupId(null);
+-        setPendingVisibilityTarget(null);
+-      }, 0);
+-      return () => clearTimeout(timer);
+-    }
+-  }, [isTogglingGroupVisibility]);
+-
+   const handleSignOut = async () => {
+     setSignOutOpen(false);
+     await signOut();
+@@ -477,8 +463,12 @@ export function Header({
+                       onToggleGroupVisibility?.(
+                         pendingVisibilityGroupId,
+                         pendingVisibilityTarget,
++                        () => {
++                          setVisibilityDialogOpen(false);
++                          setPendingVisibilityGroupId(null);
++                          setPendingVisibilityTarget(null);
++                        },
+                       );
+-                      initiatedToggleRef.current = true;
+                     }
+                   }}
+                 >
+diff --git a/components/settings-dialog.tsx b/components/settings-dialog.tsx
+index 0b028f5..21aaa1a 100644
+--- a/components/settings-dialog.tsx
++++ b/components/settings-dialog.tsx
+@@ -4,7 +4,6 @@ import {
+   useState,
+   useCallback,
+   useRef,
+-  useEffect,
+   type ChangeEvent,
+ } from "react";
+ import { useRouter } from "next/navigation";
+@@ -75,13 +74,17 @@ export function SettingsDialog({
+   const [isSaving, setIsSaving] = useState(false);
+   const [isUploading, setIsUploading] = useState(false);
+   const fileInputRef = useRef<HTMLInputElement>(null);
+-  const initial = name.trim().charAt(0).toUpperCase() || "?";
+ 
+-  useEffect(() => {
+-    if (!open) return;
++  const [prevOpen, setPrevOpen] = useState(open);
++  if (open && !prevOpen) {
+     setName(user.name);
+     setAvatarUrl(user.image);
+-  }, [open, user.name, user.image]);
++  }
++  if (open !== prevOpen) {
++    setPrevOpen(open);
++  }
++
++  const initial = name.trim().charAt(0).toUpperCase() || "?";
+ 
+   const handleAvatarUpload = async (file: File) => {
+     if (!ACCEPTED_AVATAR_TYPES.has(file.type)) {
+diff --git a/hooks/use-mobile.ts b/hooks/use-mobile.ts
+index 2b0fe1d..f5fedbf 100644
+--- a/hooks/use-mobile.ts
++++ b/hooks/use-mobile.ts
+@@ -1,19 +1,22 @@
+-import * as React from "react"
++import { useSyncExternalStore } from "react"
+ 
+ const MOBILE_BREAKPOINT = 768
++const QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`
+ 
+-export function useIsMobile() {
+-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
++function subscribe(callback: () => void) {
++  const mql = window.matchMedia(QUERY)
++  mql.addEventListener("change", callback)
++  return () => mql.removeEventListener("change", callback)
++}
++
++function getSnapshot() {
++  return window.matchMedia(QUERY).matches
++}
+ 
+-  React.useEffect(() => {
+-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+-    const onChange = () => {
+-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+-    }
+-    mql.addEventListener("change", onChange)
+-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+-    return () => mql.removeEventListener("change", onChange)
+-  }, [])
++function getServerSnapshot() {
++  return false
++}
+ 
+-  return !!isMobile
++export function useIsMobile() {
++  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+ }
+- Current branch: main
+- Recent commits: 96e8e89 perf: parallelize createBookmark, stabilize refresh callback, add content-visibility and preloading
+ff9005e feat: minor UI fixes — export count, dropdown grouping, keyboard shortcuts, help link
+b17f1e3 feat: redesign changelog page with grid layout and semantic colors Entire-Checkpoint: c6f088d096e4
+8c9f013 docs: add v0.1.0 changelog entry Entire-Checkpoint: a09ae5edf92b
+67523b9 feat: export bookmarks (#55)
+fcbafce entire init
+907dc4e feat: add RSS/Atom feeds for public profiles (#49)
+d7e3661 feat: improve arXiv metadata (#54)
+bb0e6e1 Use slugified group param (#52)
+36c8048 Merge branch 'toggle-confirmation'
+
+## Your task
+
+Based on the above changes, create a single git commit.

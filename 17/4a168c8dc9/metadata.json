@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "174a168c8dc9",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "components/bulk-move-dialog.tsx",
+    "components/dashboard-content.tsx",
+    "components/export-dialog.tsx",
+    "components/header.tsx",
+    "components/settings-dialog.tsx",
+    "hooks/use-mobile.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/17/4a168c8dc9/0/metadata.json",
+      "transcript": "/17/4a168c8dc9/0/full.jsonl",
+      "context": "/17/4a168c8dc9/0/context.md",
+      "content_hash": "/17/4a168c8dc9/0/content_hash.txt",
+      "prompt": "/17/4a168c8dc9/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 13137,
+    "cache_creation_tokens": 167830,
+    "cache_read_tokens": 785359,
+    "output_tokens": 791,
+    "api_call_count": 10
+  }
+}

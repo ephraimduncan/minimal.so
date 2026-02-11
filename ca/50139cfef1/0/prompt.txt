@@ -1,0 +1,371 @@
+Implement the following plan:
+
+# Vercel React Best Practices Audit — bmrks
+
+**Stack**: Next.js 16.1.1, React 19, TanStack Query 5, oRPC, Prisma + libsql, Tailwind 4, shadcn/ui
+
+---
+
+## Scorecard
+
+| # | Category | Impact | Score | Notes |
+|---|----------|--------|-------|-------|
+| 1 | Eliminating Waterfalls | CRITICAL | B+ | Server pages excellent, two RPC procedures have sequential awaits |
+| 2 | Bundle Size | CRITICAL | A | Dynamic imports, conditional queries, deferred analytics |
+| 3 | Server-Side Perf | HIGH | A- | React.cache, "use cache", Promise.all; missing after() |
+| 4 | Client Data Fetching | MEDIUM-HIGH | A | TanStack Query w/ optimistic updates, proper dedup |
+| 5 | Re-render Optimization | MEDIUM | A | useLatestRef, memo, useMemo, functional setState |
+| 6 | Rendering Performance | MEDIUM | B+ | Good hoisted JSX; missing content-visibility for lists |
+| 7 | JavaScript Performance | LOW-MEDIUM | A | Set/Map lookups, early exits |
+| 8 | Advanced Patterns | LOW | A+ | useLatestRef, event handler refs throughout |
+
+**Overall: A-** — Very well-optimized. Only a handful of actionable items.
+
+---
+
+## Findings (by priority)
+
+### CRITICAL — Eliminating Waterfalls
+
+#### 1. `server/procedures/bookmarks.ts:41-79` — `createBookmark` sequential awaits
+
+**Rule**: `async-parallel`
+
+```
+assertGroupOwnership → findFirst(existing) → getUrlMetadata
+```
+
+`findFirst` and `getUrlMetadata` are independent once we know the group is valid. Start `metadataPromise` earlier (like the extension API already does).
+
+**Fix**: Start `getUrlMetadata` before awaiting `findFirst`. Or combine `findFirst` + `getUrlMetadata` in `Promise.all`.
+
+#### 2. `app/api/extension/bookmark/route.ts:78-95` — Partially optimized
+
+**Rule**: `async-parallel`
+
+Already starts `metadataPromise` before `existing` lookup (good!), but `defaultGroup` and `existing` are still sequential. These two DB queries are independent once session is validated.
+
+**Fix**: `Promise.all([defaultGroup, existing])` after computing `normalizedUrl`.
+Note: `existing` depends on `defaultGroup.id` for the `groupId` filter — so actually these ARE dependent. Current code is correct. **No fix needed.**
+
+#### 3. `server/procedures/bookmarks.ts:182-198` — `refetchBookmark` sequential awaits
+
+**Rule**: `async-parallel`
+
+```
+findFirst(existing) → getUrlMetadata(existing.url) → update
+```
+
+The first two are inherently sequential (metadata fetch depends on the URL from the lookup). **No fix needed.**
+
+**Net**: Only item 1 is actionable.
+
+---
+
+### CRITICAL — Bundle Size
+
+#### 4. No preloading on hover/focus for dynamic imports
+
+**Rule**: `bundle-preload`
+
+Dynamic dialogs (SettingsDialog, BulkMoveDialog, etc.) load on-demand when opened. Could preload on hover/focus of the trigger button for perceived speed.
+
+**Low-effort improvement** — add `onMouseEnter` preload handlers on trigger buttons.
+
+**Everything else is excellent:**
+- ✅ `next/dynamic` with `ssr: false` for 6 heavy components
+- ✅ Analytics deferred with `strategy="afterInteractive"`
+- ✅ `allBookmarksQuery` only enabled when export dialog open (`bundle-conditional`)
+- ✅ No problematic barrel imports — shadcn UI is individual files
+
+---
+
+### HIGH — Server-Side Performance
+
+#### 5. No `after()` for non-blocking work
+
+**Rule**: `server-after-nonblocking`
+
+Extension bookmark API logs errors with `console.error` synchronously. The `getUrlMetadata` call in `createBookmark` is blocking — could fire metadata refetch after response in some paths.
+
+**Low priority** — current metadata fetch is needed for the response.
+
+**Everything else is excellent:**
+- ✅ `React.cache()` on `getPublicProfileData` (`server-cache-react`)
+- ✅ `"use cache"` + `cacheLife("minutes")` + `cacheTag("admin-stats")` on admin page
+- ✅ Dashboard: `Promise.all` for 3 queries (`server-parallel-fetching`)
+- ✅ Admin: `Promise.all` for 11 queries
+- ✅ Proper data serialization — Prisma `select` clauses minimize transferred data
+
+---
+
+### MEDIUM-HIGH — Client-Side Data Fetching
+
+**No issues found.**
+
+- ✅ TanStack Query provides automatic dedup (`client-swr-dedup`)
+- ✅ `useFocusRefetch` properly manages event listeners with cooldown (`client-event-listeners`)
+- ✅ Optimistic updates on all 11 mutations
+
+---
+
+### MEDIUM — Re-render Optimization
+
+#### 6. `useFocusRefetch` recreates `refresh` every time `groups` changes
+
+**Rule**: `rerender-dependencies`
+
+`refresh` callback depends on `groups` array (to iterate and invalidate per-group queries). When groups change, event listeners are re-registered. Consider using a ref for `groups` inside the callback.
+
+**Fix**: Use a ref for `groups` so `refresh` is stable.
+
+**Everything else is excellent:**
+- ✅ `BookmarkIcon` wrapped in `memo()` (`rerender-memo`)
+- ✅ `useLatestRef` used extensively to stabilize callbacks (`rerender-defer-reads`)
+- ✅ Functional `setState` for selectedIndex (`rerender-functional-setstate`)
+- ✅ `useState(() => new QueryClient(...))` lazy init (`rerender-lazy-state-init`)
+- ✅ `startTransition` for non-urgent `currentYear` update (`rerender-transitions`)
+- ✅ `publicGroupIds` derived as `Set` from groups, memoized (`rerender-derived-state`)
+
+---
+
+### MEDIUM — Rendering Performance
+
+#### 7. Long bookmark lists missing `content-visibility`
+
+**Rule**: `rendering-content-visibility`
+
+`BookmarkList` renders all bookmarks in a flat list. For groups with 100+ bookmarks, `content-visibility: auto` on individual rows would skip rendering off-screen items.
+
+**Fix**: Add `content-visibility: auto` + `contain-intrinsic-size` to bookmark rows.
+
+**Everything else is excellent:**
+- ✅ `EMPTY_STATE` and `EMPTY_SET` hoisted outside component (`rendering-hoist-jsx`)
+- ✅ Ternary `? :` used over `&&` for conditional rendering where appropriate
+- ✅ Hydration-safe year detection via useEffect + startTransition
+
+---
+
+### LOW-MEDIUM — JavaScript Performance
+
+**No actionable issues.** Everything follows best practices:
+- ✅ `Set` for `publicGroupIds`, `selectedIds` (`js-set-map-lookups`)
+- ✅ `Map` for `groupIdBySlug`, `groupNameById` (`js-index-maps`)
+- ✅ Early exits in keyboard handler (`js-early-exit`)
+
+---
+
+### LOW — Advanced Patterns
+
+**Exemplary.** The codebase implements the two advanced patterns:
+- ✅ `useLatestRef` custom hook (`advanced-use-latest`)
+- ✅ Event handlers stored in refs throughout dashboard-content.tsx
+
+---
+
+## Recommended Changes (ordered by impact)
+
+| # | File | Rule | Change | Effort |
+|---|------|------|--------|--------|
+| 1 | `server/procedures/bookmarks.ts` | `async-parallel` | Start `getUrlMetadata` before awaiting `findFirst` in `createBookmark` | Small |
+| 2 | `components/bookmark-list.tsx` | `rendering-content-visibility` | Add `content-visibility: auto` CSS to bookmark rows | Small |
+| 3 | `hooks/use-focus-refetch.ts` | `rerender-dependencies` | Use ref for `groups` to stabilize `refresh` callback | Small |
+| 4 | Various trigger buttons | `bundle-preload` | Preload dynamic imports on hover/focus | Small |
+
+---
+
+## Unresolved Questions
+
+1. How large do bookmark groups typically get? `content-visibility` is only meaningful for 50+ items.
+2. Do you want all 4 items fixed, or only the CRITICAL waterfall fix?
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/duncan/.claude/projects/-Users-duncan-dev-bmrks/df929a55-6b85-473b-abab-95f5ff2a995f.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.
+
+---
+
+## Context
+
+- Current git status: On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   .claude/settings.local.json
+	modified:   components/bookmark-list.tsx
+	modified:   components/dashboard-content.tsx
+	modified:   components/header.tsx
+	modified:   hooks/use-focus-refetch.ts
+	modified:   server/procedures/bookmarks.ts
+
+no changes added to commit (use "git add" and/or "git commit -a")
+- Current git diff (staged and unstaged changes): diff --git a/.claude/settings.local.json b/.claude/settings.local.json
+index f59ac00..7d8a34d 100644
+--- a/.claude/settings.local.json
++++ b/.claude/settings.local.json
+@@ -36,7 +36,9 @@
+       "Bash(git push:*)",
+       "Bash(git tag:*)",
+       "Bash(git pull:*)",
+-      "Bash(npx next build:*)"
++      "Bash(npx next build:*)",
++      "Bash(node:*)",
++      "Bash(git reset:*)"
+     ],
+     "deny": [
+       "Read(./.entire/metadata/**)"
+diff --git a/components/bookmark-list.tsx b/components/bookmark-list.tsx
+index 6f9cbef..41cea0b 100644
+--- a/components/bookmark-list.tsx
++++ b/components/bookmark-list.tsx
+@@ -221,6 +221,7 @@ export function BookmarkList({
+                   onClick={() => handleRowClick(bookmark, index)}
+                   onMouseEnter={() => onHoverChange(index)}
+                   onMouseLeave={() => onHoverChange(-1)}
++                  style={{ contentVisibility: "auto", containIntrinsicSize: "auto 52px" }}
+                   className={cn(
+                     "group flex h-auto items-center justify-between rounded-xl px-4 py-3 text-left",
+                     selectedIndex === index || contextMenuOpenId === bookmark.id
+diff --git a/components/dashboard-content.tsx b/components/dashboard-content.tsx
+index 6d0c109..51a3222 100644
+--- a/components/dashboard-content.tsx
++++ b/components/dashboard-content.tsx
+@@ -30,6 +30,9 @@ const ExportDialog = dynamic(
+   () => import("@/components/export-dialog").then((m) => m.ExportDialog),
+   { ssr: false },
+ );
++const preloadBulkMoveDialog = () => import("@/components/bulk-move-dialog");
++const preloadBulkDeleteDialog = () => import("@/components/bulk-delete-dialog");
++const preloadExportDialog = () => import("@/components/export-dialog");
+ import { handleQuickExport } from "@/components/export-dialog";
+ import { parseColor, isUrl, normalizeUrl, slugify } from "@/lib/utils";
+ import { client, orpc } from "@/lib/orpc";
+@@ -99,6 +102,14 @@ export function DashboardContent({
+ 
+   useFocusRefetch(groups);
+ 
++  useEffect(() => {
++    if (selectionMode) {
++      preloadBulkMoveDialog();
++      preloadBulkDeleteDialog();
++      preloadExportDialog();
++    }
++  }, [selectionMode]);
++
+   const groupIdBySlug = useMemo(
+     () => new Map(groups.map((g) => [slugify(g.name), g.id])),
+     [groups],
+diff --git a/components/header.tsx b/components/header.tsx
+index 0f79279..6a72396 100644
+--- a/components/header.tsx
++++ b/components/header.tsx
+@@ -57,6 +57,7 @@ const SettingsDialog = dynamic(
+   () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
+   { ssr: false },
+ );
++const preloadSettingsDialog = () => import("@/components/settings-dialog");
+ 
+ interface HeaderProps {
+   groups: GroupItem[];
+@@ -350,6 +351,8 @@ export function Header({
+               <DropdownMenuItem
+                 className="rounded-lg"
+                 onClick={() => setSettingsOpen(true)}
++                onMouseEnter={preloadSettingsDialog}
++                onFocus={preloadSettingsDialog}
+                 disabled={readOnly}
+               >
+                 <IconSettings className="h-4 w-4" />
+diff --git a/hooks/use-focus-refetch.ts b/hooks/use-focus-refetch.ts
+index eb832fe..e31ee3a 100644
+--- a/hooks/use-focus-refetch.ts
++++ b/hooks/use-focus-refetch.ts
+@@ -3,6 +3,7 @@
+ import { useEffect, useRef, useCallback } from "react";
+ import { useQueryClient } from "@tanstack/react-query";
+ import { orpc } from "@/lib/orpc";
++import { useLatestRef } from "@/lib/hooks/use-latest-ref";
+ import type { GroupItem } from "@/lib/schema";
+ 
+ const COOLDOWN_MS = 30 * 1000;
+@@ -10,6 +11,7 @@ const COOLDOWN_MS = 30 * 1000;
+ export function useFocusRefetch(groups: GroupItem[]) {
+   const queryClient = useQueryClient();
+   const lastRefreshRef = useRef<number>(0);
++  const groupsRef = useLatestRef(groups);
+ 
+   const refresh = useCallback(() => {
+     const now = Date.now();
+@@ -17,13 +19,13 @@ export function useFocusRefetch(groups: GroupItem[]) {
+ 
+     lastRefreshRef.current = now;
+     queryClient.invalidateQueries({ queryKey: orpc.group.key() });
+-    for (const group of groups) {
++    for (const group of groupsRef.current) {
+       queryClient.invalidateQueries({
+         queryKey: orpc.bookmark.list.key({ input: { groupId: group.id } }),
+         refetchType: "all",
+       });
+     }
+-  }, [queryClient, groups]);
++  }, [queryClient, groupsRef]);
+ 
+   useEffect(() => {
+     const handleVisibilityChange = () => {
+diff --git a/server/procedures/bookmarks.ts b/server/procedures/bookmarks.ts
+index 875483b..6315870 100644
+--- a/server/procedures/bookmarks.ts
++++ b/server/procedures/bookmarks.ts
+@@ -50,16 +50,18 @@ export const createBookmark = authed
+       const normalizedUrl = normalizeUrl(input.url);
+       url = normalizedUrl;
+ 
+-      const existing = await db.bookmark.findFirst({
+-        where: {
+-          userId: context.user.id,
+-          groupId: input.groupId,
+-          url: normalizedUrl,
+-        },
+-      });
++      const [existing, metadata] = await Promise.all([
++        db.bookmark.findFirst({
++          where: {
++            userId: context.user.id,
++            groupId: input.groupId,
++            url: normalizedUrl,
++          },
++        }),
++        getUrlMetadata(normalizedUrl),
++      ]);
+ 
+       if (existing) {
+-        const metadata = await getUrlMetadata(normalizedUrl);
+         const bookmark = await db.bookmark.update({
+           where: { id: existing.id, userId: context.user.id },
+           data: {
+@@ -71,7 +73,6 @@ export const createBookmark = authed
+         return bookmark;
+       }
+ 
+-      const metadata = await getUrlMetadata(normalizedUrl);
+       if (metadata.title) {
+         title = metadata.title;
+       }
+- Current branch: main
+- Recent commits: ff9005e feat: minor UI fixes — export count, dropdown grouping, keyboard shortcuts, help link
+b17f1e3 feat: redesign changelog page with grid layout and semantic colors Entire-Checkpoint: c6f088d096e4
+8c9f013 docs: add v0.1.0 changelog entry Entire-Checkpoint: a09ae5edf92b
+67523b9 feat: export bookmarks (#55)
+fcbafce entire init
+907dc4e feat: add RSS/Atom feeds for public profiles (#49)
+d7e3661 feat: improve arXiv metadata (#54)
+bb0e6e1 Use slugified group param (#52)
+36c8048 Merge branch 'toggle-confirmation'
+e84a63b Add private visibility confirmation
+
+## Your task
+
+Based on the above changes, create a single git commit.

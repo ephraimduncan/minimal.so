@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.2",
+  "checkpoint_id": "ca50139cfef1",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "components/bookmark-list.tsx",
+    "components/dashboard-content.tsx",
+    "components/header.tsx",
+    "hooks/use-focus-refetch.ts",
+    "server/procedures/bookmarks.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ca/50139cfef1/0/metadata.json",
+      "transcript": "/ca/50139cfef1/0/full.jsonl",
+      "context": "/ca/50139cfef1/0/context.md",
+      "content_hash": "/ca/50139cfef1/0/content_hash.txt",
+      "prompt": "/ca/50139cfef1/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 10510,
+    "cache_creation_tokens": 91091,
+    "cache_read_tokens": 1011284,
+    "output_tokens": 648,
+    "api_call_count": 14
+  }
+}

@@ -257,15 +257,14 @@ export function SettingsDialog({
                 </a>
               </Field>
               {onExport && (
-                <Field>
+                <Field className="[&>button]:w-fit">
                   <FieldLabel>Data</FieldLabel>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={onExport}
-                    className="w-fit"
                   >
-                    Export
+                    Export Bookmarks
                   </Button>
                 </Field>
               )}

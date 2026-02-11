@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -32,6 +33,8 @@ import {
   IconWorldOff,
   IconUser,
   IconLoader2,
+  IconKeyboard,
+  IconLifebuoy,
 } from "@tabler/icons-react";
 import { signOut } from "@/lib/auth-client";
 import {
@@ -48,6 +51,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { type GroupItem } from "@/lib/schema";
 import type { ProfileData } from "@/components/dashboard-content";
+import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog";
 
 const SettingsDialog = dynamic(
   () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
@@ -95,6 +99,7 @@ export function Header({
   const [newGroupName, setNewGroupName] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [visibilityDialogOpen, setVisibilityDialogOpen] = useState(false);
   const [pendingVisibilityGroupId, setPendingVisibilityGroupId] = useState<
@@ -350,6 +355,7 @@ export function Header({
                 <IconSettings className="h-4 w-4" />
                 Settings
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
               {username && (
                 <DropdownMenuItem
                   className="rounded-lg"
@@ -375,6 +381,24 @@ export function Header({
                 <ChromeIcon />
                 Chrome Extension
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="rounded-lg"
+                onClick={() => setShortcutsOpen(true)}
+              >
+                <IconKeyboard className="h-4 w-4" />
+                Keyboard Shortcuts
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="rounded-lg"
+                render={
+                  <a href="mailto:ephraimduncan68@gmail.com" target="_blank" rel="noopener noreferrer" />
+                }
+              >
+                <IconLifebuoy className="h-4 w-4" />
+                Help & Support
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="rounded-lg"
                 onClick={() => setSignOutOpen(true)}
@@ -463,6 +487,10 @@ export function Header({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          <KeyboardShortcutsDialog
+            open={shortcutsOpen}
+            onOpenChange={setShortcutsOpen}
+          />
           <SettingsDialog
             open={settingsOpen}
             onOpenChange={setSettingsOpen}

@@ -79,7 +79,7 @@ export function ExportDialog({
     }
 
     if (mode === "settings") {
-      if (selectedGroupIds.size > 0 && selectedGroupIds.size < groups.length) {
+      if (selectedGroupIds.size < groups.length) {
         filtered = filtered.filter((b) => selectedGroupIds.has(b.groupId));
       }
 

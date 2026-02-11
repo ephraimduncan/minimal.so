@@ -1,0 +1,50 @@
+Implement the following plan:
+
+# Plan: v0.1.0 Changelog + Release Tag
+
+## Context
+Last release was v0.0.1 (Jan 27, 2026). ~15 commits since then with significant features. `package.json` already at `0.1.0`. User wants a minor version bump → v0.1.0 aligns with both semver and existing package.json.
+
+## Steps
+
+### 1. Add v0.1.0 entry to `app/changelog/page.tsx`
+Prepend new entry to the `changelog` array with today's date (February 11, 2026).
+
+**Added:**
+- RSS/Atom feeds for public profiles (#49)
+- Avatar uploads (#51)
+- Transactional emails via Autosend (#50)
+- ArXiv metadata improvements (#54)
+- Private visibility confirmation for bookmarks
+- Slugified group URL params (#52)
+
+**Changed:**
+- Simplified email call sites and settings dialog
+
+**Fixed:**
+- Twitter profile pictures showing generic X favicon instead of actual avatars
+- Consistent paragraph spacing in email templates
+- Dashboard UI spacing, empty state, and dialog close buttons
+- Sign-out dialog closing before async work completes
+- Broken favicons, missing referrer, and public profile auto-enable
+
+### 2. Commit, tag, and push
+- `git add app/changelog/page.tsx`
+- `git commit -m "docs: add v0.1.0 changelog entry"`
+- `git tag 0.1.0`
+- `git push && git push --tags`
+
+## Files Modified
+- `app/changelog/page.tsx` — new changelog entry prepended
+
+## Verification
+- Run `next build` or `next dev` to confirm no syntax errors
+- Visit `/changelog` to verify the new entry renders correctly
+
+## Unresolved Questions
+- The commit `fcbafce - entire init` is vague — should it be included as a changelog item, or is it an internal/infra change?
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/duncan/.REDACTED.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.

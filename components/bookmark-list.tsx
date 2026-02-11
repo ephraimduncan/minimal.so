@@ -221,6 +221,7 @@ export function BookmarkList({
                   onClick={() => handleRowClick(bookmark, index)}
                   onMouseEnter={() => onHoverChange(index)}
                   onMouseLeave={() => onHoverChange(-1)}
+                  style={{ contentVisibility: "auto", containIntrinsicSize: "auto 52px" }}
                   className={cn(
                     "group flex h-auto items-center justify-between rounded-xl px-4 py-3 text-left",
                     selectedIndex === index || contextMenuOpenId === bookmark.id

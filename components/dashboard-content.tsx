@@ -30,6 +30,9 @@ const ExportDialog = dynamic(
   () => import("@/components/export-dialog").then((m) => m.ExportDialog),
   { ssr: false },
 );
+const preloadBulkMoveDialog = () => import("@/components/bulk-move-dialog");
+const preloadBulkDeleteDialog = () => import("@/components/bulk-delete-dialog");
+const preloadExportDialog = () => import("@/components/export-dialog");
 import { handleQuickExport } from "@/components/export-dialog";
 import { parseColor, isUrl, normalizeUrl, slugify } from "@/lib/utils";
 import { client, orpc } from "@/lib/orpc";
@@ -98,6 +101,14 @@ export function DashboardContent({
   );
 
   useFocusRefetch(groups);
+
+  useEffect(() => {
+    if (selectionMode) {
+      preloadBulkMoveDialog();
+      preloadBulkDeleteDialog();
+      preloadExportDialog();
+    }
+  }, [selectionMode]);
 
   const groupIdBySlug = useMemo(
     () => new Map(groups.map((g) => [slugify(g.name), g.id])),

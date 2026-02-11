@@ -50,16 +50,18 @@ export const createBookmark = authed
       const normalizedUrl = normalizeUrl(input.url);
       url = normalizedUrl;
 
-      const existing = await db.bookmark.findFirst({
-        where: {
-          userId: context.user.id,
-          groupId: input.groupId,
-          url: normalizedUrl,
-        },
-      });
+      const [existing, metadata] = await Promise.all([
+        db.bookmark.findFirst({
+          where: {
+            userId: context.user.id,
+            groupId: input.groupId,
+            url: normalizedUrl,
+          },
+        }),
+        getUrlMetadata(normalizedUrl),
+      ]);
 
       if (existing) {
-        const metadata = await getUrlMetadata(normalizedUrl);
         const bookmark = await db.bookmark.update({
           where: { id: existing.id, userId: context.user.id },
           data: {
@@ -71,7 +73,6 @@ export const createBookmark = authed
         return bookmark;
       }
 
-      const metadata = await getUrlMetadata(normalizedUrl);
       if (metadata.title) {
         title = metadata.title;
       }

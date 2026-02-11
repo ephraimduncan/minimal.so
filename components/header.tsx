@@ -57,6 +57,7 @@ const SettingsDialog = dynamic(
   () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
   { ssr: false },
 );
+const preloadSettingsDialog = () => import("@/components/settings-dialog");
 
 interface HeaderProps {
   groups: GroupItem[];
@@ -350,6 +351,8 @@ export function Header({
               <DropdownMenuItem
                 className="rounded-lg"
                 onClick={() => setSettingsOpen(true)}
+                onMouseEnter={preloadSettingsDialog}
+                onFocus={preloadSettingsDialog}
                 disabled={readOnly}
               >
                 <IconSettings className="h-4 w-4" />

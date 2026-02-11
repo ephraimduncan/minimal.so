@@ -149,11 +149,6 @@ export function DashboardContent({
     [allBookmarksQuery.data],
   );
 
-  useEffect(() => {
-    setSelectedIndex(-1);
-    setHoveredIndex(-1);
-  }, [bookmarks, currentGroupId]);
-
   const createBookmarkMutation = useMutation({
     ...orpc.bookmark.create.mutationOptions(),
     onMutate: async (newBookmark) => {
@@ -410,6 +405,7 @@ export function DashboardContent({
 
       setGroupSlug(slugify(newGroup.name));
       setSelectedIndex(-1);
+      setHoveredIndex(-1);
 
       return {
         previousGroups,
@@ -455,6 +451,7 @@ export function DashboardContent({
           remainingGroups[0] ? slugify(remainingGroups[0].name) : null,
         );
         setSelectedIndex(-1);
+        setHoveredIndex(-1);
       }
 
       return { previousGroups, previousGroupSlug, deletedId: data.id };
@@ -941,6 +938,7 @@ export function DashboardContent({
       const group = groupsRef.current.find((g) => g.id === id);
       setGroupSlug(group ? slugify(group.name) : null);
       setSelectedIndex(-1);
+      setHoveredIndex(-1);
       handleExitSelectionMode();
     },
     [setGroupSlug, handleExitSelectionMode],
@@ -1105,8 +1103,8 @@ export function DashboardContent({
   ]);
 
   const handleToggleGroupVisibility = useCallback(
-    (id: string, isPublic: boolean) => {
-      setGroupVisibilityMutation.mutate({ id, isPublic });
+    (id: string, isPublic: boolean, onSettled?: () => void) => {
+      setGroupVisibilityMutation.mutate({ id, isPublic }, { onSettled });
     },
     [setGroupVisibilityMutation],
   );

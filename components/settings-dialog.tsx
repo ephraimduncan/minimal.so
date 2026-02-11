@@ -4,7 +4,6 @@ import {
   useState,
   useCallback,
   useRef,
-  useEffect,
   type ChangeEvent,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -75,13 +74,17 @@ export function SettingsDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const initial = name.trim().charAt(0).toUpperCase() || "?";
 
-  useEffect(() => {
-    if (!open) return;
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open && !prevOpen) {
     setName(user.name);
     setAvatarUrl(user.image);
-  }, [open, user.name, user.image]);
+  }
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+  }
+
+  const initial = name.trim().charAt(0).toUpperCase() || "?";
 
   const handleAvatarUpload = async (file: File) => {
     if (!ACCEPTED_AVATAR_TYPES.has(file.type)) {

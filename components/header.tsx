@@ -65,7 +65,7 @@ interface HeaderProps {
   onSelectGroup: (id: string) => void;
   onCreateGroup: (name: string) => void;
   onDeleteGroup?: (id: string) => void;
-  onToggleGroupVisibility?: (id: string, isPublic: boolean) => void;
+  onToggleGroupVisibility?: (id: string, isPublic: boolean, onSettled?: () => void) => void;
   isTogglingGroupVisibility?: boolean;
   userName: string;
   userEmail: string;
@@ -113,20 +113,6 @@ export function Header({
   const [holdProgress, setHoldProgress] = useState(0);
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartRef = useRef<number>(0);
-  const initiatedToggleRef = useRef(false);
-
-  useEffect(() => {
-    if (!isTogglingGroupVisibility && initiatedToggleRef.current) {
-      initiatedToggleRef.current = false;
-      const timer = setTimeout(() => {
-        setVisibilityDialogOpen(false);
-        setPendingVisibilityGroupId(null);
-        setPendingVisibilityTarget(null);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [isTogglingGroupVisibility]);
-
   const handleSignOut = async () => {
     setSignOutOpen(false);
     await signOut();
@@ -477,8 +463,12 @@ export function Header({
                       onToggleGroupVisibility?.(
                         pendingVisibilityGroupId,
                         pendingVisibilityTarget,
+                        () => {
+                          setVisibilityDialogOpen(false);
+                          setPendingVisibilityGroupId(null);
+                          setPendingVisibilityTarget(null);
+                        },
                       );
-                      initiatedToggleRef.current = true;
                     }
                   }}
                 >

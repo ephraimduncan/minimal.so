@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogClose,
@@ -55,6 +55,16 @@ export function ExportDialog({
   const [includeNonLinks, setIncludeNonLinks] = useState(true);
   const [format, setFormat] = useState<"csv" | "json">("csv");
 
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open && !prevOpen && mode === "settings") {
+    setSelectedGroupIds(new Set(groups.map((g) => g.id)));
+    setIncludeNonLinks(true);
+    setFormat("csv");
+  }
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+  }
+
   const groupsMap = useMemo(() => {
     return new Map(groups.map((g) => [g.id, g.name]));
   }, [groups]);
@@ -62,14 +72,6 @@ export function ExportDialog({
   const nonEmptyGroups = useMemo(() => {
     return groups.filter((g) => (g.bookmarkCount ?? 0) > 0);
   }, [groups]);
-
-  useEffect(() => {
-    if (open && mode === "settings") {
-      setSelectedGroupIds(new Set(groups.map((g) => g.id)));
-      setIncludeNonLinks(true);
-      setFormat("csv");
-    }
-  }, [open, mode, groups]);
 
   const filteredBookmarks = useMemo(() => {
     let filtered = bookmarks;

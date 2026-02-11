@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogClose,
@@ -44,11 +44,13 @@ export function BulkMoveDialog({
   const [targetGroupId, setTargetGroupId] = useState<string>(availableGroups[0]?.id ?? "");
   const selectedGroup = availableGroups.find((g) => g.id === targetGroupId);
 
-  useEffect(() => {
-    if (open && availableGroups.length > 0) {
-      setTargetGroupId(availableGroups[0].id);
-    }
-  }, [open]);
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open && !prevOpen && availableGroups.length > 0) {
+    setTargetGroupId(availableGroups[0].id);
+  }
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+  }
 
   const handleConfirm = () => {
     if (targetGroupId) {

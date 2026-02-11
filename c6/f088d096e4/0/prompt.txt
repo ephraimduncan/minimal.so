@@ -1,0 +1,177 @@
+Implement the following plan:
+
+# Changelog Page Redesign
+
+## Context
+
+Current changelog is a plain vertical list with prose styling. Redesign adopts the two-column grid layout from the reference UI (date left, content right) while keeping it appropriate for a versioned changelog with categorized entries.
+
+## Changes
+
+Single file: `app/changelog/page.tsx`
+
+### Layout: Two-column grid
+
+Shared grid pattern for header + each version article:
+```
+grid sm:grid-cols-[140px_1fr] sm:gap-6 md:grid-cols-[180px_1fr]
+```
+
+- **Header**: empty left col, right col has back link → h1 → subtitle
+- **Per version**: left col = date (right-aligned on sm+), right col = version title + categorized entries
+- Versions separated by `gap-12`
+- Remove `prose` wrapper — use explicit spacing instead
+
+### Category badges
+
+Replace plain "Added"/"Changed"/"Fixed" h3 headers with `Badge` component using semantic color tokens:
+
+| Category | Badge style |
+|----------|------------|
+| Added | `bg-success/10 text-success-foreground` |
+| Changed | `bg-info/10 text-info-foreground` |
+| Fixed | `bg-destructive/10 text-destructive-foreground` |
+
+### Other changes
+
+- Replace inline SVG arrow with `IconChevronLeft` from `@tabler/icons-react`
+- Wrap dates in `<time>` elements with `dateTime` attribute
+- Add `id="v{version}"` anchors to each version section
+- No bullet points on entries — clean flat list with spacing (matches reference UI)
+- Version titles are anchor links (`<a href="#v0.1.0">v0.1.0</a>`) with hover underline
+- PR links: `text-muted-foreground hover:text-foreground text-xs font-mono`
+
+### Reused existing code
+
+- `Badge` from `components/ui/badge.tsx`
+- `IconChevronLeft` from `@tabler/icons-react`
+- Semantic color tokens from `globals.css` (success, info, destructive) — no CSS changes needed
+- `cn()` from `lib/utils.ts`
+
+## Verification
+
+1. `bun run dev` → navigate to `/changelog`
+2. Check desktop: date column right-aligned, content in right column
+3. Check mobile (< 640px): single column, date above content
+4. Check dark mode: badge colors, text contrast
+5. Verify PR links open correct GitHub URLs
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/duncan/.REDACTED.jsonl
+
+If this plan can be broken down into multiple independent tasks, consider using the TeamCreate tool to create a team and parallelize the work.
+
+---
+
+without bulleting, its difficult to read. use bullleting. 
+
+dont use badges too, just text that is bolded or something, dont use badges, remove them
+
+---
+
+they shoyldnt be colored, just black.
+
+---
+
+## Page Feedback: /changelog
+
+**Environment:**
+- Viewport: 2048×1087
+- URL: http://localhost:3000/changelog
+- User Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+- Timestamp: 2026-02-11T08:28:58.200Z
+- Device Pixel Ratio: 2
+
+---
+
+### 1. <LoadingBoundary> <HTTPAccessFallbackBoundary> <RedirectBoundary> <RedirectErrorBoundary> <InnerLayoutRouter> <SegmentViewNode> h2 "v0.1.0"
+**Full DOM Path:** body.geist > div.mx-auto > div.grid > section#v0.1.0 > h2.text-lg
+**CSS Classes:** text-lg, font-medium, text-foreground
+**Position:** x:853, y:248 (532×28px)
+**Annotation at:** 45.4% from left, 268px from top
+**Context:** v0.1.0
+**Computed Styles:** color: lab(8.30603 0.618205 -2.16572); border-color: oklab(0 0 0 / 0.1); font-size: 18px; font-weight: 500; font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; line-height: 28px; text-align: start; width: 532px; height: 28px; margin: 0px 0px 24px; border: 0px solid oklab(0 0 0 / 0.1); display: block; flex-direction: row; opacity: 1
+**Nearby Elements:** div.space-y-2, div.space-y-2, div.space-y-2
+**React:** <LoadingBoundary> <HTTPAccessFallbackBoundary> <RedirectBoundary> <RedirectErrorBoundary> <InnerLayoutRouter> <SegmentViewNode>
+**Feedback:** reduce the space below it by a bit.
+
+### 2. <LoadingBoundary> <HTTPAccessFallbackBoundary> <RedirectBoundary> <RedirectErrorBoundary> <InnerLayoutRouter> <SegmentViewNode> container
+**Full DOM Path:** body.geist > div.mx-auto > div.grid > div.mb-12
+**CSS Classes:** mb-12
+**Position:** x:853, y:64 (532×112px)
+**Annotation at:** 66.4% from left, 113px from top
+**Context:** Back to homeChangelogAll notable changes to Minimal will be documented here. [after: "February 11, 2
+**Computed Styles:** color: lab(8.30603 0.618205 -2.16572); border-color: oklab(0 0 0 / 0.1); font-size: 16px; font-weight: 400; font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; line-height: 24px; text-align: start; width: 532px; height: 112px; margin: 0px 0px 48px; border: 0px solid oklab(0 0 0 / 0.1); display: block; flex-direction: row; opacity: 1
+**Nearby Elements:** div.hidden, div.mb-1, section.mb-12, div.mb-1 (8 total in .grid)
+**React:** <LoadingBoundary> <HTTPAccessFallbackBoundary> <RedirectBoundary> <RedirectErrorBoundary> <InnerLayoutRouter> <SegmentViewNode>
+**Feedback:** reduce the space below by a bit.
+
+---
+
+## Page Feedback: /changelog
+
+**Environment:**
+- Viewport: 2048×1087
+- URL: http://localhost:3000/changelog
+- User Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+- Timestamp: 2026-02-11T08:33:42.826Z
+- Device Pixel Ratio: 2
+
+---
+
+### 1. <LoadingBoundary> <HTTPAccessFallbackBoundary> <RedirectBoundary> <RedirectErrorBoundary> <InnerLayoutRouter> <SegmentViewNode> container
+**Full DOM Path:** body.geist > div.mx-auto > div.grid > div.mb-8
+**CSS Classes:** mb-8
+**Position:** x:853, y:64 (532×112px)
+**Annotation at:** 47.6% from left, 102px from top
+**Context:** Back to homeChangelogAll notable changes to Minimal will be documented here. [after: "February 11, 2
+**Computed Styles:** color: lab(8.30603 0.618205 -2.16572); border-color: oklab(0 0 0 / 0.1); font-size: 16px; font-weight: 400; font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; line-height: 24px; text-align: start; width: 532px; height: 112px; margin: 0px 0px 32px; border: 0px solid oklab(0 0 0 / 0.1); display: block; flex-direction: row; opacity: 1
+**Nearby Elements:** div.hidden, div.mb-1, section.mb-12, div.mb-1 (8 total in .grid)
+**React:** <LoadingBoundary> <HTTPAccessFallbackBoundary> <RedirectBoundary> <RedirectErrorBoundary> <InnerLayoutRouter> <SegmentViewNode>
+**Feedback:** reduce the gap between the back to home adn the title, its too big.
+
+---
+
+## Page Feedback: /changelog
+
+**Environment:**
+- Viewport: 2048×1087
+- URL: http://localhost:3000/changelog
+- User Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+- Timestamp: 2026-02-11T08:34:56.087Z
+- Device Pixel Ratio: 2
+
+---
+
+### 1. <LoadingBoundary> <HTTPAccessFallbackBoundary> <RedirectBoundary> <RedirectErrorBoundary> <InnerLayoutRouter> <SegmentViewNode> container
+**Full DOM Path:** body.geist > div.mx-auto > div.grid > div.mb-8
+**CSS Classes:** mb-8
+**Position:** x:853, y:64 (532×96px)
+**Annotation at:** 42.5% from left, 89px from top
+**Context:** Back to homeChangelogAll notable changes to Minimal will be documented here. [after: "February 11, 2
+**Computed Styles:** color: lab(8.30603 0.618205 -2.16572); border-color: oklab(0 0 0 / 0.1); font-size: 16px; font-weight: 400; font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; line-height: 24px; text-align: start; width: 532px; height: 96px; margin: 0px 0px 32px; border: 0px solid oklab(0 0 0 / 0.1); display: block; flex-direction: row; opacity: 1
+**Nearby Elements:** div.hidden, div.mb-1, section.mb-12, div.mb-1 (8 total in .grid)
+**React:** <LoadingBoundary> <HTTPAccessFallbackBoundary> <RedirectBoundary> <RedirectErrorBoundary> <InnerLayoutRouter> <SegmentViewNode>
+**Feedback:** reduce teh padding to the bottom of this.
+
+---
+
+## Page Feedback: /changelog
+
+**Environment:**
+- Viewport: 2048×1087
+- URL: http://localhost:3000/changelog
+- User Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36
+- Timestamp: 2026-02-11T08:35:48.930Z
+- Device Pixel Ratio: 2
+
+---
+
+### 1. <LoadingBoundary> <HTTPAccessFallbackBoundary> <RedirectBoundary> <RedirectErrorBoundary> <InnerLayoutRouter> <SegmentViewNode> grid sm:grid
+**Full DOM Path:** body.geist > div.mx-auto > div.grid
+**CSS Classes:** grid, sm:grid-cols-[140px_1fr], sm:gap-6, md:grid-cols-[180px_1fr]
+**Position:** x:649, y:64 (736×1902px)
+**Annotation at:** 42.3% from left, 729px from top
+**Computed Styles:** color: lab(8.30603 0.618205 -2.16572); border-color: oklab(0 0 0 / 0.1); font-size: 16px; font-weight: 400; font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; line-height: 24px; text-align: start; width: 736px; height: 1902px; border: 0px solid oklab(0 0 0 / 0.1); display: grid; flex-direction: row; gap: 24px; opacity: 1
+**React:** <LoadingBoundary> <HTTPAccessFallbackBoundary> <RedirectBoundary> <RedirectErrorBoundary> <InnerLayoutRouter> <SegmentViewNode>
+**Feedback:** reduce the space between the various changelogs

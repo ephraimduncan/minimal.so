@@ -32,15 +32,21 @@
       "WebFetch(domain:localhost)",
       "Bash(echo:*)",
       "Bash(git push)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(git tag:*)",
+      "Bash(git pull:*)",
+      "Bash(npx next build:*)"
     ],
-    "deny": ["Read(./.entire/metadata/**)"],
+    "deny": [
+      "Read(./.entire/metadata/**)"
+    ],
     "ask": []
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": ["shadcn"],
-  "outputStyle": "Explanatory",
-  "spinnerTipsEnabled": true,
+  "enabledMcpjsonServers": [
+    "shadcn"
+  ],
   "hooks": {
     "SessionStart": [
       {
@@ -117,5 +123,7 @@
         ]
       }
     ]
-  }
+  },
+  "outputStyle": "Explanatory",
+  "spinnerTipsEnabled": true
 }

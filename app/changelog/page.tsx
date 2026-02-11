@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Fragment } from "react";
 import Link from "next/link";
+import { IconChevronLeft } from "@tabler/icons-react";
 
 export const metadata: Metadata = {
   title: "Changelog - Minimal",
@@ -92,13 +94,19 @@ const changelog: ChangelogVersion[] = [
   },
 ];
 
+type Category = "Added" | "Changed" | "Fixed";
+
+function toISODate(dateStr: string): string {
+  return new Date(dateStr).toISOString().split("T")[0];
+}
+
 function PrLink({ number }: { number: number }) {
   return (
     <a
       href={`${GITHUB_REPO}/pull/${number}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
+      className="text-muted-foreground hover:text-foreground hover:underline cursor-pointer text-xs font-mono"
     >
       (#{number})
     </a>
@@ -106,22 +114,20 @@ function PrLink({ number }: { number: number }) {
 }
 
 function ChangelogSection({
-  title,
+  category,
   entries,
 }: {
-  title: string;
+  category: Category;
   entries: ChangelogEntry[];
 }) {
-  if (entries.length === 0) {
-    return null;
-  }
+  if (entries.length === 0) return null;
 
   return (
-    <div className="mb-6">
-      <h3 className="mb-2 text-lg font-medium text-zinc-800 dark:text-zinc-200">
-        {title}
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold text-foreground">
+        {category}
       </h3>
-      <ul className="list-disc space-y-2 pl-6 text-zinc-600 dark:text-zinc-400">
+      <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
         {entries.map((entry, index) => (
           <li key={index}>
             {entry.text}
@@ -141,51 +147,48 @@ function ChangelogSection({
 export default function ChangelogPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
-      <Link
-        href="/"
-        className="mb-8 inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:hover:text-zinc-300"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="m12 19-7-7 7-7" />
-          <path d="M19 12H5" />
-        </svg>
-        Back to home
-      </Link>
+      <div className="grid sm:grid-cols-[140px_1fr] sm:gap-6 md:grid-cols-[180px_1fr]">
+        <div className="hidden sm:block" />
+        <div className="mb-5">
+          <Link
+            href="/"
+            className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <IconChevronLeft className="size-4" />
+            Back to home
+          </Link>
+          <h1 className="text-3xl font-semibold text-foreground">Changelog</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            All notable changes to Minimal will be documented here.
+          </p>
+        </div>
 
-      <h1 className="mb-2 text-3xl font-semibold text-zinc-900 dark:text-zinc-100">
-        Changelog
-      </h1>
-      <p className="mb-8 text-sm text-zinc-500">
-        All notable changes to Minimal will be documented here.
-      </p>
-
-      <div className="prose prose-zinc max-w-none dark:prose-invert">
         {changelog.map((version) => (
-          <section key={version.version} className="mb-12">
-            <div className="mb-4 flex items-baseline gap-3">
-              <h2 className="text-xl font-medium text-zinc-900 dark:text-zinc-100">
-                v{version.version}
-              </h2>
-              <span className="text-sm text-zinc-500">{version.date}</span>
+          <Fragment key={version.version}>
+            <div className="mb-1 sm:mb-0 sm:pt-0.5 sm:text-right">
+              <time
+                dateTime={toISODate(version.date)}
+                className="text-sm text-muted-foreground"
+              >
+                {version.date}
+              </time>
             </div>
-
-            <ChangelogSection title="Added" entries={version.added} />
-            <ChangelogSection title="Changed" entries={version.changed} />
-            <ChangelogSection title="Fixed" entries={version.fixed} />
-          </section>
+            <section id={`v${version.version}`} className="mb-8 space-y-4">
+              <h2 className="text-lg font-medium text-foreground">
+                <a
+                  href={`#v${version.version}`}
+                  className="hover:underline"
+                >
+                  v{version.version}
+                </a>
+              </h2>
+              <ChangelogSection category="Added" entries={version.added} />
+              <ChangelogSection category="Changed" entries={version.changed} />
+              <ChangelogSection category="Fixed" entries={version.fixed} />
+            </section>
+          </Fragment>
         ))}
       </div>
     </div>
   );
 }
-

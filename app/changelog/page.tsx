@@ -23,6 +23,28 @@ const GITHUB_REPO = "https://github.com/ephraimduncan/minimal.so";
 
 const changelog: ChangelogVersion[] = [
   {
+    version: "0.1.0",
+    date: "February 11, 2026",
+    added: [
+      { text: "RSS/Atom feeds for public profiles", pr: 49 },
+      { text: "Avatar uploads", pr: 51 },
+      { text: "Transactional emails via Autosend", pr: 50 },
+      { text: "ArXiv metadata improvements", pr: 54 },
+      { text: "Private visibility confirmation for bookmarks" },
+      { text: "Slugified group URL params", pr: 52 },
+    ],
+    changed: [
+      { text: "Simplified email call sites and settings dialog" },
+    ],
+    fixed: [
+      { text: "Twitter profile pictures showing generic X favicon instead of actual avatars", pr: 50 },
+      { text: "Consistent paragraph spacing in email templates", pr: 50 },
+      { text: "Dashboard UI spacing, empty state, and dialog close buttons", pr: 50 },
+      { text: "Sign-out dialog closing before async work completes", pr: 50 },
+      { text: "Broken favicons, missing referrer, and public profile auto-enable" },
+    ],
+  },
+  {
     version: "0.0.1",
     date: "January 27, 2026",
     added: [

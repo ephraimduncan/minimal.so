@@ -72,6 +72,7 @@ export function DashboardContent({
   profile,
 }: DashboardContentProps) {
   const queryClient = useQueryClient();
+  const [mountedAt] = useState(Date.now);
 
   const [groupSlug, setGroupSlug] = useQueryState("group");
   const [searchQuery, setSearchQuery] = useState("");
@@ -89,7 +90,7 @@ export function DashboardContent({
   const groupsQuery = useQuery({
     ...orpc.group.list.queryOptions(),
     initialData: initialGroups,
-    initialDataUpdatedAt: Date.now(),
+    initialDataUpdatedAt: mountedAt,
   });
 
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data]);
@@ -114,8 +115,6 @@ export function DashboardContent({
     () => new Map(groups.map((g) => [slugify(g.name), g.id])),
     [groups],
   );
-  const groupIdBySlugRef = useLatestRef(groupIdBySlug);
-
   const selectedGroupId = groupSlug
     ? (groupIdBySlug.get(groupSlug) ?? null)
     : null;
@@ -128,7 +127,7 @@ export function DashboardContent({
     }),
     initialData:
       currentGroupId === initialGroups[0]?.id ? initialBookmarks : undefined,
-    initialDataUpdatedAt: Date.now(),
+    initialDataUpdatedAt: mountedAt,
     enabled: !!currentGroupId,
   });
 
@@ -926,8 +925,6 @@ export function DashboardContent({
   const handleDeleteBookmarkRef = useLatestRef(handleDeleteBookmark);
   const handleStartRenameRef = useLatestRef(handleStartRename);
   const selectionModeRef = useLatestRef(selectionMode);
-  const selectedIdsRef = useLatestRef(selectedIds);
-
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
     setSelectedIndex(-1);
@@ -941,7 +938,7 @@ export function DashboardContent({
       setHoveredIndex(-1);
       handleExitSelectionMode();
     },
-    [setGroupSlug, handleExitSelectionMode],
+    [groupsRef, setGroupSlug, handleExitSelectionMode],
   );
 
   const handleAddBookmark = useCallback(
@@ -1194,7 +1191,18 @@ export function DashboardContent({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleExitSelectionMode, handleSelectAll, handleToggleSelection]);
+  }, [
+    filteredBookmarksRef,
+    handleDeleteBookmarkRef,
+    handleStartRenameRef,
+    hoveredIndexRef,
+    renamingIdRef,
+    selectedIndexRef,
+    selectionModeRef,
+    handleExitSelectionMode,
+    handleSelectAll,
+    handleToggleSelection,
+  ]);
 
   if (!selectedGroup) {
     return null;
@@ -1257,7 +1265,6 @@ export function DashboardContent({
         )}
         {selectionMode && selectedIds.size > 0 && (
           <MultiSelectToolbar
-            selectedCount={selectedIds.size}
             onSelectAll={handleSelectAll}
             onMove={() => setMoveDialogOpen(true)}
             onCopyUrls={handleCopyUrls}

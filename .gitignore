@@ -56,3 +56,5 @@ prisma/generated
 
 # local avatar uploads
 /public/uploads/avatars/
+# Nightshift plan artifacts (keep out of version control)
+.nightshift-plan

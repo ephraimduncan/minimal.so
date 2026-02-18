@@ -3,6 +3,7 @@ import { createAuthMiddleware } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
+import { posthogServer } from "./posthog-server";
 import { sendEmail } from "./email";
 import { welcomeEmail } from "./emails/welcome";
 import { verificationEmail } from "./emails/verify-email";
@@ -66,7 +67,18 @@ export const auth = betterAuth({
       const isNewUser =
         Date.now() - new Date(session.user.createdAt).getTime() < 60_000;
       if (isNewUser) {
+        posthogServer?.capture({
+          distinctId: session.user.id,
+          event: "signup_completed",
+          properties: { method: "google" },
+        });
         void sendEmail({ to: session.user.email, ...welcomeEmail(session.user.name) });
+      } else {
+        posthogServer?.capture({
+          distinctId: session.user.id,
+          event: "login_completed",
+          properties: { method: "google" },
+        });
       }
     }),
   },

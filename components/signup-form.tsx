@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -15,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { OAuthButton } from "@/components/oauth-button";
 import { useAutofill } from "@/hooks/use-autofill";
+import posthog from "posthog-js";
 import { signUp } from "@/lib/auth-client";
 import { signupSchema, type SignupFormData } from "@/lib/schema";
 
@@ -30,6 +32,10 @@ export function SignupForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter();
+
+  useEffect(() => {
+    posthog.capture("signup_started");
+  }, []);
 
   const {
     register,
@@ -51,7 +57,7 @@ export function SignupForm({
   const formRef = useAutofill(setValue, SIGNUP_FIELDS);
 
   const onSubmit = async (data: SignupFormData) => {
-    const { error } = await signUp.email({
+    const { data: authData, error } = await signUp.email({
       name: data.name,
       email: data.email,
       password: data.password,
@@ -60,6 +66,16 @@ export function SignupForm({
     if (error) {
       setError("root", { message: error.message ?? "An error occurred" });
       return;
+    }
+
+    if (authData?.user) {
+      posthog.identify(authData.user.id, {
+        email: authData.user.email,
+        name: authData.user.name,
+        created_at: authData.user.createdAt,
+        auth_method: "email",
+      });
+      posthog.capture("signup_completed", { method: "email" });
     }
 
     router.push("/dashboard");

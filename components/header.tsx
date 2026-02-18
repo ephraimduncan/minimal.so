@@ -36,6 +36,7 @@ import {
   IconKeyboard,
   IconLifebuoy,
 } from "@tabler/icons-react";
+import posthog from "posthog-js";
 import { signOut } from "@/lib/auth-client";
 import {
   Dialog,
@@ -115,6 +116,7 @@ export function Header({
   const holdStartRef = useRef<number>(0);
   const handleSignOut = async () => {
     setSignOutOpen(false);
+    posthog.reset();
     await signOut();
     router.push("/login");
   };

@@ -131,8 +131,7 @@ export function Landing() {
                   Private by default
                 </h3>
                 <p className="text-zinc-600 text-sm">
-                  Your bookmarks are yours alone. No tracking, no ads, no data
-                  selling.
+                  Your bookmarks are yours alone. No ads, no data selling.
                 </p>
               </div>
             </div>

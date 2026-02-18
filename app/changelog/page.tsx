@@ -25,6 +25,25 @@ const GITHUB_REPO = "https://github.com/ephraimduncan/minimal.so";
 
 const changelog: ChangelogVersion[] = [
   {
+    version: "0.2.0",
+    date: "February 18, 2026",
+    added: [
+      { text: "Multi-source bookmark capture with dedupe and source routing", pr: 57 },
+      { text: "Browser bookmark import via Chrome extension", pr: 58 },
+      { text: "UI updates for export count, dropdown grouping, keyboard shortcuts, and help link" },
+      { text: "Changelog page redesign with a cleaner grid layout" },
+    ],
+    changed: [
+      { text: "Replaced useEffect anti-patterns with idiomatic React patterns" },
+      { text: "Improved bookmark creation performance with parallelized create flows" },
+      { text: "Stabilized refresh callbacks and added content-visibility/preloading optimizations" },
+    ],
+    fixed: [
+      { text: "Slash redirect behavior for ingest events" },
+      { text: "Resolved project-wide ESLint errors and warnings", pr: 56 },
+    ],
+  },
+  {
     version: "0.1.0",
     date: "February 11, 2026",
     added: [
@@ -128,8 +147,8 @@ function ChangelogSection({
         {category}
       </h3>
       <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
-        {entries.map((entry, index) => (
-          <li key={index}>
+        {entries.map((entry) => (
+          <li key={`${entry.text}-${entry.pr ?? "no-pr"}`}>
             {entry.text}
             {entry.pr && (
               <>

@@ -32,6 +32,9 @@ async function DashboardData() {
         twitter: true,
         website: true,
         isProfilePublic: true,
+        plan: true,
+        subscriptionStatus: true,
+        polarCustomerId: true,
       },
     }),
     db.group.findFirst({
@@ -81,6 +84,9 @@ async function DashboardData() {
           twitter: null,
           website: null,
           isProfilePublic: false,
+          plan: "free",
+          subscriptionStatus: null,
+          polarCustomerId: null,
         }
       }
     />

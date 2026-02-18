@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -37,7 +37,8 @@ import {
   IconLifebuoy,
 } from "@tabler/icons-react";
 import posthog from "posthog-js";
-import { signOut } from "@/lib/auth-client";
+import { authClient, signOut } from "@/lib/auth-client";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogClose,
@@ -112,8 +113,59 @@ export function Header({
   >(null);
   const [holdingGroupId, setHoldingGroupId] = useState<string | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
+  const [isBillingPending, startBillingTransition] = useTransition();
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartRef = useRef<number>(0);
+
+  const openExternal = useCallback((url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, []);
+
+  const hasProAccess =
+    profile?.plan === "pro" &&
+    (profile.subscriptionStatus === "active" ||
+      profile.subscriptionStatus === "trialing" ||
+      profile.subscriptionStatus === "past_due");
+  const shouldShowUpgrade = !hasProAccess;
+
+  const handleUpgradeClick = () => {
+    startBillingTransition(async () => {
+      const defaultCycle =
+        process.env.NEXT_PUBLIC_DEFAULT_BILLING_CYCLE === "monthly"
+          ? "monthly"
+          : "yearly";
+
+      const { error } = await authClient.checkout({
+        slug: defaultCycle === "monthly" ? "pro-monthly" : "pro-yearly",
+        allowDiscountCodes: true,
+        metadata: {
+          source: "dashboard_dropdown",
+          billingCycle: defaultCycle,
+        },
+        customFieldData: {
+          source: "dashboard_dropdown",
+          billingCycle: defaultCycle,
+        },
+        redirect: true,
+      });
+
+      if (error) {
+        toast.error(error.message || "Unable to start checkout right now");
+      }
+    });
+  };
+
+  const handleBillingPortalClick = () => {
+    startBillingTransition(async () => {
+      const { error } = await authClient.customer.portal({
+        redirect: true,
+      });
+
+      if (error) {
+        toast.error(error.message || "Unable to open billing portal");
+      }
+    });
+  };
   const handleSignOut = async () => {
     setSignOutOpen(false);
     posthog.reset();
@@ -350,13 +402,7 @@ export function Header({
               {username && (
                 <DropdownMenuItem
                   className="rounded-lg"
-                  render={
-                    <a
-                      href={`/u/${username}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    />
-                  }
+                  onClick={() => openExternal(`/u/${username}`)}
                 >
                   <IconUser className="h-4 w-4" />
                   Public Profile
@@ -364,13 +410,28 @@ export function Header({
               )}
               <DropdownMenuItem
                 className="rounded-lg"
-                render={
-                  <a href="/chrome" target="_blank" rel="noopener noreferrer" />
-                }
+                onClick={() => openExternal("/chrome")}
                 disabled={readOnly}
               >
                 <ChromeIcon />
                 Chrome Extension
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {shouldShowUpgrade ? (
+                <DropdownMenuItem
+                  className="rounded-lg"
+                  onClick={handleUpgradeClick}
+                  disabled={readOnly || isBillingPending}
+                >
+                  Upgrade
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem
+                className="rounded-lg"
+                onClick={handleBillingPortalClick}
+                disabled={readOnly || isBillingPending}
+              >
+                Billing Portal
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -382,9 +443,7 @@ export function Header({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="rounded-lg"
-                render={
-                  <a href="mailto:ephraimduncan68@gmail.com" target="_blank" rel="noopener noreferrer" />
-                }
+                onClick={() => openExternal("mailto:ephraimduncan68@gmail.com")}
               >
                 <IconLifebuoy className="h-4 w-4" />
                 Help & Support
@@ -517,6 +576,7 @@ function BmrksLogo({ size = 24 }: { size?: number }) {
       strokeLinejoin="round"
       aria-label="Logo"
     >
+      <title>bmrks logo</title>
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M12.432 17.949c.863 1.544 2.589 1.976 4.13 1.112c1.54 -.865 1.972 -2.594 1.048 -4.138c-.185 -.309 -.309 -.556 -.494 -.74c.247 .06 .555 .06 .925 .06c1.726 0 2.959 -1.234 2.959 -2.963c0 -1.73 -1.233 -2.965 -3.02 -2.965c-.37 0 -.617 0 -.925 .062c.185 -.185 .308 -.432 .493 -.74c.863 -1.545 .431 -3.274 -1.048 -4.138c-1.541 -.865 -3.205 -.433 -4.13 1.111c-.185 .309 -.308 .556 -.432 .803c-.123 -.247 -.246 -.494 -.431 -.803c-.802 -1.605 -2.528 -2.038 -4.007 -1.173c-1.541 .865 -1.973 2.594 -1.048 4.137c.185 .31 .308 .556 .493 .741c-.246 -.061 -.555 -.061 -.924 -.061c-1.788 0 -3.021 1.235 -3.021 2.964c0 1.729 1.233 2.964 3.02 2.964" />
       <path d="M4.073 21c4.286 -2.756 5.9 -5.254 7.927 -9" />
@@ -538,6 +598,7 @@ function UserAvatar({ name, image }: { name: string; image?: string | null }) {
 
   return (
     <svg viewBox="0 0 32 32" fill="none" width="18" height="18">
+      <title>User avatar</title>
       <rect width="32" height="32" rx="16" fill="#74B06F" />
       <text
         x="50%"
@@ -567,6 +628,7 @@ function ChromeIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
+      <title>Chrome</title>
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="4" />
       <line x1="21.17" y1="8" x2="12" y2="8" />

@@ -51,6 +51,9 @@ export interface ProfileData {
   twitter: string | null;
   website: string | null;
   isProfilePublic: boolean;
+  plan: string;
+  subscriptionStatus: string | null;
+  polarCustomerId: string | null;
 }
 
 interface DashboardContentProps {

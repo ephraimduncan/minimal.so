@@ -12,19 +12,23 @@ import {
   ACCESS_ANYWHERE_ICON,
 } from "@/components/landing-icons";
 import { DashboardDemoLazy as DashboardDemo } from "@/components/dashboard-demo-lazy";
+import { LandingPricing } from "@/components/landing-pricing";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
 export function Landing() {
   return (
-    <main className="flex grow flex-col bg-white text-zinc-900" role="main">
+    <main className="flex grow flex-col bg-white text-zinc-900">
       <article
         className="mx-auto w-full max-w-5xl p-4 sm:p-6"
         aria-labelledby="landing-title"
       >
         <header className="mx-auto mb-8 mt-12 flex max-w-[400px] flex-col items-center justify-center text-center sm:mb-12 sm:mt-24">
           {LOGO_SVG}
-          <h1 id="landing-title" className="mb-1.5 text-2xl font-semibold text-zinc-900">
+          <h1
+            id="landing-title"
+            className="mb-1.5 text-2xl font-semibold text-zinc-900"
+          >
             minimal
           </h1>
           <p className="text-zinc-600">
@@ -51,6 +55,12 @@ export function Landing() {
               title="Chrome Extension"
             >
               {CHROME_ICON}
+            </a>
+            <a
+              href="#pricing"
+              className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
+            >
+              Pricing
             </a>
           </nav>
         </header>
@@ -161,6 +171,8 @@ export function Landing() {
             </div>
           </div>
         </section>
+
+        <LandingPricing />
 
         <footer className="mb-10 mt-10 text-center text-sm text-zinc-500 sm:mb-16 sm:mt-16">
           <div className="mb-4 flex flex-wrap flex-row items-center justify-center">

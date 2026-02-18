@@ -9,6 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import posthog from "posthog-js";
 import { authClient } from "@/lib/auth-client";
 import { client, orpc } from "@/lib/orpc";
 import type { ProfileData } from "@/components/dashboard-content";
@@ -162,6 +163,7 @@ export function SettingsDialog({
       return;
     }
 
+    posthog.capture("settings_updated");
     toast.success("Name updated");
     onOpenChange(false);
     router.refresh();
@@ -347,6 +349,7 @@ function ProfileTab({ profile, onOpenChange }: ProfileTabProps) {
     mutationFn: (data: Parameters<typeof client.profile.update>[0]) =>
       client.profile.update(data),
     onSuccess: () => {
+      posthog.capture("settings_updated");
       toast.success("Profile updated");
       onOpenChange(false);
       router.refresh();

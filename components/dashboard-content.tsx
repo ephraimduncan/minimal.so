@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useQueryState } from "nuqs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 import dynamic from "next/dynamic";
 import { Header } from "@/components/header";
 import { BookmarkInput } from "@/components/bookmark-input";
@@ -101,7 +102,23 @@ export function DashboardContent({
     [groups],
   );
 
+  useEffect(() => {
+    if (posthog.get_distinct_id() === session.user.id) return;
+
+    posthog.identify(session.user.id, {
+      email: session.user.email,
+      name: session.user.name,
+      created_at: session.user.createdAt,
+    });
+  }, [session]);
+
   useFocusRefetch(groups);
+
+  useEffect(() => {
+    if (debouncedSearchQuery) {
+      posthog.capture("bookmark_searched");
+    }
+  }, [debouncedSearchQuery]);
 
   useEffect(() => {
     if (selectionMode) {
@@ -208,6 +225,9 @@ export function DashboardContent({
         );
       }
       toast.error("Failed to create bookmark");
+    },
+    onSuccess: () => {
+      posthog.capture("bookmark_created");
     },
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({
@@ -322,6 +342,15 @@ export function DashboardContent({
 
       return { previousBookmarks, sourceGroupId, previousGroups };
     },
+    onSuccess: (_data, variables) => {
+      const isMove =
+        variables.groupId &&
+        variables._sourceGroupId &&
+        variables.groupId !== variables._sourceGroupId;
+      if (isMove) return;
+
+      posthog.capture("bookmark_edited");
+    },
     onError: (_err, data, context) => {
       if (
         context?.previousSourceBookmarks !== undefined &&
@@ -411,6 +440,9 @@ export function DashboardContent({
         previousGroupSlug,
         optimisticId: optimisticGroup.id,
       };
+    },
+    onSuccess: () => {
+      posthog.capture("collection_created");
     },
     onError: (_err, _newGroup, context) => {
       if (context?.previousGroups) {
@@ -533,6 +565,9 @@ export function DashboardContent({
       );
 
       return { previousBookmarks, previousGroups, groupId };
+    },
+    onSuccess: () => {
+      posthog.capture("bookmark_deleted");
     },
     onError: (_err, _data, context) => {
       if (context?.previousBookmarks) {
@@ -1173,6 +1208,7 @@ export function DashboardContent({
 
       if ((e.metaKey || e.ctrlKey) && e.key === "c") {
         e.preventDefault();
+        posthog.capture("keyboard_shortcut_used", { shortcut: "cmd+c" });
         const textToCopy =
           activeBookmark.url || activeBookmark.color || activeBookmark.title;
         navigator.clipboard.writeText(textToCopy ?? "");
@@ -1180,11 +1216,13 @@ export function DashboardContent({
 
       if ((e.metaKey || e.ctrlKey) && e.key === "e") {
         e.preventDefault();
+        posthog.capture("keyboard_shortcut_used", { shortcut: "cmd+e" });
         handleStartRenameRef.current(activeBookmark.id);
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === "Backspace") {
         e.preventDefault();
+        posthog.capture("keyboard_shortcut_used", { shortcut: "cmd+backspace" });
         handleDeleteBookmarkRef.current(activeBookmark.id);
       }
     };

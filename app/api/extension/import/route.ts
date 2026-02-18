@@ -3,10 +3,16 @@ import { getSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
 import { normalizeUrl } from "@/lib/utils";
 import { z } from "zod";
+import {
+  getAllowedOrigins,
+  corsHeaders,
+  jsonError,
+  handleOptions,
+} from "../shared";
 
 const IMPORT_LIMIT = 2000;
 const CHUNK_SIZE = 500;
-const IMPORTED_GROUP_NAME = "Imported";
+const IMPORTED_GROUP_NAME = "Imported - Browser";
 const IMPORTED_GROUP_COLOR = "#6366f1";
 
 const importBookmarkSchema = z.object({
@@ -18,49 +24,16 @@ const importRequestSchema = z.object({
   bookmarks: z.array(importBookmarkSchema),
 });
 
-const extensionId = process.env.CHROME_EXTENSION_ID;
-
-function getAllowedOrigins(): string[] {
-  const origins: string[] = [];
-  if (extensionId) origins.push(`chrome-extension://${extensionId}`);
-  if (process.env.NODE_ENV === "development")
-    origins.push("http://localhost:3000");
-  origins.push("https://minimal.so");
-  return origins;
-}
-
-function corsHeaders(origin: string | null): HeadersInit {
-  const allowedOrigins = getAllowedOrigins();
-  const allowed = origin && allowedOrigins.includes(origin);
-  return {
-    "Access-Control-Allow-Origin": allowed ? origin : "",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Credentials": "true",
-  };
-}
-
-function jsonError(
-  message: string,
-  error: string,
-  status: number,
-  headers: HeadersInit
-) {
-  return NextResponse.json({ error, message }, { status, headers });
-}
+const allowedOrigins = getAllowedOrigins({ includeWebOrigin: true });
 
 export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
-  return new NextResponse(null, {
-    status: 204,
-    headers: corsHeaders(request.headers.get("origin")),
-  });
+  return handleOptions(request, allowedOrigins);
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const startTime = Date.now();
   const origin = request.headers.get("origin");
-  const headers = corsHeaders(origin);
-  const allowedOrigins = getAllowedOrigins();
+  const headers = corsHeaders(origin, allowedOrigins);
 
   if (!origin || !allowedOrigins.includes(origin)) {
     return jsonError("Origin not allowed", "Forbidden", 403, headers);
@@ -107,8 +80,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       let normalized: string;
       try {
         normalized = normalizeUrl(entry.url);
-        const parsed = new URL(normalized);
-        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        const parsedUrl = new URL(normalized);
+        if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
           errorSummary.invalidUrl = (errorSummary.invalidUrl ?? 0) + 1;
           continue;
         }

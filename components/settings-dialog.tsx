@@ -195,8 +195,6 @@ export function SettingsDialog({
           type: "import-bookmarks",
         });
 
-      toast.dismiss(loadingId);
-
       if (!result.success) {
         if (result.status === 401) {
           toast.error("Please log in to import bookmarks");
@@ -207,7 +205,7 @@ export function SettingsDialog({
       }
 
       const parts = [`Imported ${result.importedCount} bookmarks into '${result.groupName}'`];
-      const skippedTotal = (result.skippedCount ?? 0);
+      const skippedTotal = result.skippedCount ?? 0;
       if (skippedTotal > 0) {
         parts.push(`Skipped ${skippedTotal} (duplicates/invalid)`);
       }
@@ -216,9 +214,9 @@ export function SettingsDialog({
       queryClient.invalidateQueries({ queryKey: orpc.bookmark.key() });
       queryClient.invalidateQueries({ queryKey: orpc.group.key() });
     } catch {
-      toast.dismiss(loadingId);
       toast.error("Failed to import bookmarks. Please try again.");
     } finally {
+      toast.dismiss(loadingId);
       setIsImporting(false);
     }
   };

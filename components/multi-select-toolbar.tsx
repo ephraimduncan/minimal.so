@@ -22,7 +22,6 @@ import {
 } from "@tabler/icons-react";
 
 interface MultiSelectToolbarProps {
-  selectedCount: number;
   onSelectAll: () => void;
   onMove: () => void;
   onCopyUrls: () => void;
@@ -35,7 +34,6 @@ interface MultiSelectToolbarProps {
 }
 
 export function MultiSelectToolbar({
-  selectedCount,
   onSelectAll,
   onMove,
   onCopyUrls,

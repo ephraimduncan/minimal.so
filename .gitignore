@@ -48,6 +48,15 @@ prisma/generated
 
 .vscode
 
+# AI / editor tooling
+.claude/
+.cursor/
+.agents/
+.entire/
+.pi/
+.sisyphus/
+.mcp.json
+
 # extension
 /extension-profile
 /extension-dist

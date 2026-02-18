@@ -1,26 +1,33 @@
 {
   "manifest_version": 3,
   "name": "Minimal - Save Bookmarks",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Save any page or link to your Minimal bookmarks with one click",
   "permissions": [
     "activeTab",
+    "bookmarks",
     "contextMenus",
     "storage",
-    "notifications",
-    "bookmarks"
+    "tabs",
+    "notifications"
   ],
   "externally_connectable": {
     "matches": ["https://minimal.so/*", "http://localhost:3000/*"]
   },
-  "host_permissions": ["https://minimal.so/*", "http://localhost:3000/*"],
+  "host_permissions": [
+    "https://minimal.so/*",
+    "http://localhost:3000/*",
+    "*://x.com/*",
+    "*://twitter.com/*"
+  ],
   "action": {
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Save to Minimal"
+    "default_title": "Save to Minimal",
+    "default_popup": "popup.html"
   },
   "icons": {
     "16": "icons/icon16.png",
@@ -30,6 +37,29 @@
   "background": {
     "service_worker": "background.js"
   },
+  "commands": {
+    "save-current-tab": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+K",
+        "mac": "Command+Shift+K"
+      },
+      "description": "Keep current tab"
+    },
+    "save-all-tabs": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L",
+        "mac": "Command+Shift+L"
+      },
+      "description": "Keep all unsaved tabs"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://x.com/*", "*://twitter.com/*"],
+      "js": ["constants.js", "x-capture.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "options_ui": {
     "page": "options.html",
     "open_in_tab": false

@@ -136,10 +136,68 @@ export function normalizeUrl(value: string): string {
     return trimmed;
   }
 
-  // Handle protocol-relative URLs (e.g. //example.com)
   if (trimmed.startsWith("//")) {
     return `https:${trimmed}`;
   }
 
   return `https://${trimmed}`;
+}
+
+const TRACKING_PARAMS = new Set([
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_term",
+  "utm_content",
+  "utm_id",
+  "fbclid",
+  "gclid",
+  "gclsrc",
+  "dclid",
+  "gbraid",
+  "wbraid",
+  "msclkid",
+  "twclid",
+  "igshid",
+  "mc_cid",
+  "mc_eid",
+]);
+
+export function canonicalizeUrl(value: string): string {
+  const withProtocol = normalizeUrl(value);
+  if (!withProtocol) return withProtocol;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(withProtocol);
+  } catch {
+    return withProtocol;
+  }
+
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    return withProtocol;
+  }
+
+  parsed.hostname = parsed.hostname.toLowerCase();
+  parsed.hash = "";
+
+  for (const key of [...parsed.searchParams.keys()]) {
+    if (TRACKING_PARAMS.has(key.toLowerCase())) {
+      parsed.searchParams.delete(key);
+    }
+  }
+  parsed.searchParams.sort();
+
+  let href = parsed.href;
+  if (href.endsWith("/") && parsed.pathname === "/") {
+    href = href.slice(0, -1);
+  } else if (
+    parsed.pathname.endsWith("/") &&
+    parsed.pathname !== "/" &&
+    !parsed.search
+  ) {
+    href = href.replace(/\/(\?|$)/, "$1");
+  }
+
+  return href;
 }

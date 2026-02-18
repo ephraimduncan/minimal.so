@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth-server";
 import { posthogServer } from "@/lib/posthog-server";
 import { db } from "@/lib/db";
 import { getUrlMetadata, isArxivHost } from "@/lib/url-metadata";
-import { normalizeUrl } from "@/lib/utils";
+import { canonicalizeUrl, normalizeUrl } from "@/lib/utils";
 import { z } from "zod";
 import {
   getAllowedOrigins,
@@ -12,12 +12,121 @@ import {
   handleOptions,
 } from "../shared";
 
+const sourceEnum = z.enum([
+  "manual_popup",
+  "manual_context_menu",
+  "manual_shortcut",
+  "x_bookmark",
+  "browser_bookmark",
+]);
+
+const SOURCE_PRIORITY: Record<string, number> = {
+  manual_popup: 0,
+  manual_context_menu: 1,
+  manual_shortcut: 2,
+  x_bookmark: 3,
+  browser_bookmark: 4,
+};
+
+const IMPORT_GROUP_MAP: Record<string, string> = {
+  x_bookmark: "Imported - X",
+  browser_bookmark: "Imported - Browser",
+};
+
+const IMPORT_GROUP_COLOR = "#6b7280";
+
 const createBookmarkSchema = z.object({
   url: z.url(),
   title: z.string().optional(),
+  source: sourceEnum.optional(),
+  destinationGroup: z.string().optional(),
+  capturedAt: z.string().datetime().optional(),
 });
 
 const allowedOrigins = getAllowedOrigins();
+
+function parseSourceHistory(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function appendSourceHistory(
+  existing: string[],
+  currentSource: string,
+  newSource: string,
+): string[] {
+  const history = [...existing];
+  if (currentSource && !history.includes(currentSource)) {
+    history.push(currentSource);
+  }
+  if (!history.includes(newSource)) {
+    history.push(newSource);
+  }
+  return history;
+}
+
+function shouldReclassify(
+  existingSource: string | null,
+  existingCapturedAt: Date | null,
+  newSource: string,
+  newCapturedAt: Date,
+): boolean {
+  if (!existingSource) return true;
+  if (!existingCapturedAt) return true;
+
+  const existingTime = existingCapturedAt.getTime();
+  const newTime = newCapturedAt.getTime();
+
+  if (newTime > existingTime) return true;
+  if (newTime < existingTime) return false;
+
+  const existingPriority = SOURCE_PRIORITY[existingSource] ?? 99;
+  const newPriority = SOURCE_PRIORITY[newSource] ?? 99;
+  return newPriority <= existingPriority;
+}
+
+async function resolveDestinationGroup(
+  userId: string,
+  source: string | undefined,
+  destinationGroupName: string | undefined,
+): Promise<{ id: string; name: string }> {
+  const importGroupName =
+    destinationGroupName || (source ? IMPORT_GROUP_MAP[source] : undefined);
+
+  if (importGroupName) {
+    const existing = await db.group.findFirst({
+      where: { userId, name: importGroupName },
+      select: { id: true, name: true },
+    });
+    if (existing) return existing;
+
+    const created = await db.group.create({
+      data: {
+        name: importGroupName,
+        color: IMPORT_GROUP_COLOR,
+        userId,
+      },
+    });
+    return { id: created.id, name: created.name };
+  }
+
+  const defaultGroup = await db.group.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true },
+  });
+
+  if (!defaultGroup) {
+    throw new Error("NO_GROUP");
+  }
+
+  return defaultGroup;
+}
 
 export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
   return handleOptions(request, allowedOrigins);
@@ -42,7 +151,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         "Please log in to save bookmarks",
         "Unauthorized",
         401,
-        headers
+        headers,
       );
     }
 
@@ -52,42 +161,74 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return jsonError("Invalid URL provided", "Bad Request", 400, headers);
     }
 
-    const { url, title: providedTitle } = parsed.data;
+    const { url, title: providedTitle, source, destinationGroup, capturedAt } =
+      parsed.data;
 
-    const defaultGroup = await db.group.findFirst({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "asc" },
-    });
+    const userId = session.user.id;
+    const normalized = canonicalizeUrl(url);
+    const eventTime = capturedAt ? new Date(capturedAt) : new Date();
 
-    if (!defaultGroup) {
-      return jsonError(
-        "No bookmark group found. Please create one first.",
-        "No Group",
-        400,
-        headers
+    let targetGroup: { id: string; name: string };
+    try {
+      targetGroup = await resolveDestinationGroup(
+        userId,
+        source,
+        destinationGroup,
       );
+    } catch (err) {
+      if (err instanceof Error && err.message === "NO_GROUP") {
+        return jsonError(
+          "No bookmark group found. Please create one first.",
+          "No Group",
+          400,
+          headers,
+        );
+      }
+      throw err;
     }
 
-    const normalizedUrl = normalizeUrl(url);
-    const metadataPromise = getUrlMetadata(normalizedUrl);
-
     const existing = await db.bookmark.findFirst({
-      where: {
-        userId: session.user.id,
-        groupId: defaultGroup.id,
-        url: normalizedUrl,
-      },
+      where: { userId, normalizedUrl: normalized },
     });
-    const metadata = await metadataPromise;
+
+    const metadataPromise = getUrlMetadata(normalizeUrl(url));
 
     if (existing) {
+      const reclassify = source
+        ? shouldReclassify(
+            existing.primarySource,
+            existing.lastCapturedAt,
+            source,
+            eventTime,
+          )
+        : false;
+
+      const updatedHistory = source
+        ? appendSourceHistory(
+            parseSourceHistory(existing.sourceHistory),
+            existing.primarySource || "",
+            source,
+          )
+        : parseSourceHistory(existing.sourceHistory);
+
+      const metadata = await metadataPromise;
+
+      const updateData: Record<string, unknown> = {
+        title: metadata.title || existing.title,
+        favicon: metadata.favicon || existing.favicon,
+        updatedAt: new Date(),
+        sourceHistory: JSON.stringify(updatedHistory),
+      };
+
+      if (reclassify) {
+        updateData.primarySource = source;
+        updateData.lastCapturedAt = eventTime;
+        updateData.groupId = targetGroup.id;
+      }
+
       const bookmark = await db.bookmark.update({
-        where: { id: existing.id, userId: session.user.id },
-        data: {
-          title: metadata.title || existing.title,
-          favicon: metadata.favicon || existing.favicon,
-          updatedAt: new Date(),
-        },
+        where: { id: existing.id, userId },
+        data: updateData,
       });
 
       posthogServer?.capture({
@@ -98,29 +239,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json(
         {
           success: true,
+          action: reclassify ? "reclassified" : "updated",
           bookmark: {
             id: bookmark.id,
             title: bookmark.title,
             url: bookmark.url,
-            groupName: defaultGroup.name,
+            groupName: targetGroup.name,
           },
         },
-        { status: 200, headers }
+        { status: 200, headers },
       );
     }
 
-    const title = isArxivHost(normalizedUrl)
-      ? metadata.title || providedTitle || normalizedUrl
-      : providedTitle || metadata.title || normalizedUrl;
+    const metadata = await metadataPromise;
+    const title = isArxivHost(normalizeUrl(url))
+      ? metadata.title || providedTitle || normalized
+      : providedTitle || metadata.title || normalized;
+
+    const sourceHistory = source ? [source] : [];
 
     const bookmark = await db.bookmark.create({
       data: {
         title,
-        url: normalizedUrl,
+        url: normalizeUrl(url),
+        normalizedUrl: normalized,
         favicon: metadata.favicon,
         type: "link",
-        groupId: defaultGroup.id,
-        userId: session.user.id,
+        primarySource: source || null,
+        sourceHistory: JSON.stringify(sourceHistory),
+        lastCapturedAt: eventTime,
+        groupId: targetGroup.id,
+        userId,
       },
     });
 
@@ -132,14 +281,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       {
         success: true,
+        action: "created",
         bookmark: {
           id: bookmark.id,
           title: bookmark.title,
           url: bookmark.url,
-          groupName: defaultGroup.name,
+          groupName: targetGroup.name,
         },
       },
-      { status: 200, headers }
+      { status: 200, headers },
     );
   } catch (error) {
     console.error("[Extension API] Error:", error);

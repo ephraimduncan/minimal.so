@@ -84,12 +84,12 @@ async function checkUrls(urls) {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "keep-page",
-    title: "Keep this link",
+    title: "Save to Minimal",
     contexts: ["page"],
   });
   chrome.contextMenus.create({
     id: "keep-link",
-    title: "Keep this link",
+    title: "Save link to Minimal",
     contexts: ["link"],
   });
 });
@@ -105,7 +105,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   } else if (info.menuItemId === "keep-link" && info.linkUrl) {
     await saveLink({
       url: info.linkUrl,
-      title: info.linkUrl,
       source: SOURCE.MANUAL_CONTEXT_MENU,
       tabId: tab ? tab.id : undefined,
     });

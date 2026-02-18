@@ -42,7 +42,7 @@ bun run ext:dev
 |---|---|
 | `activeTab` | Access active tab URL/title for saving |
 | `bookmarks` | Listen for new browser bookmarks (auto-sync) |
-| `contextMenus` | Right-click "Keep this link" menu items |
+| `contextMenus` | Right-click save menu items for pages and links |
 | `storage` | Persist server URL setting |
 | `tabs` | Query all tabs in current window (Keep all tabs) |
 | `notifications` | Save confirmation feedback |
@@ -60,7 +60,7 @@ Click the extension icon to open the popup:
 
 ### Context Menu
 
-Right-click anywhere on a page or on a link and select **Keep this link**.
+Right-click anywhere on a page and select **Save to Minimal**, or right-click a link and select **Save link to Minimal**.
 
 ### Keyboard Shortcuts
 

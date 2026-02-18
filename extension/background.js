@@ -81,6 +81,38 @@ async function checkUrls(urls) {
   }
 }
 
+function isSavableTab(tab) {
+  return !isRestrictedUrl(tab.url) && /^https?:\/\//i.test(tab.url);
+}
+
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!isSavableTab(tab)) {
+    showBadge("error", tab.id);
+    await showNotification(
+      "Cannot keep this page",
+      "Open a regular website tab and try again",
+    );
+    return;
+  }
+
+  const result = await saveLink({
+    url: tab.url,
+    title: tab.title,
+    source: SOURCE.MANUAL_POPUP,
+    tabId: tab.id,
+  });
+
+  if (result.success) {
+    await showNotification("Kept", tab.title || tab.url);
+  } else if (result.needsLogin) {
+    const baseUrl = await getBaseUrl();
+    chrome.tabs.create({ url: `${baseUrl}/login` });
+    await showNotification("Login required", "Please log in to keep bookmarks");
+  } else {
+    await showNotification("Failed to keep", result.message);
+  }
+});
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "keep-page",

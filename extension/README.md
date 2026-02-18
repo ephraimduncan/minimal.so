@@ -51,12 +51,9 @@ Host permissions for `x.com` and `twitter.com` are required for the X bookmark c
 
 ## Usage
 
-### Popup
+### Toolbar Click
 
-Click the extension icon to open the popup:
-
-- **Keep current tab** saves the active tab URL. Shows "Already kept" if already saved.
-- **Keep all tabs (N)** saves all unsaved tabs in the current window. Hidden when no unsaved tabs remain.
+Click the extension icon to instantly save the active tab. A confirmation notification appears when the save finishes.
 
 ### Context Menu
 
@@ -90,7 +87,7 @@ Bookmarks from different sources are kept in separate groups:
 - `Imported - X` — tweets bookmarked on X
 - `Imported - Browser` — bookmarks created in Chrome
 
-Groups are auto-created on first import. Manual saves (popup, context menu, shortcuts) go to the user's default group.
+Groups are auto-created on first import. Manual saves (toolbar click, context menu, shortcuts) go to the user's default group.
 
 ## Deduplication
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Minimal - Save Bookmarks",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Save any page or link to your Minimal bookmarks with one click",
   "permissions": [
     "activeTab",
@@ -26,8 +26,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Save to Minimal",
-    "default_popup": "popup.html"
+    "default_title": "Save to Minimal"
   },
   "icons": {
     "16": "icons/icon16.png",

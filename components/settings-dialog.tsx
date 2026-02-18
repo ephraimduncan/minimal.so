@@ -163,7 +163,7 @@ export function SettingsDialog({
       return;
     }
 
-    posthog.capture("settings_updated", { setting: "name" });
+    posthog.capture("settings_updated");
     toast.success("Name updated");
     onOpenChange(false);
     router.refresh();
@@ -349,7 +349,7 @@ function ProfileTab({ profile, onOpenChange }: ProfileTabProps) {
     mutationFn: (data: Parameters<typeof client.profile.update>[0]) =>
       client.profile.update(data),
     onSuccess: () => {
-      posthog.capture("settings_updated", { setting: "profile" });
+      posthog.capture("settings_updated");
       toast.success("Profile updated");
       onOpenChange(false);
       router.refresh();

@@ -73,9 +73,8 @@ export function SignupForm({
         email: authData.user.email,
         name: authData.user.name,
         created_at: authData.user.createdAt,
-        auth_method: "email",
       });
-      posthog.capture("signup_completed", { method: "email" });
+      posthog.capture("signup_completed");
     }
 
     router.push("/dashboard");

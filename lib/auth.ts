@@ -70,14 +70,12 @@ export const auth = betterAuth({
         posthogServer?.capture({
           distinctId: session.user.id,
           event: "signup_completed",
-          properties: { method: "google" },
         });
         void sendEmail({ to: session.user.email, ...welcomeEmail(session.user.name) });
       } else {
         posthogServer?.capture({
           distinctId: session.user.id,
           event: "login_completed",
-          properties: { method: "google" },
         });
       }
     }),

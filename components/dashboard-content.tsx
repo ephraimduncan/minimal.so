@@ -102,13 +102,13 @@ export function DashboardContent({
   );
 
   useEffect(() => {
-    if (session?.user && posthog.get_distinct_id() !== session.user.id) {
-      posthog.identify(session.user.id, {
-        email: session.user.email,
-        name: session.user.name,
-        created_at: session.user.createdAt,
-      });
-    }
+    if (posthog.get_distinct_id() === session.user.id) return;
+
+    posthog.identify(session.user.id, {
+      email: session.user.email,
+      name: session.user.name,
+      created_at: session.user.createdAt,
+    });
   }, [session]);
 
   useFocusRefetch(groups);
@@ -228,7 +228,7 @@ export function DashboardContent({
       toast.error("Failed to create bookmark");
     },
     onSuccess: () => {
-      posthog.capture("bookmark_created", { source: "web" });
+      posthog.capture("bookmark_created");
     },
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({
@@ -344,9 +344,12 @@ export function DashboardContent({
       return { previousBookmarks, sourceGroupId, previousGroups };
     },
     onSuccess: (_data, variables) => {
-      if (variables.groupId && variables._sourceGroupId && variables.groupId !== variables._sourceGroupId) {
-        return;
-      }
+      const isMove =
+        variables.groupId &&
+        variables._sourceGroupId &&
+        variables.groupId !== variables._sourceGroupId;
+      if (isMove) return;
+
       posthog.capture("bookmark_edited");
     },
     onError: (_err, data, context) => {

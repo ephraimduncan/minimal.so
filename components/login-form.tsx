@@ -63,9 +63,8 @@ export function LoginForm({
         email: authData.user.email,
         name: authData.user.name,
         created_at: authData.user.createdAt,
-        auth_method: "email",
       });
-      posthog.capture("login_completed", { method: "email" });
+      posthog.capture("login_completed");
     }
 
     router.push("/dashboard");

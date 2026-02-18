@@ -98,3 +98,77 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     await saveBookmark(info.linkUrl, info.linkUrl, tab.id);
   }
 });
+
+const IMPORT_LIMIT = 2000;
+
+function flattenBookmarks(nodes) {
+  const result = [];
+  for (const node of nodes) {
+    if (node.url) {
+      result.push(node);
+    }
+    if (node.children) {
+      result.push(...flattenBookmarks(node.children));
+    }
+  }
+  return result;
+}
+
+function isHttpUrl(url) {
+  return url.startsWith("http://") || url.startsWith("https://");
+}
+
+chrome.runtime.onMessageExternal.addListener(
+  (message, sender, sendResponse) => {
+    if (message?.type !== "import-bookmarks") return;
+
+    (async () => {
+      try {
+        const tree = await chrome.bookmarks.getTree();
+        const leaves = flattenBookmarks(tree);
+        const httpLeaves = leaves.filter((b) => isHttpUrl(b.url));
+
+        const truncated = httpLeaves.length > IMPORT_LIMIT;
+        const capped = httpLeaves.slice(0, IMPORT_LIMIT);
+        const bookmarks = capped.map((b) => ({
+          title: b.title || b.url,
+          url: b.url,
+        }));
+
+        const baseUrl = sender.origin;
+        const response = await fetch(`${baseUrl}/api/extension/import`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ bookmarks }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          sendResponse({
+            success: false,
+            error: data.error || "Server error",
+            message: data.message || "Import failed",
+            status: response.status,
+          });
+          return;
+        }
+
+        sendResponse({
+          ...data,
+          truncated: truncated || data.truncated,
+          limit: IMPORT_LIMIT,
+        });
+      } catch (error) {
+        sendResponse({
+          success: false,
+          error: "NetworkError",
+          message: error.message || "Failed to import bookmarks",
+        });
+      }
+    })();
+
+    return true;
+  }
+);

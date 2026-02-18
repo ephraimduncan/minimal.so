@@ -7,8 +7,12 @@
     "activeTab",
     "contextMenus",
     "storage",
-    "notifications"
+    "notifications",
+    "bookmarks"
   ],
+  "externally_connectable": {
+    "matches": ["https://minimal.so/*", "http://localhost:3000/*"]
+  },
   "host_permissions": ["https://minimal.so/*", "http://localhost:3000/*"],
   "action": {
     "default_icon": {

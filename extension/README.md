@@ -36,19 +36,76 @@ For automatic reloading during development:
 bun run ext:dev
 ```
 
+## Permissions
+
+| Permission | Purpose |
+|---|---|
+| `activeTab` | Access active tab URL/title for saving |
+| `bookmarks` | Listen for new browser bookmarks (auto-sync) |
+| `contextMenus` | Right-click "Keep this link" menu items |
+| `storage` | Persist server URL setting |
+| `tabs` | Query all tabs in current window (Keep all tabs) |
+| `notifications` | Save confirmation feedback |
+
+Host permissions for `x.com` and `twitter.com` are required for the X bookmark capture content script.
+
 ## Usage
 
-### Save Current Page
-Click the extension icon in the toolbar to instantly save the current page.
+### Popup
 
-### Save from Context Menu
-- Right-click anywhere on a page and select "Save to Minimal" to save the current page
-- Right-click on any link and select "Save to Minimal" to save that specific link
+Click the extension icon to open the popup:
 
-### Feedback
-- Green badge + notification = Successfully saved
-- Red badge + notification = Error occurred
-- Orange badge + notification = Not logged in (will open login page)
+- **Keep current tab** saves the active tab URL. Shows "Already kept" if already saved.
+- **Keep all tabs (N)** saves all unsaved tabs in the current window. Hidden when no unsaved tabs remain.
+
+### Context Menu
+
+Right-click anywhere on a page or on a link and select **Keep this link**.
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Cmd+Shift+K` (Mac) / `Ctrl+Shift+K` | Keep current tab |
+| `Cmd+Shift+L` (Mac) / `Ctrl+Shift+L` | Keep all unsaved tabs |
+
+Bindings are hardcoded defaults. Rebinding is available through `chrome://extensions/shortcuts`.
+
+### X Bookmark Capture
+
+When browsing `x.com` or `twitter.com`, bookmarking a tweet automatically saves its canonical URL to the **Imported - X** group. A rate-limited toast confirms saves; burst events are collapsed into aggregate messages.
+
+Only tweet URLs (`/user/status/{id}`) are captured. Non-tweet pages (profiles, lists, search, settings, spaces) are excluded.
+
+### Browser Bookmark Sync
+
+New browser bookmarks (created via Chrome's bookmark system) are automatically synced to the **Imported - Browser** group. This is silent — no toast or notification.
+
+Only new bookmarks are synced. Existing browser bookmarks are not backfilled.
+
+## Import Groups
+
+Bookmarks from different sources are kept in separate groups:
+
+- `Imported - X` — tweets bookmarked on X
+- `Imported - Browser` — bookmarks created in Chrome
+
+Groups are auto-created on first import. Manual saves (popup, context menu, shortcuts) go to the user's default group.
+
+## Deduplication
+
+All save paths use normalized URL as the dedupe key. If the same URL is captured from a different source, the existing record is moved to the latest source's group (last-write reclassification). Record identity, tags, notes, and other metadata are preserved.
+
+## Reliability
+
+This extension operates on a best-effort basis:
+
+- No persistent retry queue for failed saves
+- No failure toast or badge on background sync errors
+- Service worker restarts may drop in-flight events
+- Transient failures and offline states may cause missed saves
+
+Errors are logged to the service worker console with source tags.
 
 ## Configuration
 

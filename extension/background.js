@@ -12,89 +12,231 @@ function showBadge(type, tabId) {
   setTimeout(() => chrome.action.setBadgeText({ text: "", tabId }), 2500);
 }
 
-function showNotification(title, message, onClick) {
+function showNotification(title, message) {
   return new Promise((resolve) => {
     chrome.notifications.create(
       { type: "basic", iconUrl: "icons/icon128.png", title, message },
-      onClick
-        ? (id) => {
-            onClick();
-            setTimeout(() => chrome.notifications.clear(id, resolve), 3000);
-          }
-        : resolve
+      resolve,
     );
   });
 }
 
-async function saveBookmark(url, title, tabId) {
+async function saveLink({ url, title, source, tabId }) {
   const baseUrl = await getBaseUrl();
+  const capturedAt = new Date().toISOString();
+
+  const destinationGroup =
+    source === SOURCE.X_BOOKMARK
+      ? IMPORT_GROUP.X
+      : source === SOURCE.BROWSER_BOOKMARK
+        ? IMPORT_GROUP.BROWSER
+        : undefined;
 
   try {
     const response = await fetch(`${baseUrl}/api/extension/bookmark`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ url, title }),
+      body: JSON.stringify({ url, title, source, destinationGroup, capturedAt }),
     });
 
     const data = await response.json();
 
     if (response.status === 401) {
-      showBadge("login", tabId);
-      chrome.tabs.create({ url: `${baseUrl}/login` });
-      await showNotification(
-        "Login Required",
-        "Please log in to save bookmarks."
-      );
-      return;
+      if (tabId) showBadge("login", tabId);
+      return { success: false, needsLogin: true };
     }
 
     if (!response.ok) {
-      console.error("Save failed:", data);
-      showBadge("error", tabId);
-      await showNotification(
-        "Error",
-        data.message || "Failed to save bookmark"
-      );
-      return;
+      console.error("[saveLink]", source, data);
+      if (tabId) showBadge("error", tabId);
+      return { success: false, message: data.message };
     }
 
-    showBadge("success", tabId);
-    await showNotification("Bookmark Saved", data.bookmark?.title || title);
+    if (tabId) showBadge("success", tabId);
+    return { success: true, action: data.action, bookmark: data.bookmark };
   } catch (error) {
-    console.error("Network error:", error);
-    showBadge("error", tabId);
-    await showNotification("Error", "Network error. Please try again.");
+    console.error("[saveLink]", source, error);
+    if (tabId) showBadge("error", tabId);
+    return { success: false, message: "Network error" };
   }
 }
 
-function isInvalidUrl(url) {
-  return (
-    !url || url.startsWith("chrome://") || url.startsWith("chrome-extension://")
-  );
-}
+async function checkUrls(urls) {
+  const baseUrl = await getBaseUrl();
 
-chrome.action.onClicked.addListener(async (tab) => {
-  if (isInvalidUrl(tab.url)) {
-    showBadge("error", tab.id);
-    return;
+  try {
+    const response = await fetch(`${baseUrl}/api/extension/bookmark/check`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ urls }),
+    });
+
+    if (!response.ok) return { saved: {} };
+    const data = await response.json();
+    return { saved: data.saved || {} };
+  } catch {
+    return { saved: {} };
   }
-  await saveBookmark(tab.url, tab.title, tab.id);
-});
+}
 
 chrome.runtime.onInstalled.addListener(() => {
-  [
-    { id: "save-page", contexts: ["page"] },
-    { id: "save-link", contexts: ["link"] },
-  ].forEach(({ id, contexts }) => {
-    chrome.contextMenus.create({ id, title: "Save to Minimal", contexts });
+  chrome.contextMenus.create({
+    id: "keep-page",
+    title: "Keep this link",
+    contexts: ["page"],
+  });
+  chrome.contextMenus.create({
+    id: "keep-link",
+    title: "Keep this link",
+    contexts: ["link"],
   });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId === "save-page" && !isInvalidUrl(tab.url)) {
-    await saveBookmark(tab.url, tab.title, tab.id);
-  } else if (info.menuItemId === "save-link" && info.linkUrl) {
-    await saveBookmark(info.linkUrl, info.linkUrl, tab.id);
+  if (info.menuItemId === "keep-page" && tab && !isRestrictedUrl(tab.url)) {
+    await saveLink({
+      url: tab.url,
+      title: tab.title,
+      source: SOURCE.MANUAL_CONTEXT_MENU,
+      tabId: tab.id,
+    });
+  } else if (info.menuItemId === "keep-link" && info.linkUrl) {
+    await saveLink({
+      url: info.linkUrl,
+      title: info.linkUrl,
+      source: SOURCE.MANUAL_CONTEXT_MENU,
+      tabId: tab ? tab.id : undefined,
+    });
   }
 });
+
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === "save-current-tab") {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (!tab || isRestrictedUrl(tab.url)) return;
+
+    const result = await saveLink({
+      url: tab.url,
+      title: tab.title,
+      source: SOURCE.MANUAL_SHORTCUT,
+      tabId: tab.id,
+    });
+
+    if (result.success) {
+      await showNotification("Kept", tab.title || tab.url);
+    } else if (result.needsLogin) {
+      const baseUrl = await getBaseUrl();
+      chrome.tabs.create({ url: `${baseUrl}/login` });
+    }
+  }
+
+  if (command === "save-all-tabs") {
+    const tabs = await chrome.tabs.query({ currentWindow: true });
+    const httpTabs = tabs.filter(
+      (t) => t.url && !isRestrictedUrl(t.url) && /^https?:\/\//i.test(t.url),
+    );
+
+    if (httpTabs.length === 0) return;
+
+    const urls = httpTabs.map((t) => t.url);
+    const { saved } = await checkUrls(urls);
+    const unsaved = httpTabs.filter((t) => !saved[t.url]);
+
+    if (unsaved.length === 0) return;
+
+    let savedCount = 0;
+    for (const tab of unsaved) {
+      const result = await saveLink({
+        url: tab.url,
+        title: tab.title,
+        source: SOURCE.MANUAL_SHORTCUT,
+      });
+      if (result.success) savedCount++;
+      if (result.needsLogin) {
+        const baseUrl = await getBaseUrl();
+        chrome.tabs.create({ url: `${baseUrl}/login` });
+        return;
+      }
+    }
+
+    if (savedCount > 0) {
+      await showNotification("Kept " + savedCount + " tabs", "All unsaved tabs have been saved");
+    }
+  }
+});
+
+chrome.bookmarks.onCreated.addListener(async (_id, bookmark) => {
+  if (!bookmark.url) return;
+  if (isRestrictedUrl(bookmark.url)) return;
+
+  try {
+    await saveLink({
+      url: bookmark.url,
+      title: bookmark.title || bookmark.url,
+      source: SOURCE.BROWSER_BOOKMARK,
+    });
+  } catch (error) {
+    console.error("[browser-bookmark-sync]", error);
+  }
+});
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.action === "saveLink") {
+    saveLink({
+      url: message.url,
+      title: message.title,
+      source: message.source,
+    }).then(sendResponse);
+    return true;
+  }
+
+  if (message.action === "checkUrls") {
+    checkUrls(message.urls).then(sendResponse);
+    return true;
+  }
+
+  if (message.action === "x-bookmark-captured") {
+    saveLink({
+      url: message.url,
+      title: message.url,
+      source: SOURCE.X_BOOKMARK,
+    }).then((result) => {
+      if (result.success) {
+        showXToast(message.url);
+      }
+    });
+    return false;
+  }
+});
+
+let lastXToastTime = 0;
+let xToastBurstCount = 0;
+let xToastBurstTimer = null;
+
+function showXToast(url) {
+  const now = Date.now();
+
+  if (now - lastXToastTime < X_TOAST_RATE_LIMIT_MS) {
+    xToastBurstCount++;
+    if (xToastBurstTimer) clearTimeout(xToastBurstTimer);
+    xToastBurstTimer = setTimeout(() => {
+      if (xToastBurstCount > 0) {
+        showNotification(
+          "Kept " + (xToastBurstCount + 1) + " tweets",
+          "Bookmarked tweets saved to Imported - X",
+        );
+        xToastBurstCount = 0;
+      }
+    }, X_TOAST_BURST_WINDOW_MS);
+    return;
+  }
+
+  lastXToastTime = now;
+  xToastBurstCount = 0;
+  showNotification("Kept tweet", url);
+}

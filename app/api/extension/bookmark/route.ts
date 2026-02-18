@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
+import { posthogServer } from "@/lib/posthog-server";
 import { db } from "@/lib/db";
 import { getUrlMetadata, isArxivHost } from "@/lib/url-metadata";
 import { normalizeUrl } from "@/lib/utils";
@@ -33,6 +34,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const session = await getSession();
     if (!session?.user) {
+      posthogServer?.capture({
+        distinctId: "anonymous",
+        event: "extension_auth_failed",
+      });
       return jsonError(
         "Please log in to save bookmarks",
         "Unauthorized",
@@ -85,6 +90,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         },
       });
 
+      posthogServer?.capture({
+        distinctId: session.user.id,
+        event: "extension_bookmark_saved",
+      });
+
       return NextResponse.json(
         {
           success: true,
@@ -114,6 +124,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
+    posthogServer?.capture({
+      distinctId: session.user.id,
+      event: "extension_bookmark_saved",
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -128,6 +143,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   } catch (error) {
     console.error("[Extension API] Error:", error);
+    posthogServer?.capture({
+      distinctId: "anonymous",
+      event: "extension_save_failed",
+    });
     return jsonError("Failed to save bookmark", "Server Error", 500, headers);
   }
 }

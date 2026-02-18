@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.trycloudflare.com"],
+  skipTrailingSlashRedirect: true,
   experimental: {
     optimizePackageImports: ["@tabler/icons-react"],
   },
@@ -16,6 +17,18 @@ const nextConfig: NextConfig = {
     "@prisma/adapter-libsql",
     "sharp",
   ],
+  async rewrites() {
+    return [
+      {
+        source: "/ingest/static/:path*",
+        destination: "https://us-assets.i.posthog.com/static/:path*",
+      },
+      {
+        source: "/ingest/:path*",
+        destination: "https://us.i.posthog.com/:path*",
+      },
+    ];
+  },
   async redirects() {
     return [
       {

@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
+import { posthogServer } from "@/lib/posthog-server";
 import { db } from "@/lib/db";
 import { getUrlMetadata, isArxivHost } from "@/lib/url-metadata";
 import { canonicalizeUrl, normalizeUrl } from "@/lib/utils";
 import { z } from "zod";
+import {
+  getAllowedOrigins,
+  corsHeaders,
+  jsonError,
+  handleOptions,
+} from "../shared";
 
 const sourceEnum = z.enum([
   "manual_popup",
@@ -36,35 +43,7 @@ const createBookmarkSchema = z.object({
   capturedAt: z.string().datetime().optional(),
 });
 
-const extensionId = process.env.CHROME_EXTENSION_ID;
-
-function getAllowedOrigins(): string[] {
-  const origins: string[] = [];
-  if (extensionId) origins.push(`chrome-extension://${extensionId}`);
-  if (process.env.NODE_ENV === "development")
-    origins.push("http://localhost:3000");
-  return origins;
-}
-
-function corsHeaders(origin: string | null): HeadersInit {
-  const allowedOrigins = getAllowedOrigins();
-  const allowed = origin && allowedOrigins.includes(origin);
-  return {
-    "Access-Control-Allow-Origin": allowed ? origin : "",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Credentials": "true",
-  };
-}
-
-function jsonError(
-  message: string,
-  error: string,
-  status: number,
-  headers: HeadersInit,
-) {
-  return NextResponse.json({ error, message }, { status, headers });
-}
+const allowedOrigins = getAllowedOrigins();
 
 function parseSourceHistory(raw: string | null): string[] {
   if (!raw) return [];
@@ -150,16 +129,12 @@ async function resolveDestinationGroup(
 }
 
 export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
-  return new NextResponse(null, {
-    status: 204,
-    headers: corsHeaders(request.headers.get("origin")),
-  });
+  return handleOptions(request, allowedOrigins);
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const origin = request.headers.get("origin");
-  const headers = corsHeaders(origin);
-  const allowedOrigins = getAllowedOrigins();
+  const headers = corsHeaders(origin, allowedOrigins);
 
   if (!origin || !allowedOrigins.includes(origin)) {
     return jsonError("Origin not allowed", "Forbidden", 403, headers);
@@ -168,6 +143,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const session = await getSession();
     if (!session?.user) {
+      posthogServer?.capture({
+        distinctId: "anonymous",
+        event: "extension_auth_failed",
+      });
       return jsonError(
         "Please log in to save bookmarks",
         "Unauthorized",
@@ -252,6 +231,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         data: updateData,
       });
 
+      posthogServer?.capture({
+        distinctId: session.user.id,
+        event: "extension_bookmark_saved",
+      });
+
       return NextResponse.json(
         {
           success: true,
@@ -289,6 +273,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
+    posthogServer?.capture({
+      distinctId: session.user.id,
+      event: "extension_bookmark_saved",
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -304,6 +293,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   } catch (error) {
     console.error("[Extension API] Error:", error);
+    posthogServer?.capture({
+      distinctId: "anonymous",
+      event: "extension_save_failed",
+    });
     return jsonError("Failed to save bookmark", "Server Error", 500, headers);
   }
 }

@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { OAuthButton } from "@/components/oauth-button";
 import { useAutofill } from "@/hooks/use-autofill";
+import posthog from "posthog-js";
 import { signIn } from "@/lib/auth-client";
 import { loginSchema, type LoginFormData } from "@/lib/schema";
 
@@ -47,7 +48,7 @@ export function LoginForm({
   const formRef = useAutofill(setValue, LOGIN_FIELDS);
 
   const onSubmit = async (data: LoginFormData) => {
-    const { error } = await signIn.email({
+    const { data: authData, error } = await signIn.email({
       email: data.email,
       password: data.password,
     });
@@ -55,6 +56,15 @@ export function LoginForm({
     if (error) {
       setError("root", { message: error.message ?? "An error occurred" });
       return;
+    }
+
+    if (authData?.user) {
+      posthog.identify(authData.user.id, {
+        email: authData.user.email,
+        name: authData.user.name,
+        created_at: authData.user.createdAt,
+      });
+      posthog.capture("login_completed");
     }
 
     router.push("/dashboard");

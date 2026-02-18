@@ -8,9 +8,15 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import posthog from "posthog-js";
 import { authClient } from "@/lib/auth-client";
 import { client, orpc } from "@/lib/orpc";
+import {
+  isExtensionAvailable,
+  sendExtensionMessage,
+} from "@/lib/extension";
+import type { ImportBookmarksResponse } from "@/lib/schema";
 import type { ProfileData } from "@/components/dashboard-content";
 import {
   Dialog,
@@ -35,6 +41,7 @@ import {
   IconLoader2,
   IconCopy,
   IconExternalLink,
+  IconDownload,
 } from "@tabler/icons-react";
 import { ImagePlusIcon } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -69,10 +76,12 @@ export function SettingsDialog({
   onExport,
 }: SettingsDialogProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [name, setName] = useState(user.name);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user.image);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [prevOpen, setPrevOpen] = useState(open);
@@ -162,9 +171,56 @@ export function SettingsDialog({
       return;
     }
 
+    posthog.capture("settings_updated");
     toast.success("Name updated");
     onOpenChange(false);
     router.refresh();
+  };
+
+  const handleImportBookmarks = async () => {
+    if (!isExtensionAvailable()) {
+      toast.error("Install the Chrome extension to import bookmarks", {
+        action: {
+          label: "Get Extension",
+          onClick: () => window.open("/chrome", "_blank"),
+        },
+      });
+      return;
+    }
+
+    setIsImporting(true);
+    const loadingId = toast.loading("Importing browser bookmarks...");
+
+    try {
+      const result =
+        await sendExtensionMessage<ImportBookmarksResponse>({
+          type: "import-bookmarks",
+        });
+
+      if (!result.success) {
+        if (result.status === 401) {
+          toast.error("Please log in to import bookmarks");
+        } else {
+          toast.error(result.message || "Failed to import bookmarks. Please try again.");
+        }
+        return;
+      }
+
+      const parts = [`Imported ${result.importedCount} bookmarks into '${result.groupName}'`];
+      const skippedTotal = result.skippedCount ?? 0;
+      if (skippedTotal > 0) {
+        parts.push(`Skipped ${skippedTotal} (duplicates/invalid)`);
+      }
+      toast.success(parts.join(". "));
+
+      queryClient.invalidateQueries({ queryKey: orpc.bookmark.key() });
+      queryClient.invalidateQueries({ queryKey: orpc.group.key() });
+    } catch {
+      toast.error("Failed to import bookmarks. Please try again.");
+    } finally {
+      toast.dismiss(loadingId);
+      setIsImporting(false);
+    }
   };
 
   return (
@@ -259,18 +315,38 @@ export function SettingsDialog({
                   <span>Get the Chrome Extension</span>
                 </a>
               </Field>
-              {onExport && (
-                <Field className="[&>button]:w-fit">
-                  <FieldLabel>Data</FieldLabel>
+              <Field>
+                <FieldLabel>Data</FieldLabel>
+                <div className="flex flex-wrap gap-2">
+                  {onExport && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={onExport}
+                    >
+                      Export Bookmarks
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={onExport}
+                    disabled={isImporting}
+                    onClick={handleImportBookmarks}
                   >
-                    Export Bookmarks
+                    {isImporting ? (
+                      <>
+                        <IconLoader2 className="size-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      <>
+                        <IconDownload className="size-4" />
+                        Import Browser Bookmarks
+                      </>
+                    )}
                   </Button>
-                </Field>
-              )}
+                </div>
+              </Field>
               <DialogFooter>
                 <DialogClose render={<Button variant="ghost" />}>
                   Cancel
@@ -347,6 +423,7 @@ function ProfileTab({ profile, onOpenChange }: ProfileTabProps) {
     mutationFn: (data: Parameters<typeof client.profile.update>[0]) =>
       client.profile.update(data),
     onSuccess: () => {
+      posthog.capture("settings_updated");
       toast.success("Profile updated");
       onOpenChange(false);
       router.refresh();

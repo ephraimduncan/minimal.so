@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useQueryState } from "nuqs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 import dynamic from "next/dynamic";
 import { Header } from "@/components/header";
 import { BookmarkInput } from "@/components/bookmark-input";
@@ -72,6 +73,7 @@ export function DashboardContent({
   profile,
 }: DashboardContentProps) {
   const queryClient = useQueryClient();
+  const [mountedAt] = useState(Date.now);
 
   const [groupSlug, setGroupSlug] = useQueryState("group");
   const [searchQuery, setSearchQuery] = useState("");
@@ -89,7 +91,7 @@ export function DashboardContent({
   const groupsQuery = useQuery({
     ...orpc.group.list.queryOptions(),
     initialData: initialGroups,
-    initialDataUpdatedAt: Date.now(),
+    initialDataUpdatedAt: mountedAt,
   });
 
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data]);
@@ -100,7 +102,23 @@ export function DashboardContent({
     [groups],
   );
 
+  useEffect(() => {
+    if (posthog.get_distinct_id() === session.user.id) return;
+
+    posthog.identify(session.user.id, {
+      email: session.user.email,
+      name: session.user.name,
+      created_at: session.user.createdAt,
+    });
+  }, [session]);
+
   useFocusRefetch(groups);
+
+  useEffect(() => {
+    if (debouncedSearchQuery) {
+      posthog.capture("bookmark_searched");
+    }
+  }, [debouncedSearchQuery]);
 
   useEffect(() => {
     if (selectionMode) {
@@ -114,8 +132,6 @@ export function DashboardContent({
     () => new Map(groups.map((g) => [slugify(g.name), g.id])),
     [groups],
   );
-  const groupIdBySlugRef = useLatestRef(groupIdBySlug);
-
   const selectedGroupId = groupSlug
     ? (groupIdBySlug.get(groupSlug) ?? null)
     : null;
@@ -128,7 +144,7 @@ export function DashboardContent({
     }),
     initialData:
       currentGroupId === initialGroups[0]?.id ? initialBookmarks : undefined,
-    initialDataUpdatedAt: Date.now(),
+    initialDataUpdatedAt: mountedAt,
     enabled: !!currentGroupId,
   });
 
@@ -209,6 +225,9 @@ export function DashboardContent({
         );
       }
       toast.error("Failed to create bookmark");
+    },
+    onSuccess: () => {
+      posthog.capture("bookmark_created");
     },
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({
@@ -323,6 +342,15 @@ export function DashboardContent({
 
       return { previousBookmarks, sourceGroupId, previousGroups };
     },
+    onSuccess: (_data, variables) => {
+      const isMove =
+        variables.groupId &&
+        variables._sourceGroupId &&
+        variables.groupId !== variables._sourceGroupId;
+      if (isMove) return;
+
+      posthog.capture("bookmark_edited");
+    },
     onError: (_err, data, context) => {
       if (
         context?.previousSourceBookmarks !== undefined &&
@@ -412,6 +440,9 @@ export function DashboardContent({
         previousGroupSlug,
         optimisticId: optimisticGroup.id,
       };
+    },
+    onSuccess: () => {
+      posthog.capture("collection_created");
     },
     onError: (_err, _newGroup, context) => {
       if (context?.previousGroups) {
@@ -534,6 +565,9 @@ export function DashboardContent({
       );
 
       return { previousBookmarks, previousGroups, groupId };
+    },
+    onSuccess: () => {
+      posthog.capture("bookmark_deleted");
     },
     onError: (_err, _data, context) => {
       if (context?.previousBookmarks) {
@@ -926,8 +960,6 @@ export function DashboardContent({
   const handleDeleteBookmarkRef = useLatestRef(handleDeleteBookmark);
   const handleStartRenameRef = useLatestRef(handleStartRename);
   const selectionModeRef = useLatestRef(selectionMode);
-  const selectedIdsRef = useLatestRef(selectedIds);
-
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
     setSelectedIndex(-1);
@@ -941,7 +973,7 @@ export function DashboardContent({
       setHoveredIndex(-1);
       handleExitSelectionMode();
     },
-    [setGroupSlug, handleExitSelectionMode],
+    [groupsRef, setGroupSlug, handleExitSelectionMode],
   );
 
   const handleAddBookmark = useCallback(
@@ -1176,6 +1208,7 @@ export function DashboardContent({
 
       if ((e.metaKey || e.ctrlKey) && e.key === "c") {
         e.preventDefault();
+        posthog.capture("keyboard_shortcut_used", { shortcut: "cmd+c" });
         const textToCopy =
           activeBookmark.url || activeBookmark.color || activeBookmark.title;
         navigator.clipboard.writeText(textToCopy ?? "");
@@ -1183,18 +1216,31 @@ export function DashboardContent({
 
       if ((e.metaKey || e.ctrlKey) && e.key === "e") {
         e.preventDefault();
+        posthog.capture("keyboard_shortcut_used", { shortcut: "cmd+e" });
         handleStartRenameRef.current(activeBookmark.id);
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === "Backspace") {
         e.preventDefault();
+        posthog.capture("keyboard_shortcut_used", { shortcut: "cmd+backspace" });
         handleDeleteBookmarkRef.current(activeBookmark.id);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleExitSelectionMode, handleSelectAll, handleToggleSelection]);
+  }, [
+    filteredBookmarksRef,
+    handleDeleteBookmarkRef,
+    handleStartRenameRef,
+    hoveredIndexRef,
+    renamingIdRef,
+    selectedIndexRef,
+    selectionModeRef,
+    handleExitSelectionMode,
+    handleSelectAll,
+    handleToggleSelection,
+  ]);
 
   if (!selectedGroup) {
     return null;
@@ -1257,7 +1303,6 @@ export function DashboardContent({
         )}
         {selectionMode && selectedIds.size > 0 && (
           <MultiSelectToolbar
-            selectedCount={selectedIds.size}
             onSelectAll={handleSelectAll}
             onMove={() => setMoveDialogOpen(true)}
             onCopyUrls={handleCopyUrls}

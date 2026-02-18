@@ -161,3 +161,22 @@ export type UpdateGroup = z.infer<typeof updateGroupSchema>;
 export type UpdateProfile = z.infer<typeof updateProfileSchema>;
 export type SignupFormData = z.infer<typeof signupSchema>;
 export type LoginFormData = z.infer<typeof loginSchema>;
+
+export interface ImportBookmarksResponse {
+  success: boolean;
+  groupId?: string;
+  groupName?: string;
+  importedCount?: number;
+  skippedCount?: number;
+  truncated?: boolean;
+  limit?: number;
+  error?: string;
+  message?: string;
+  status?: number;
+  errorSummary?: {
+    invalidUrl?: number;
+    duplicateInBatch?: number;
+    duplicateInGroup?: number;
+    chunkInsertFailed?: number;
+  };
+}

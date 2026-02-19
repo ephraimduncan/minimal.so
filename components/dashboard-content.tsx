@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import posthog from "posthog-js";
 import dynamic from "next/dynamic";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { BookmarkInput } from "@/components/bookmark-input";
 import { BookmarkList } from "@/components/bookmark-list";
@@ -36,10 +37,16 @@ const preloadBulkDeleteDialog = () => import("@/components/bulk-delete-dialog");
 const preloadExportDialog = () => import("@/components/export-dialog");
 import { handleQuickExport } from "@/components/export-dialog";
 import { parseColor, isUrl, normalizeUrl, slugify } from "@/lib/utils";
+import { authClient } from "@/lib/auth-client";
 import { client, orpc } from "@/lib/orpc";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useFocusRefetch } from "@/hooks/use-focus-refetch";
 import { useLatestRef } from "@/lib/hooks/use-latest-ref";
+import {
+  FREE_BOOKMARK_LIMIT,
+  FREE_GROUP_LIMIT,
+  hasActiveProAccess,
+} from "@/lib/plan-limits";
 import type { BookmarkType, GroupItem, BookmarkItem } from "@/lib/schema";
 import type { Session } from "@/lib/auth";
 
@@ -75,6 +82,9 @@ export function DashboardContent({
   initialBookmarks,
   profile,
 }: DashboardContentProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [mountedAt] = useState(Date.now);
 
@@ -90,6 +100,10 @@ export function DashboardContent({
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const bookmarkLimitRedirectTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const bookmarkLimitRedirectPendingRef = useRef(false);
 
   const groupsQuery = useQuery({
     ...orpc.group.list.queryOptions(),
@@ -98,12 +112,42 @@ export function DashboardContent({
   });
 
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data]);
+  const hasProAccess = hasActiveProAccess(profile.plan, profile.subscriptionStatus);
+  const totalBookmarks = useMemo(
+    () => groups.reduce((sum, group) => sum + (group.bookmarkCount ?? 0), 0),
+    [groups],
+  );
+  const hasReachedFreeBookmarkLimit =
+    !hasProAccess && totalBookmarks >= FREE_BOOKMARK_LIMIT;
+  const hasReachedFreeGroupLimit = !hasProAccess && groups.length >= FREE_GROUP_LIMIT;
 
   const hasUsername = profile.username !== null;
   const publicGroupIds = useMemo(
     () => new Set(groups.filter((g) => g.isPublic).map((g) => g.id)),
     [groups],
   );
+
+  useEffect(() => {
+    const checkoutStatus = searchParams.get("checkout");
+
+    if (!checkoutStatus) {
+      return;
+    }
+
+    if (checkoutStatus === "success") {
+      toast.success("Checkout completed successfully", { duration: 5000 });
+    } else {
+      toast.error("Checkout failed. Please try again.", { duration: 5000 });
+    }
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("checkout");
+    nextParams.delete("checkout_id");
+    router.replace(
+      nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname,
+      { scroll: false },
+    );
+  }, [pathname, router, searchParams]);
 
   useEffect(() => {
     if (posthog.get_distinct_id() === session.user.id) return;
@@ -130,6 +174,14 @@ export function DashboardContent({
       preloadExportDialog();
     }
   }, [selectionMode]);
+
+  useEffect(() => {
+    return () => {
+      if (bookmarkLimitRedirectTimeoutRef.current) {
+        clearTimeout(bookmarkLimitRedirectTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const groupIdBySlug = useMemo(
     () => new Map(groups.map((g) => [slugify(g.name), g.id])),
@@ -214,7 +266,7 @@ export function DashboardContent({
         groupId: newBookmark.groupId,
       };
     },
-    onError: (_err, _newBookmark, context) => {
+    onError: (err, _newBookmark, context) => {
       if (context?.previousBookmarks) {
         queryClient.setQueryData<BookmarkItem[]>(
           bookmarkListKey(context.groupId),
@@ -227,7 +279,7 @@ export function DashboardContent({
           context.previousGroups,
         );
       }
-      toast.error("Failed to create bookmark");
+      toast.error(err.message || "Failed to create bookmark");
     },
     onSuccess: () => {
       posthog.capture("bookmark_created");
@@ -447,7 +499,7 @@ export function DashboardContent({
     onSuccess: () => {
       posthog.capture("collection_created");
     },
-    onError: (_err, _newGroup, context) => {
+    onError: (err, _newGroup, context) => {
       if (context?.previousGroups) {
         queryClient.setQueryData<GroupItem[]>(
           groupListKey(),
@@ -457,7 +509,7 @@ export function DashboardContent({
       if (context?.previousGroupSlug !== undefined) {
         setGroupSlug(context.previousGroupSlug);
       }
-      toast.error("Failed to create group");
+      toast.error(err.message || "Failed to create group");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: orpc.group.key() });
@@ -986,6 +1038,50 @@ export function DashboardContent({
       const trimmedValue = value.trim();
       if (!trimmedValue) return;
 
+       if (hasReachedFreeBookmarkLimit) {
+        if (!bookmarkLimitRedirectPendingRef.current) {
+          bookmarkLimitRedirectPendingRef.current = true;
+          toast.error(
+            "You have reached the free bookmark limit. Redirecting to checkout...",
+            { duration: 2000 },
+          );
+
+          bookmarkLimitRedirectTimeoutRef.current = setTimeout(() => {
+            const defaultCycle =
+              process.env.NEXT_PUBLIC_DEFAULT_BILLING_CYCLE === "monthly"
+                ? "monthly"
+                : "yearly";
+            const appOrigin =
+              process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
+
+            void (async () => {
+              const result = await authClient.checkout({
+                slug: defaultCycle === "monthly" ? "pro-monthly" : "pro-yearly",
+                allowDiscountCodes: true,
+                successUrl: `${appOrigin}/dashboard?checkout=success&checkout_id={CHECKOUT_ID}`,
+                returnUrl: `${appOrigin}/dashboard?checkout=failed`,
+                metadata: {
+                  source: "bookmark_limit_guard",
+                  billingCycle: defaultCycle,
+                },
+                customFieldData: {
+                  source: "bookmark_limit_guard",
+                  billingCycle: defaultCycle,
+                },
+                redirect: true,
+              });
+
+              bookmarkLimitRedirectPendingRef.current = false;
+              if (result.error) {
+                toast.error(result.error.message || "Unable to start checkout right now");
+              }
+            })();
+          }, 2000);
+        }
+
+        return;
+      }
+
       const colorResult = parseColor(trimmedValue);
 
       if (colorResult.isColor) {
@@ -1016,11 +1112,16 @@ export function DashboardContent({
       setSearchQuery("");
       setSelectedIndex(-1);
     },
-    [currentGroupId, createBookmarkMutation],
+    [currentGroupId, createBookmarkMutation, hasReachedFreeBookmarkLimit],
   );
 
   const handleCreateGroup = useCallback(
     (name: string) => {
+      if (hasReachedFreeGroupLimit) {
+        toast.error("You have reached the free group limit. Upgrade to create more groups.");
+        return;
+      }
+
       const palette = [
         "#3E63DD",
         "#208368",
@@ -1045,7 +1146,7 @@ export function DashboardContent({
 
       createGroupMutation.mutate({ name, color });
     },
-    [createGroupMutation, groups],
+    [createGroupMutation, groups, hasReachedFreeGroupLimit],
   );
 
   const handleDeleteGroup = useCallback(

@@ -46,6 +46,8 @@ import {
 import { ImagePlusIcon } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usernameSchema, updateProfileSchema } from "@/lib/schema";
+import { Badge } from "@/components/ui/badge";
+import { hasActiveProAccess } from "@/lib/plan-limits";
 
 const ACCEPTED_AVATAR_TYPES = new Set([
   "image/png",
@@ -83,6 +85,10 @@ export function SettingsDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasProAccess = hasActiveProAccess(
+    profile?.plan,
+    profile?.subscriptionStatus,
+  );
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open && !prevOpen) {
@@ -178,6 +184,11 @@ export function SettingsDialog({
   };
 
   const handleImportBookmarks = async () => {
+    if (!hasProAccess) {
+      toast.error("Import is a Pro feature. Upgrade to unlock browser import.");
+      return;
+    }
+
     if (!isExtensionAvailable()) {
       toast.error("Install the Chrome extension to import bookmarks", {
         action: {
@@ -330,7 +341,7 @@ export function SettingsDialog({
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={isImporting}
+                    disabled={isImporting || !hasProAccess}
                     onClick={handleImportBookmarks}
                   >
                     {isImporting ? (
@@ -342,6 +353,14 @@ export function SettingsDialog({
                       <>
                         <IconDownload className="size-4" />
                         Import Browser Bookmarks
+                        {!hasProAccess ? (
+                          <Badge
+                            variant="outline"
+                            className="ml-1 h-5 rounded-md px-1.5 text-[10px]"
+                          >
+                            Pro
+                          </Badge>
+                        ) : null}
                       </>
                     )}
                   </Button>
@@ -713,6 +732,7 @@ function ChromeIcon() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
+      <title>Chrome</title>
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="4" />
       <line x1="21.17" y1="8" x2="12" y2="8" />

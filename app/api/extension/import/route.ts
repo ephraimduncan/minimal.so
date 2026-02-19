@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
 import { normalizeUrl } from "@/lib/utils";
+import { hasActiveProAccess } from "@/lib/plan-limits";
 import { z } from "zod";
 import {
   getAllowedOrigins,
@@ -47,6 +48,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         "Unauthorized",
         401,
         headers
+      );
+    }
+
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        plan: true,
+        subscriptionStatus: true,
+      },
+    });
+
+    if (!hasActiveProAccess(user?.plan, user?.subscriptionStatus)) {
+      return jsonError(
+        "Import is available on Pro only. Upgrade to continue.",
+        "Forbidden",
+        403,
+        headers,
       );
     }
 

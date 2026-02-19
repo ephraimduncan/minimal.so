@@ -35,6 +35,8 @@ import {
   IconLoader2,
   IconKeyboard,
   IconLifebuoy,
+  IconRocket,
+  IconCreditCard,
 } from "@tabler/icons-react";
 import posthog from "posthog-js";
 import { authClient, signOut } from "@/lib/auth-client";
@@ -54,6 +56,8 @@ import { cn } from "@/lib/utils";
 import { type GroupItem } from "@/lib/schema";
 import type { ProfileData } from "@/components/dashboard-content";
 import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog";
+import { Badge } from "@/components/ui/badge";
+import { FREE_GROUP_LIMIT, hasActiveProAccess } from "@/lib/plan-limits";
 
 const SettingsDialog = dynamic(
   () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
@@ -121,12 +125,13 @@ export function Header({
     window.open(url, "_blank", "noopener,noreferrer");
   }, []);
 
-  const hasProAccess =
-    profile?.plan === "pro" &&
-    (profile.subscriptionStatus === "active" ||
-      profile.subscriptionStatus === "trialing" ||
-      profile.subscriptionStatus === "past_due");
+  const hasProAccess = hasActiveProAccess(
+    profile?.plan,
+    profile?.subscriptionStatus,
+  );
   const shouldShowUpgrade = !hasProAccess;
+  const hasReachedFreeGroupLimit =
+    !hasProAccess && groups.length >= FREE_GROUP_LIMIT;
 
   const handleUpgradeClick = () => {
     startBillingTransition(async () => {
@@ -134,10 +139,14 @@ export function Header({
         process.env.NEXT_PUBLIC_DEFAULT_BILLING_CYCLE === "monthly"
           ? "monthly"
           : "yearly";
+      const appOrigin =
+        process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
 
       const { error } = await authClient.checkout({
         slug: defaultCycle === "monthly" ? "pro-monthly" : "pro-yearly",
         allowDiscountCodes: true,
+        successUrl: `${appOrigin}/dashboard?checkout=success&checkout_id={CHECKOUT_ID}`,
+        returnUrl: `${appOrigin}/dashboard?checkout=failed`,
         metadata: {
           source: "dashboard_dropdown",
           billingCycle: defaultCycle,
@@ -278,13 +287,21 @@ export function Header({
             ))}
             <DropdownMenuItem
               onClick={() => {
-                if (!readOnly) setDialogOpen(true);
+                if (!readOnly && !hasReachedFreeGroupLimit) setDialogOpen(true);
               }}
-              disabled={readOnly}
+              disabled={readOnly || hasReachedFreeGroupLimit}
               className="rounded-lg w-full px-2 py-1.5"
             >
               <IconPlus className="h-4 w-4 mr-0" />
               Create Group
+              {hasReachedFreeGroupLimit ? (
+                <Badge
+                  variant="outline"
+                  className="ml-auto h-5 rounded-md px-1.5 text-[10px]"
+                >
+                  Pro
+                </Badge>
+              ) : null}
             </DropdownMenuItem>
             {!readOnly && onToggleGroupVisibility && (
               <DropdownMenuItem
@@ -423,16 +440,20 @@ export function Header({
                   onClick={handleUpgradeClick}
                   disabled={readOnly || isBillingPending}
                 >
+                  <IconRocket className="h-4 w-4" />
                   Upgrade
                 </DropdownMenuItem>
               ) : null}
-              <DropdownMenuItem
-                className="rounded-lg"
-                onClick={handleBillingPortalClick}
-                disabled={readOnly || isBillingPending}
-              >
-                Billing Portal
-              </DropdownMenuItem>
+              {hasProAccess ? (
+                <DropdownMenuItem
+                  className="rounded-lg"
+                  onClick={handleBillingPortalClick}
+                  disabled={readOnly || isBillingPending}
+                >
+                  <IconCreditCard className="h-4 w-4" />
+                  Billing Portal
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="rounded-lg"

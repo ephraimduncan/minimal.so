@@ -32,37 +32,6 @@ const CHECKOUT_SLUGS: Record<BillingCycle, string> = {
   yearly: "pro-yearly",
 };
 
-const isTrialInterval = (
-  value: string,
-): value is "day" | "week" | "month" | "year" =>
-  value === "day" ||
-  value === "week" ||
-  value === "month" ||
-  value === "year";
-
-const getTrialConfig = () => {
-  const trialInterval = process.env.NEXT_PUBLIC_POLAR_TRIAL_INTERVAL;
-  const trialIntervalCountRaw = process.env.NEXT_PUBLIC_POLAR_TRIAL_INTERVAL_COUNT;
-  const trialIntervalCount = trialIntervalCountRaw
-    ? Number(trialIntervalCountRaw)
-    : undefined;
-
-  if (
-    !trialInterval ||
-    !isTrialInterval(trialInterval) ||
-    !trialIntervalCount ||
-    !Number.isFinite(trialIntervalCount)
-  ) {
-    return {};
-  }
-
-  return {
-    allowTrial: true,
-    trialInterval,
-    trialIntervalCount,
-  } as const;
-};
-
 const FREE_PLAN_FEATURES = [
   { icon: PRICING_FREE_BOOKMARKS_ICON, label: "Up to 500 bookmarks" },
   { icon: PRICING_FREE_COLLECTIONS_ICON, label: "Up to 50 collections" },
@@ -211,8 +180,6 @@ export function LandingPricing() {
 
     const discountId = process.env.NEXT_PUBLIC_POLAR_DISCOUNT_ID?.trim();
     const appOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
-    const trialConfig = getTrialConfig();
-
     startCheckoutTransition(async () => {
       const { error } = await authClient.checkout({
         slug: CHECKOUT_SLUGS[billingCycle],
@@ -230,7 +197,6 @@ export function LandingPricing() {
         },
         referenceId: currentUser.id,
         redirect: true,
-        ...trialConfig,
       });
 
       if (error) {

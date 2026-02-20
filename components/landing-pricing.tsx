@@ -21,7 +21,6 @@ import {
   PRICING_PRO_IMPORT_ICON,
   PRICING_PRO_API_ICON,
   PRICING_PRO_FILTER_ICON,
-  PRICING_PRO_BACKUP_ICON,
   PRICING_PRO_SUPPORT_ICON,
 } from "@/components/landing-icons";
 
@@ -52,7 +51,11 @@ const FREE_PLAN_FEATURES = [
   },
 ];
 
-const PRO_PLAN_FEATURES = [
+const PRO_PLAN_FEATURES: {
+  icon: ReactElement;
+  label: string;
+  soon?: boolean;
+}[] = [
   { icon: PRICING_PRO_EVERYTHING_ICON, label: "Everything in Free" },
   {
     icon: PRICING_PRO_UNLIMITED_BOOKMARKS_ICON,
@@ -65,11 +68,11 @@ const PRO_PLAN_FEATURES = [
   {
     icon: PRICING_FREE_TAGS_ICON,
     label: "Tags, metadata, colors, and notes",
+    soon: true,
   },
   { icon: PRICING_PRO_IMPORT_ICON, label: "Import from browser" },
-  { icon: PRICING_PRO_API_ICON, label: "API access with rate limits" },
-  { icon: PRICING_PRO_FILTER_ICON, label: "Advanced search and filtering" },
-  { icon: PRICING_PRO_BACKUP_ICON, label: "Backups and recovery tools" },
+  { icon: PRICING_PRO_API_ICON, label: "API access with rate limits", soon: true },
+  { icon: PRICING_PRO_FILTER_ICON, label: "Advanced search and filtering", soon: true },
   { icon: PRICING_PRO_SUPPORT_ICON, label: "Priority support" },
 ];
 
@@ -90,12 +93,17 @@ const PRO_PLAN_PRICING: Record<
 function PricingFeature({
   feature,
 }: {
-  feature: { icon: ReactElement; label: string };
+  feature: { icon: ReactElement; label: string; soon?: boolean };
 }) {
   return (
     <div className="flex items-start gap-2 text-sm">
       <div className="mt-0.5">{feature.icon}</div>
       <span>{feature.label}</span>
+      {feature.soon && (
+        <span className="ml-auto shrink-0 rounded-full border border-zinc-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+          Soon
+        </span>
+      )}
     </div>
   );
 }
@@ -186,7 +194,7 @@ export function LandingPricing() {
         allowDiscountCodes: true,
         ...(discountId ? { discountId } : {}),
         successUrl: `${appOrigin}/dashboard?checkout=success&checkout_id={CHECKOUT_ID}`,
-        returnUrl: appOrigin,
+        returnUrl: `${appOrigin}/dashboard?checkout=failed`,
         metadata: {
           source: "landing_pricing",
           billingCycle,
@@ -224,7 +232,7 @@ export function LandingPricing() {
           <button
             type="button"
             onClick={handleFreeAction}
-            className="absolute right-4 top-4 rounded-full bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
+            className="absolute right-4 top-4 cursor-pointer rounded-full bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
           >
             {isSignedIn ? "Go to dashboard" : "Sign up"}
           </button>
@@ -245,7 +253,7 @@ export function LandingPricing() {
             type="button"
             onClick={handleProAction}
             disabled={isCheckoutPending}
-            className="absolute right-4 top-4 rounded-full bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60"
+            className="absolute right-4 top-4 cursor-pointer rounded-full bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {proActionLabel}
           </button>

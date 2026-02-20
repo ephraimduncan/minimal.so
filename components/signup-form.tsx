@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
@@ -17,8 +17,16 @@ import { Input } from "@/components/ui/input";
 import { OAuthButton } from "@/components/oauth-button";
 import { useAutofill } from "@/hooks/use-autofill";
 import posthog from "posthog-js";
-import { signUp } from "@/lib/auth-client";
+import { toast } from "sonner";
+import { authClient, signUp } from "@/lib/auth-client";
 import { signupSchema, type SignupFormData } from "@/lib/schema";
+
+type BillingCycle = "monthly" | "yearly";
+
+const CHECKOUT_SLUGS: Record<BillingCycle, string> = {
+  monthly: "pro-monthly",
+  yearly: "pro-yearly",
+};
 
 const SIGNUP_FIELDS = [
   { name: "name", id: "name" },
@@ -32,6 +40,16 @@ export function SignupForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedPlan = searchParams.get("plan");
+  const billingCycleParam = searchParams.get("billingCycle");
+  const billingCycle: BillingCycle =
+    billingCycleParam === "monthly" ? "monthly" : "yearly";
+  const isProSignup = selectedPlan === "pro";
+  const appOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
+  const checkoutCallbackURL = isProSignup
+    ? `/signup/complete?plan=pro&billingCycle=${billingCycle}`
+    : "/dashboard";
 
   useEffect(() => {
     posthog.capture("signup_started");
@@ -77,6 +95,32 @@ export function SignupForm({
       posthog.capture("signup_completed");
     }
 
+    if (isProSignup) {
+      const { error: checkoutError } = await authClient.checkout({
+        slug: CHECKOUT_SLUGS[billingCycle],
+        allowDiscountCodes: true,
+        successUrl: `${appOrigin}/dashboard?checkout=success&checkout_id={CHECKOUT_ID}`,
+        returnUrl: `${appOrigin}/dashboard?checkout=failed`,
+        metadata: {
+          source: "signup_form",
+          billingCycle,
+          userId: authData?.user?.id,
+        },
+        customFieldData: {
+          billingCycle,
+        },
+        referenceId: authData?.user?.id,
+        redirect: true,
+      });
+
+      if (checkoutError) {
+        toast.error(checkoutError.message || "Unable to start checkout right now");
+        return;
+      }
+
+      return;
+    }
+
     router.push("/dashboard");
   };
 
@@ -89,7 +133,11 @@ export function SignupForm({
         </p>
       </div>
 
-      <OAuthButton provider="google" mode="signup" />
+      <OAuthButton
+        provider="google"
+        mode="signup"
+        callbackURL={checkoutCallbackURL}
+      />
 
       <div className="relative my-3">
         <div className="absolute inset-0 flex items-center">
@@ -162,7 +210,7 @@ export function SignupForm({
             <p className="text-sm text-red-500">{errors.root.message}</p>
           )}
           <Field>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
               {isSubmitting ? "Loading..." : "Sign up"}
             </Button>
 

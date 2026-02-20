@@ -18,6 +18,7 @@ const {
   POLAR_ACCESS_TOKEN,
   POLAR_WEBHOOK_SECRET,
   POLAR_SERVER,
+  POLAR_CREATE_CUSTOMER_ON_SIGN_UP,
   POLAR_PRO_MONTHLY_PRODUCT_ID,
   POLAR_PRO_YEARLY_PRODUCT_ID,
   NEXT_PUBLIC_APP_URL,
@@ -25,6 +26,8 @@ const {
 const googleOAuthEnabled = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
 const polarServer = POLAR_SERVER === "sandbox" ? "sandbox" : "production";
 const polarEnabled = Boolean(POLAR_ACCESS_TOKEN && POLAR_WEBHOOK_SECRET);
+const polarCreateCustomerOnSignUp =
+  POLAR_CREATE_CUSTOMER_ON_SIGN_UP === "true";
 
 const polarProductMappings = [
   POLAR_PRO_MONTHLY_PRODUCT_ID
@@ -37,6 +40,10 @@ const polarProductMappings = [
 
 const hasProAccess = (status: string) =>
   status === "active" || status === "trialing" || status === "past_due";
+
+function resolvePlan(status: string): "free" | "pro" {
+  return hasProAccess(status) ? "pro" : "free";
+}
 
 type CustomerSyncInput = {
   id: string;
@@ -85,7 +92,7 @@ async function syncSubscriptionData(input: SubscriptionSyncInput): Promise<void>
   await db.user.updateMany({
     where: { polarCustomerId: input.customerId },
     data: {
-      plan: hasProAccess(input.status) ? "pro" : "free",
+      plan: resolvePlan(input.status),
       subscriptionStatus: input.status,
       polarSubscriptionId: input.id,
       polarProductId: input.productId,
@@ -138,7 +145,7 @@ export const auth = betterAuth({
               accessToken: POLAR_ACCESS_TOKEN,
               server: polarServer,
             }),
-            createCustomerOnSignUp: true,
+            createCustomerOnSignUp: polarCreateCustomerOnSignUp,
             getCustomerCreateParams: async ({ user }) => ({
               metadata: user.id
                 ? {

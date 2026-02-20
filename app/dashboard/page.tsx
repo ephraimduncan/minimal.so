@@ -12,41 +12,43 @@ async function DashboardData() {
     redirect("/login");
   }
 
-  const [groups, user, firstGroupWithBookmarks] = await Promise.all([
-    db.group.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "asc" },
-      include: {
-        _count: {
-          select: { bookmarks: true },
+  const [groups, user, firstGroupWithBookmarks, totalBookmarkCount] =
+    await Promise.all([
+      db.group.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "asc" },
+        include: {
+          _count: {
+            select: { bookmarks: true },
+          },
         },
-      },
-    }),
-    db.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        image: true,
-        username: true,
-        bio: true,
-        github: true,
-        twitter: true,
-        website: true,
-        isProfilePublic: true,
-        plan: true,
-        subscriptionStatus: true,
-        polarCustomerId: true,
-      },
-    }),
-    db.group.findFirst({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "asc" },
-      select: {
-        bookmarks: {
-          orderBy: { createdAt: "desc" },
+      }),
+      db.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          image: true,
+          username: true,
+          bio: true,
+          github: true,
+          twitter: true,
+          website: true,
+          isProfilePublic: true,
+          plan: true,
+          subscriptionStatus: true,
+          polarCustomerId: true,
         },
-      },
-    }),
-  ]);
+      }),
+      db.group.findFirst({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "asc" },
+        select: {
+          bookmarks: {
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      }),
+      db.bookmark.count({ where: { userId: session.user.id } }),
+    ]);
 
   const groupItems: GroupItem[] = groups.map((g) => ({
     id: g.id,
@@ -75,6 +77,7 @@ async function DashboardData() {
       session={session}
       initialGroups={groupItems}
       initialBookmarks={initialBookmarks}
+      initialTotalBookmarks={totalBookmarkCount}
       profile={
         user ?? {
           image: session.user.image ?? null,

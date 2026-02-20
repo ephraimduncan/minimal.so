@@ -11,6 +11,7 @@ import { Header } from "@/components/header";
 import { BookmarkInput } from "@/components/bookmark-input";
 import { BookmarkList } from "@/components/bookmark-list";
 import { BookmarkListSkeleton } from "@/components/dashboard-skeleton";
+import { UpgradeBanner } from "@/components/upgrade-banner";
 
 const MultiSelectToolbar = dynamic(
   () =>
@@ -37,7 +38,7 @@ const preloadBulkDeleteDialog = () => import("@/components/bulk-delete-dialog");
 const preloadExportDialog = () => import("@/components/export-dialog");
 import { handleQuickExport } from "@/components/export-dialog";
 import { parseColor, isUrl, normalizeUrl, slugify } from "@/lib/utils";
-import { authClient } from "@/lib/auth-client";
+
 import { client, orpc } from "@/lib/orpc";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useFocusRefetch } from "@/hooks/use-focus-refetch";
@@ -67,6 +68,7 @@ interface DashboardContentProps {
   session: NonNullable<Session>;
   initialGroups: GroupItem[];
   initialBookmarks: BookmarkItem[];
+  initialTotalBookmarks: number;
   profile: ProfileData;
 }
 
@@ -80,6 +82,7 @@ export function DashboardContent({
   session,
   initialGroups,
   initialBookmarks,
+  initialTotalBookmarks,
   profile,
 }: DashboardContentProps) {
   const router = useRouter();
@@ -100,10 +103,7 @@ export function DashboardContent({
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const bookmarkLimitRedirectTimeoutRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
-  const bookmarkLimitRedirectPendingRef = useRef(false);
+
 
   const groupsQuery = useQuery({
     ...orpc.group.list.queryOptions(),
@@ -113,10 +113,13 @@ export function DashboardContent({
 
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data]);
   const hasProAccess = hasActiveProAccess(profile.plan, profile.subscriptionStatus);
-  const totalBookmarks = useMemo(
+  const groupSumBookmarks = useMemo(
     () => groups.reduce((sum, group) => sum + (group.bookmarkCount ?? 0), 0),
     [groups],
   );
+  const totalBookmarks = groupsQuery.dataUpdatedAt > mountedAt
+    ? groupSumBookmarks
+    : initialTotalBookmarks;
   const hasReachedFreeBookmarkLimit =
     !hasProAccess && totalBookmarks >= FREE_BOOKMARK_LIMIT;
   const hasReachedFreeGroupLimit = !hasProAccess && groups.length >= FREE_GROUP_LIMIT;
@@ -175,13 +178,6 @@ export function DashboardContent({
     }
   }, [selectionMode]);
 
-  useEffect(() => {
-    return () => {
-      if (bookmarkLimitRedirectTimeoutRef.current) {
-        clearTimeout(bookmarkLimitRedirectTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const groupIdBySlug = useMemo(
     () => new Map(groups.map((g) => [slugify(g.name), g.id])),
@@ -1038,47 +1034,8 @@ export function DashboardContent({
       const trimmedValue = value.trim();
       if (!trimmedValue) return;
 
-       if (hasReachedFreeBookmarkLimit) {
-        if (!bookmarkLimitRedirectPendingRef.current) {
-          bookmarkLimitRedirectPendingRef.current = true;
-          toast.error(
-            "You have reached the free bookmark limit. Redirecting to checkout...",
-            { duration: 2000 },
-          );
-
-          bookmarkLimitRedirectTimeoutRef.current = setTimeout(() => {
-            const defaultCycle =
-              process.env.NEXT_PUBLIC_DEFAULT_BILLING_CYCLE === "monthly"
-                ? "monthly"
-                : "yearly";
-            const appOrigin =
-              process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
-
-            void (async () => {
-              const result = await authClient.checkout({
-                slug: defaultCycle === "monthly" ? "pro-monthly" : "pro-yearly",
-                allowDiscountCodes: true,
-                successUrl: `${appOrigin}/dashboard?checkout=success&checkout_id={CHECKOUT_ID}`,
-                returnUrl: `${appOrigin}/dashboard?checkout=failed`,
-                metadata: {
-                  source: "bookmark_limit_guard",
-                  billingCycle: defaultCycle,
-                },
-                customFieldData: {
-                  source: "bookmark_limit_guard",
-                  billingCycle: defaultCycle,
-                },
-                redirect: true,
-              });
-
-              bookmarkLimitRedirectPendingRef.current = false;
-              if (result.error) {
-                toast.error(result.error.message || "Unable to start checkout right now");
-              }
-            })();
-          }, 2000);
-        }
-
+      if (hasReachedFreeBookmarkLimit) {
+        toast.error("You have reached the free bookmark limit. Upgrade to add more bookmarks.");
         return;
       }
 
@@ -1376,6 +1333,9 @@ export function DashboardContent({
           onChange={handleSearchChange}
           onSubmit={handleAddBookmark}
         />
+        {!hasProAccess && (
+          <UpgradeBanner totalBookmarks={totalBookmarks} />
+        )}
         {bookmarksQuery.isPending && !bookmarksQuery.data ? (
           <BookmarkListSkeleton />
         ) : (

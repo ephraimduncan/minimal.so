@@ -1,3 +1,5 @@
+import { APP_URL } from "./config";
+
 const AUTOSEND_API_URL = "https://api.autosend.com/v1/mails/send";
 const FROM_EMAIL = "ephraim@minimal.so";
 const FROM_NAME = "minimal";
@@ -9,11 +11,23 @@ interface SendEmailParams {
   text?: string;
 }
 
-export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
+export interface SendEmailResult {
+  ok: boolean;
+  status?: number;
+  error?: string;
+}
+
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+}: SendEmailParams): Promise<SendEmailResult> {
   const apiKey = process.env.AUTOSEND_API_KEY;
   if (!apiKey) {
-    console.error("[email] AUTOSEND_API_KEY not set, skipping email to", to);
-    return;
+    const error = "AUTOSEND_API_KEY not set";
+    console.error(`[email] ${error}, skipping email to`, to);
+    return { ok: false, error };
   }
 
   try {
@@ -35,16 +49,21 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
     if (!res.ok) {
       const body = await res.text();
       console.error("[email] Autosend error:", res.status, body);
+      return { ok: false, status: res.status, error: body || "Autosend error" };
     }
+    return { ok: true, status: res.status };
   } catch (err) {
     console.error("[email] Failed to send:", err);
+    const error = err instanceof Error ? err.message : "Unknown email error";
+    return { ok: false, error };
   }
 }
 
 const FONT_STACK =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif";
 
-export function emailLayout(content: string): string {
+export function emailLayout(content: string, baseUrl?: string): string {
+  const url = baseUrl ?? APP_URL;
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8" /></head>
@@ -58,7 +77,7 @@ export function emailLayout(content: string): string {
               ${content}
               <hr style="border:none;border-top:1px solid #e5e5e5;margin:32px 0 16px;" />
               <p style="font-size:0.8em;color:#999;margin:0;">
-                minimal — <a href="https://minimal.so" style="color:#999;">minimal.so</a>
+                minimal — <a href="${url}" style="color:#999;">minimal.so</a>
               </p>
             </td>
           </tr>

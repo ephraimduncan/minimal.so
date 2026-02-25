@@ -10,6 +10,10 @@ const databaseUrl =
   process.env.DATABASE_URL ??
   "file:./dev.db";
 
+if (process.env.NODE_ENV === "production" && databaseUrl === "file:./dev.db") {
+  throw new Error("No database URL configured for production");
+}
+
 const adapter = new PrismaLibSql({
   url: databaseUrl,
   authToken: process.env.TURSO_AUTH_TOKEN,

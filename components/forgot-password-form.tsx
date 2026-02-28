@@ -45,7 +45,7 @@ export function ForgotPasswordForm({
   if (submitted) {
     return (
       <div className={cn("flex flex-col gap-2", className)} {...props}>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 text-center">
           <h1 className="text-xl font-semibold">Check your email</h1>
           <p className="text-sm text-muted-foreground">
             We sent a password reset link to your email

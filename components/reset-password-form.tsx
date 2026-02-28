@@ -50,7 +50,7 @@ export function ResetPasswordForm({
   if (urlError === "INVALID_TOKEN" || !token) {
     return (
       <div className={cn("flex flex-col gap-2", className)} {...props}>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 text-center">
           <h1 className="text-xl font-semibold">Invalid reset link</h1>
           <p className="text-sm text-muted-foreground">
             This password reset link is invalid or has expired

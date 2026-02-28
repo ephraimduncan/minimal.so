@@ -67,7 +67,7 @@ export function emailLayout(content: string): string {
 <html>
 <head><meta charset="utf-8" /></head>
 <body style="margin:0;padding:0;background:#ffffff;font-family:${FONT_STACK};font-size:1.077em;line-height:155%;color:#1a1a1a;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:10px 0;">
     <tr>
       <td align="left">
         <table cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">

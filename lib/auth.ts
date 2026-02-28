@@ -11,6 +11,7 @@ import { sendEmail } from "./email";
 import { welcomeEmail } from "./emails/welcome";
 import { verificationEmail } from "./emails/verify-email";
 import { resetPasswordEmail } from "./emails/reset-password";
+import { hasActiveProAccess, type PlanValue } from "./plan-limits";
 
 const {
   GOOGLE_CLIENT_ID,
@@ -39,11 +40,8 @@ const polarProductMappings = [
     : null,
 ].filter((mapping): mapping is { productId: string; slug: string } => Boolean(mapping));
 
-const hasProAccess = (status: string) =>
-  status === "active" || status === "trialing" || status === "past_due";
-
-function resolvePlan(status: string): "free" | "pro" {
-  return hasProAccess(status) ? "pro" : "free";
+function resolvePlan(status: string): PlanValue {
+  return hasActiveProAccess("pro", status) ? "pro" : "free";
 }
 
 type CustomerSyncInput = {

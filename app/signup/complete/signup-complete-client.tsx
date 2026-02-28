@@ -2,15 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
-import { authClient, useSession } from "@/lib/auth-client";
-
-type BillingCycle = "monthly" | "yearly";
-
-const CHECKOUT_SLUGS: Record<BillingCycle, string> = {
-  monthly: "pro-monthly",
-  yearly: "pro-yearly",
-};
+import { useSession } from "@/lib/auth-client";
+import { type BillingCycle, startCheckout } from "@/lib/checkout";
 
 export function SignupCompleteClient() {
   const router = useRouter();
@@ -43,31 +36,14 @@ export function SignupCompleteClient() {
     }
 
     startedCheckoutRef.current = true;
-    const appOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
 
-    void (async () => {
-      const { error } = await authClient.checkout({
-        slug: CHECKOUT_SLUGS[billingCycle],
-        allowDiscountCodes: true,
-        successUrl: `${appOrigin}/dashboard?checkout=success&checkout_id={CHECKOUT_ID}`,
-        returnUrl: `${appOrigin}/dashboard?checkout=failed`,
-        metadata: {
-          source: "signup_oauth",
-          billingCycle,
-          userId: session.user.id,
-        },
-        customFieldData: {
-          billingCycle,
-        },
-        referenceId: session.user.id,
-        redirect: true,
-      });
-
-      if (error) {
-        toast.error(error.message || "Unable to start checkout right now");
-        router.replace("/dashboard");
-      }
-    })();
+    void startCheckout({
+      billingCycle,
+      source: "signup_oauth",
+      userId: session.user.id,
+    }).then((ok) => {
+      if (!ok) router.replace("/dashboard");
+    });
   }, [isPending, router, searchParams, session?.user, session?.user?.id]);
 
   return (

@@ -18,6 +18,7 @@ import {
 } from "@/lib/extension";
 import type { ImportBookmarksResponse } from "@/lib/schema";
 import type { ProfileData } from "@/components/dashboard-content";
+import { ChromeIcon } from "@/components/chrome-icon";
 import {
   Dialog,
   DialogClose,
@@ -322,7 +323,7 @@ export function SettingsDialog({
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <ChromeIcon />
+                  <ChromeIcon size={20} />
                   <span>Get the Chrome Extension</span>
                 </a>
               </Field>
@@ -719,25 +720,3 @@ function UsernameStatusIcon({ status }: { status: UsernameStatus }) {
   }
 }
 
-function ChromeIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <title>Chrome</title>
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="4" />
-      <line x1="21.17" y1="8" x2="12" y2="8" />
-      <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
-      <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
-    </svg>
-  );
-}

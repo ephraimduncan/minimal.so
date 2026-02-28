@@ -56,8 +56,10 @@ import { cn } from "@/lib/utils";
 import { type GroupItem } from "@/lib/schema";
 import type { ProfileData } from "@/components/dashboard-content";
 import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog";
+import { ChromeIcon } from "@/components/chrome-icon";
 
 import { hasActiveProAccess } from "@/lib/plan-limits";
+import { startCheckout } from "@/lib/checkout";
 
 const SettingsDialog = dynamic(
   () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
@@ -129,35 +131,13 @@ export function Header({
     profile?.plan,
     profile?.subscriptionStatus,
   );
-  const shouldShowUpgrade = !hasProAccess;
   const handleUpgradeClick = () => {
+    const billingCycle =
+      process.env.NEXT_PUBLIC_DEFAULT_BILLING_CYCLE === "monthly"
+        ? ("monthly" as const)
+        : ("yearly" as const);
     startBillingTransition(async () => {
-      const defaultCycle =
-        process.env.NEXT_PUBLIC_DEFAULT_BILLING_CYCLE === "monthly"
-          ? "monthly"
-          : "yearly";
-      const appOrigin =
-        process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
-
-      const { error } = await authClient.checkout({
-        slug: defaultCycle === "monthly" ? "pro-monthly" : "pro-yearly",
-        allowDiscountCodes: true,
-        successUrl: `${appOrigin}/dashboard?checkout=success&checkout_id={CHECKOUT_ID}`,
-        returnUrl: `${appOrigin}/dashboard?checkout=failed`,
-        metadata: {
-          source: "dashboard_dropdown",
-          billingCycle: defaultCycle,
-        },
-        customFieldData: {
-          source: "dashboard_dropdown",
-          billingCycle: defaultCycle,
-        },
-        redirect: true,
-      });
-
-      if (error) {
-        toast.error(error.message || "Unable to start checkout right now");
-      }
+      await startCheckout({ billingCycle, source: "dashboard_dropdown" });
     });
   };
 
@@ -423,7 +403,7 @@ export function Header({
                 Chrome Extension
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {shouldShowUpgrade ? (
+              {!hasProAccess ? (
                 <DropdownMenuItem
                   className="rounded-lg"
                   onClick={handleUpgradeClick}
@@ -625,25 +605,3 @@ function UserAvatar({ name, image }: { name: string; image?: string | null }) {
   );
 }
 
-function ChromeIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <title>Chrome</title>
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="4" />
-      <line x1="21.17" y1="8" x2="12" y2="8" />
-      <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
-      <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
-    </svg>
-  );
-}

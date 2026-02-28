@@ -17,16 +17,9 @@ import { Input } from "@/components/ui/input";
 import { OAuthButton } from "@/components/oauth-button";
 import { useAutofill } from "@/hooks/use-autofill";
 import posthog from "posthog-js";
-import { toast } from "sonner";
-import { authClient, signUp } from "@/lib/auth-client";
+import { signUp } from "@/lib/auth-client";
 import { signupSchema } from "@/lib/schema";
-
-type BillingCycle = "monthly" | "yearly";
-
-const CHECKOUT_SLUGS: Record<BillingCycle, string> = {
-  monthly: "pro-monthly",
-  yearly: "pro-yearly",
-};
+import { type BillingCycle, startCheckout } from "@/lib/checkout";
 
 const SIGNUP_FIELDS = [
   { name: "name", id: "name" },
@@ -46,8 +39,6 @@ export function SignupForm({
   const billingCycle: BillingCycle =
     billingCycleParam === "monthly" ? "monthly" : "yearly";
   const isProSignup = selectedPlan === "pro";
-  const appOrigin =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
   const checkoutCallbackURL = isProSignup
     ? `/signup/complete?plan=pro&billingCycle=${billingCycle}`
     : "/dashboard";
@@ -87,28 +78,11 @@ export function SignupForm({
       }
 
       if (isProSignup) {
-        const { error: checkoutError } = await authClient.checkout({
-          slug: CHECKOUT_SLUGS[billingCycle],
-          allowDiscountCodes: true,
-          successUrl: `${appOrigin}/dashboard?checkout=success&checkout_id={CHECKOUT_ID}`,
-          returnUrl: `${appOrigin}/dashboard?checkout=failed`,
-          metadata: {
-            source: "signup_form",
-            billingCycle,
-            userId: authRef.current?.user?.id,
-          },
-          customFieldData: {
-            billingCycle,
-          },
-          referenceId: authRef.current?.user?.id,
-          redirect: true,
+        await startCheckout({
+          billingCycle,
+          source: "signup_form",
+          userId: authRef.current?.user?.id,
         });
-
-        if (checkoutError) {
-          toast.error(
-            checkoutError.message || "Unable to start checkout right now",
-          );
-        }
         return;
       }
 

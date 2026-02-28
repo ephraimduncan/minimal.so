@@ -3,9 +3,8 @@
 import type { ReactElement } from "react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { TextMorph } from "torph/react";
-import { authClient, useSession } from "@/lib/auth-client";
+import { useSession } from "@/lib/auth-client";
 import {
   PRICING_FREE_TAGS_ICON,
   PRICING_FREE_EXPORT_ICON,
@@ -19,13 +18,7 @@ import {
   PRICING_PRO_FILTER_ICON,
   PRICING_PRO_SUPPORT_ICON,
 } from "@/components/landing-icons";
-
-type BillingCycle = "monthly" | "yearly";
-
-const CHECKOUT_SLUGS: Record<BillingCycle, string> = {
-  monthly: "pro-monthly",
-  yearly: "pro-yearly",
-};
+import { type BillingCycle, startCheckout } from "@/lib/checkout";
 
 const FREE_PLAN_FEATURES = [
   { icon: PRICING_PRO_UNLIMITED_BOOKMARKS_ICON, label: "Unlimited bookmarks" },
@@ -164,29 +157,13 @@ export function LandingPricing() {
     }
 
     const discountId = process.env.NEXT_PUBLIC_POLAR_DISCOUNT_ID?.trim();
-    const appOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
     startCheckoutTransition(async () => {
-      const { error } = await authClient.checkout({
-        slug: CHECKOUT_SLUGS[billingCycle],
-        allowDiscountCodes: true,
-        ...(discountId ? { discountId } : {}),
-        successUrl: `${appOrigin}/dashboard?checkout=success&checkout_id={CHECKOUT_ID}`,
-        returnUrl: `${appOrigin}/dashboard?checkout=failed`,
-        metadata: {
-          source: "landing_pricing",
-          billingCycle,
-          userId: currentUser.id,
-        },
-        customFieldData: {
-          billingCycle,
-        },
-        referenceId: currentUser.id,
-        redirect: true,
+      await startCheckout({
+        billingCycle,
+        source: "landing_pricing",
+        userId: currentUser.id,
+        discountId: discountId || undefined,
       });
-
-      if (error) {
-        toast.error(error.message || "Unable to start checkout right now");
-      }
     });
   };
 

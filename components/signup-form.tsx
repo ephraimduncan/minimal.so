@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -19,7 +19,7 @@ import { useAutofill } from "@/hooks/use-autofill";
 import posthog from "posthog-js";
 import { toast } from "sonner";
 import { authClient, signUp } from "@/lib/auth-client";
-import { signupSchema, type SignupFormData } from "@/lib/schema";
+import { signupSchema } from "@/lib/schema";
 
 type BillingCycle = "monthly" | "yearly";
 
@@ -46,83 +46,80 @@ export function SignupForm({
   const billingCycle: BillingCycle =
     billingCycleParam === "monthly" ? "monthly" : "yearly";
   const isProSignup = selectedPlan === "pro";
-  const appOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
+  const appOrigin =
+    process.env.NEXT_PUBLIC_APP_URL?.trim() || window.location.origin;
   const checkoutCallbackURL = isProSignup
     ? `/signup/complete?plan=pro&billingCycle=${billingCycle}`
     : "/dashboard";
+
+  type AuthData = Awaited<ReturnType<typeof signUp.email>>["data"];
+  const authRef = useRef<AuthData>(null);
 
   useEffect(() => {
     posthog.capture("signup_started");
   }, []);
 
-  const {
-    register,
-    handleSubmit,
-    setError,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<SignupFormData>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
+  const form = useForm({
+    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
+    validators: {
+      onSubmit: signupSchema,
+      onSubmitAsync: async ({ value }) => {
+        const { data, error } = await signUp.email({
+          name: value.name,
+          email: value.email,
+          password: value.password,
+        });
+        if (error) {
+          return { form: error.message ?? "An error occurred", fields: {} };
+        }
+        authRef.current = data;
+        return null;
+      },
     },
-  });
+    onSubmit: async () => {
+      if (authRef.current?.user) {
+        posthog.identify(authRef.current.user.id, {
+          email: authRef.current.user.email,
+          name: authRef.current.user.name,
+          created_at: authRef.current.user.createdAt,
+        });
+        posthog.capture("signup_completed");
+      }
 
-  // Detect password manager autofill via CSS animation
-  const formRef = useAutofill(setValue, SIGNUP_FIELDS);
+      if (isProSignup) {
+        const { error: checkoutError } = await authClient.checkout({
+          slug: CHECKOUT_SLUGS[billingCycle],
+          allowDiscountCodes: true,
+          successUrl: `${appOrigin}/dashboard?checkout=success&checkout_id={CHECKOUT_ID}`,
+          returnUrl: `${appOrigin}/dashboard?checkout=failed`,
+          metadata: {
+            source: "signup_form",
+            billingCycle,
+            userId: authRef.current?.user?.id,
+          },
+          customFieldData: {
+            billingCycle,
+          },
+          referenceId: authRef.current?.user?.id,
+          redirect: true,
+        });
 
-  const onSubmit = async (data: SignupFormData) => {
-    const { data: authData, error } = await signUp.email({
-      name: data.name,
-      email: data.email,
-      password: data.password,
-    });
-
-    if (error) {
-      setError("root", { message: error.message ?? "An error occurred" });
-      return;
-    }
-
-    if (authData?.user) {
-      posthog.identify(authData.user.id, {
-        email: authData.user.email,
-        name: authData.user.name,
-        created_at: authData.user.createdAt,
-      });
-      posthog.capture("signup_completed");
-    }
-
-    if (isProSignup) {
-      const { error: checkoutError } = await authClient.checkout({
-        slug: CHECKOUT_SLUGS[billingCycle],
-        allowDiscountCodes: true,
-        successUrl: `${appOrigin}/dashboard?checkout=success&checkout_id={CHECKOUT_ID}`,
-        returnUrl: `${appOrigin}/dashboard?checkout=failed`,
-        metadata: {
-          source: "signup_form",
-          billingCycle,
-          userId: authData?.user?.id,
-        },
-        customFieldData: {
-          billingCycle,
-        },
-        referenceId: authData?.user?.id,
-        redirect: true,
-      });
-
-      if (checkoutError) {
-        toast.error(checkoutError.message || "Unable to start checkout right now");
+        if (checkoutError) {
+          toast.error(
+            checkoutError.message || "Unable to start checkout right now",
+          );
+        }
         return;
       }
 
-      return;
-    }
+      router.push("/dashboard");
+    },
+  });
 
-    router.push("/dashboard");
-  };
+  const formRef = useAutofill(
+    (name, value) => form.setFieldValue(name, value),
+    SIGNUP_FIELDS,
+  );
 
   return (
     <div className={cn("flex flex-col gap-2", className)} {...props}>
@@ -150,77 +147,113 @@ export function SignupForm({
         </div>
       </div>
 
-      <form ref={formRef} onSubmit={handleSubmit(onSubmit)}>
+      <form
+        ref={formRef}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+      >
         <FieldGroup className="gap-4">
-          <Field>
-            <FieldLabel htmlFor="name">Name</FieldLabel>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Ephraim Duncan"
-              autoComplete="name"
-              {...register("name")}
-            />
-            {errors.name && (
-              <p className="text-sm text-red-500">{errors.name.message}</p>
+          <form.Field
+            name="name"
+            children={(field) => (
+              <Field>
+                <FieldLabel htmlFor="name">Name</FieldLabel>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Ephraim Duncan"
+                  autoComplete="name"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+                <FieldError errors={field.state.meta.errors} />
+              </Field>
             )}
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
-            <Input
-              id="email"
-              type="email"
-              placeholder="hello@ephraimduncan.com"
-              autoComplete="email"
-              {...register("email")}
-            />
-            {errors.email && (
-              <p className="text-sm text-red-500">{errors.email.message}</p>
+          />
+          <form.Field
+            name="email"
+            children={(field) => (
+              <Field>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="hello@ephraimduncan.com"
+                  autoComplete="email"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+                <FieldError errors={field.state.meta.errors} />
+              </Field>
             )}
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <Input
-              id="password"
-              type="password"
-              placeholder="********"
-              autoComplete="new-password"
-              {...register("password")}
-            />
-            {errors.password && (
-              <p className="text-sm text-red-500">{errors.password.message}</p>
+          />
+          <form.Field
+            name="password"
+            children={(field) => (
+              <Field>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="********"
+                  autoComplete="new-password"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+                <FieldError errors={field.state.meta.errors} />
+              </Field>
             )}
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="confirm-password">Confirm Password</FieldLabel>
-            <Input
-              id="confirm-password"
-              type="password"
-              placeholder="********"
-              autoComplete="new-password"
-              {...register("confirmPassword")}
-            />
-            {errors.confirmPassword && (
-              <p className="text-sm text-red-500">
-                {errors.confirmPassword.message}
-              </p>
+          />
+          <form.Field
+            name="confirmPassword"
+            children={(field) => (
+              <Field>
+                <FieldLabel htmlFor="confirm-password">
+                  Confirm Password
+                </FieldLabel>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="********"
+                  autoComplete="new-password"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+                <FieldError errors={field.state.meta.errors} />
+              </Field>
             )}
-          </Field>
-          {errors.root && (
-            <p className="text-sm text-red-500">{errors.root.message}</p>
-          )}
-          <Field>
-            <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
-              {isSubmitting ? "Loading..." : "Sign up"}
-            </Button>
-
-            <FieldDescription className="text-center">
-              Already have an account?{" "}
-              <Link href="/login" className="underline underline-offset-4">
-                Login
-              </Link>
-            </FieldDescription>
-          </Field>
+          />
+          <form.Subscribe
+            selector={(state) => {
+              const e = state.errorMap.onSubmit;
+              return typeof e === "string" ? e : null;
+            }}
+            children={(error) =>
+              error ? <FieldError errors={[{ message: error }]} /> : null
+            }
+          />
+          <form.Subscribe
+            selector={(state) => state.isSubmitting}
+            children={(isSubmitting) => (
+              <Field>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Loading..." : "Sign up"}
+                </Button>
+                <FieldDescription className="text-center">
+                  Already have an account?{" "}
+                  <Link href="/login" className="underline underline-offset-4">
+                    Login
+                  </Link>
+                </FieldDescription>
+              </Field>
+            )}
+          />
         </FieldGroup>
       </form>
     </div>

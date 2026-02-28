@@ -10,5 +10,6 @@ export function verificationEmail(name: string, url: string) {
       <p style="margin:0 0 16px;"><a href="${url}" style="color:#1a1a1a;">verify email →</a></p>
       <p style="margin:0;">if you didn't create an account on minimal, you can ignore this.</p>
     `),
+    text: `hey ${firstName},\n\nclick the link below to verify your email address:\n\n${url}\n\nif you didn't create an account on minimal, you can ignore this.`,
   };
 }

@@ -5,6 +5,7 @@ import { nextCookies } from "better-auth/next-js";
 import { checkout, polar, portal, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import { db } from "./db";
+import { APP_URL } from "./config";
 import { posthogServer } from "./posthog-server";
 import { sendEmail } from "./email";
 import { welcomeEmail } from "./emails/welcome";
@@ -131,6 +132,7 @@ async function ensureDefaultGroup(userId: string): Promise<void> {
 }
 
 export const auth = betterAuth({
+  baseURL: APP_URL,
   secret: process.env.BETTER_AUTH_SECRET,
   database: prismaAdapter(db, { provider: "sqlite" }),
   trustedOrigins: CHROME_EXTENSION_ID
@@ -188,14 +190,28 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
-      void sendEmail({ to: user.email, ...resetPasswordEmail(user.name, url) });
+      const result = await sendEmail({
+        to: user.email,
+        ...resetPasswordEmail(user.name, url),
+      });
+
+      if (!result.ok) {
+        throw new Error("Failed to send password reset email");
+      }
     },
   },
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     sendVerificationEmail: async ({ user, url }) => {
-      void sendEmail({ to: user.email, ...verificationEmail(user.name, url) });
+      const result = await sendEmail({
+        to: user.email,
+        ...verificationEmail(user.name, url),
+      });
+
+      if (!result.ok) {
+        throw new Error("Failed to send verification email");
+      }
     },
   },
   ...(googleOAuthEnabled && {
@@ -223,7 +239,14 @@ export const auth = betterAuth({
           distinctId: session.user.id,
           event: "signup_completed",
         });
-        void sendEmail({ to: session.user.email, ...welcomeEmail(session.user.name) });
+        const result = await sendEmail({
+          to: session.user.email,
+          ...welcomeEmail(session.user.name),
+        });
+
+        if (!result.ok) {
+          console.error("[auth] Failed to send welcome email", result.error);
+        }
       } else {
         posthogServer?.capture({
           distinctId: session.user.id,

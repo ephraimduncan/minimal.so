@@ -3,43 +3,20 @@ import { getSession } from "@/lib/auth-server";
 import { db } from "@/lib/db";
 import { canonicalizeUrl } from "@/lib/utils";
 import { z } from "zod";
+import { getAllowedOrigins, corsHeaders, handleOptions } from "../../shared";
 
 const checkSchema = z.object({
   urls: z.array(z.string()).min(1).max(100),
 });
 
-const extensionId = process.env.CHROME_EXTENSION_ID;
-
-function getAllowedOrigins(): string[] {
-  const origins: string[] = [];
-  if (extensionId) origins.push(`chrome-extension://${extensionId}`);
-  if (process.env.NODE_ENV === "development")
-    origins.push("http://localhost:3000");
-  return origins;
-}
-
-function corsHeaders(origin: string | null): HeadersInit {
-  const allowedOrigins = getAllowedOrigins();
-  const allowed = origin && allowedOrigins.includes(origin);
-  return {
-    "Access-Control-Allow-Origin": allowed ? origin : "",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Credentials": "true",
-  };
-}
-
 export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
-  return new NextResponse(null, {
-    status: 204,
-    headers: corsHeaders(request.headers.get("origin")),
-  });
+  return handleOptions(request, getAllowedOrigins());
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const origin = request.headers.get("origin");
-  const headers = corsHeaders(origin);
   const allowedOrigins = getAllowedOrigins();
+  const origin = request.headers.get("origin");
+  const headers = corsHeaders(origin, allowedOrigins);
 
   if (!origin || !allowedOrigins.includes(origin)) {
     return NextResponse.json(

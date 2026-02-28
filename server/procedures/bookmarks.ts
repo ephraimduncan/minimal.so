@@ -11,7 +11,7 @@ import {
   bulkMoveBookmarksSchema,
 } from "@/lib/schema";
 import { getUrlMetadata } from "@/lib/url-metadata";
-import { normalizeUrl } from "@/lib/utils";
+import { normalizeUrl, canonicalizeUrl } from "@/lib/utils";
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
 import {
@@ -123,6 +123,7 @@ export const createBookmark = authed
       data: {
         title,
         url,
+        normalizedUrl: url ? canonicalizeUrl(url) : null,
         favicon,
         type: input.type,
         color: input.color,
@@ -227,7 +228,9 @@ export const refetchBookmark = authed
     });
 
     if (!existing || !existing.url) {
-      throw new Error("Bookmark not found or has no URL");
+      throw new ORPCError("NOT_FOUND", {
+        message: "Bookmark not found or has no URL",
+      });
     }
 
     const metadata = await getUrlMetadata(existing.url);

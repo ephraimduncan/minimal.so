@@ -4,11 +4,6 @@ import { posthogServer } from "@/lib/posthog-server";
 import { db } from "@/lib/db";
 import { getUrlMetadata, isArxivHost } from "@/lib/url-metadata";
 import { canonicalizeUrl, normalizeUrl } from "@/lib/utils";
-import {
-  FREE_BOOKMARK_LIMIT,
-  FREE_GROUP_LIMIT,
-  hasActiveProAccess,
-} from "@/lib/plan-limits";
 import { z } from "zod";
 import {
   getAllowedOrigins,
@@ -99,7 +94,6 @@ async function resolveDestinationGroup(
   userId: string,
   source: string | undefined,
   destinationGroupName: string | undefined,
-  isPro: boolean,
 ): Promise<{ id: string; name: string }> {
   const importGroupName =
     destinationGroupName || (source ? IMPORT_GROUP_MAP[source] : undefined);
@@ -110,13 +104,6 @@ async function resolveDestinationGroup(
       select: { id: true, name: true },
     });
     if (existing) return existing;
-
-    if (!isPro) {
-      const groupCount = await db.group.count({ where: { userId } });
-      if (groupCount >= FREE_GROUP_LIMIT) {
-        throw new Error("GROUP_LIMIT");
-      }
-    }
 
     const created = await db.group.create({
       data: {
@@ -181,19 +168,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const normalized = canonicalizeUrl(url);
     const eventTime = capturedAt ? new Date(capturedAt) : new Date();
 
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: { plan: true, subscriptionStatus: true },
-    });
-    const isPro = hasActiveProAccess(user?.plan, user?.subscriptionStatus);
-
     let targetGroup: { id: string; name: string };
     try {
       targetGroup = await resolveDestinationGroup(
         userId,
         source,
         destinationGroup,
-        isPro,
       );
     } catch (err) {
       if (err instanceof Error && err.message === "NO_GROUP") {
@@ -201,14 +181,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           "No bookmark group found. Please create one first.",
           "No Group",
           400,
-          headers,
-        );
-      }
-      if (err instanceof Error && err.message === "GROUP_LIMIT") {
-        return jsonError(
-          "Free plan group limit reached. Upgrade to create more groups.",
-          "Forbidden",
-          403,
           headers,
         );
       }
@@ -277,18 +249,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         },
         { status: 200, headers },
       );
-    }
-
-    if (!isPro) {
-      const bookmarkCount = await db.bookmark.count({ where: { userId } });
-      if (bookmarkCount >= FREE_BOOKMARK_LIMIT) {
-        return jsonError(
-          "Free plan bookmark limit reached. Upgrade to save more bookmarks.",
-          "Forbidden",
-          403,
-          headers,
-        );
-      }
     }
 
     const metadata = await metadataPromise;

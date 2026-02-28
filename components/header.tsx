@@ -56,8 +56,8 @@ import { cn } from "@/lib/utils";
 import { type GroupItem } from "@/lib/schema";
 import type { ProfileData } from "@/components/dashboard-content";
 import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog";
-import { Badge } from "@/components/ui/badge";
-import { FREE_GROUP_LIMIT, hasActiveProAccess } from "@/lib/plan-limits";
+
+import { hasActiveProAccess } from "@/lib/plan-limits";
 
 const SettingsDialog = dynamic(
   () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
@@ -130,9 +130,6 @@ export function Header({
     profile?.subscriptionStatus,
   );
   const shouldShowUpgrade = !hasProAccess;
-  const hasReachedFreeGroupLimit =
-    !hasProAccess && groups.length >= FREE_GROUP_LIMIT;
-
   const handleUpgradeClick = () => {
     startBillingTransition(async () => {
       const defaultCycle =
@@ -287,21 +284,13 @@ export function Header({
             ))}
             <DropdownMenuItem
               onClick={() => {
-                if (!readOnly && !hasReachedFreeGroupLimit) setDialogOpen(true);
+                if (!readOnly) setDialogOpen(true);
               }}
-              disabled={readOnly || hasReachedFreeGroupLimit}
+              disabled={readOnly}
               className="rounded-lg w-full px-2 py-1.5"
             >
               <IconPlus className="h-4 w-4 mr-0" />
               Create Group
-              {hasReachedFreeGroupLimit ? (
-                <Badge
-                  variant="outline"
-                  className="ml-auto h-5 rounded-md px-1.5 text-[10px]"
-                >
-                  Pro
-                </Badge>
-              ) : null}
             </DropdownMenuItem>
             {!readOnly && onToggleGroupVisibility && (
               <DropdownMenuItem

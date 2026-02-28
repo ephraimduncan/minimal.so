@@ -12,7 +12,7 @@ async function DashboardData() {
     redirect("/login");
   }
 
-  const [groups, user, firstGroupWithBookmarks, totalBookmarkCount] =
+  const [groups, user, firstGroupWithBookmarks] =
     await Promise.all([
       db.group.findMany({
         where: { userId: session.user.id },
@@ -47,7 +47,6 @@ async function DashboardData() {
           },
         },
       }),
-      db.bookmark.count({ where: { userId: session.user.id } }),
     ]);
 
   const groupItems: GroupItem[] = groups.map((g) => ({
@@ -77,7 +76,6 @@ async function DashboardData() {
       session={session}
       initialGroups={groupItems}
       initialBookmarks={initialBookmarks}
-      initialTotalBookmarks={totalBookmarkCount}
       profile={
         user ?? {
           image: session.user.image ?? null,

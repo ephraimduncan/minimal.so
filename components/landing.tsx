@@ -34,7 +34,7 @@ export function Landing() {
           <p className="text-zinc-600">
             simple, fast, and minimal bookmark manager.
           </p>
-          <nav className="mt-5 flex items-center gap-2" aria-label="Primary">
+          <nav className="mt-5 flex flex-wrap items-center justify-center gap-2" aria-label="Primary">
             <Link
               href="/login"
               className="rounded-full bg-zinc-900 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 sm:px-8"

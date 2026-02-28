@@ -11,7 +11,6 @@ import { Header } from "@/components/header";
 import { BookmarkInput } from "@/components/bookmark-input";
 import { BookmarkList } from "@/components/bookmark-list";
 import { BookmarkListSkeleton } from "@/components/dashboard-skeleton";
-import { UpgradeBanner } from "@/components/upgrade-banner";
 
 const MultiSelectToolbar = dynamic(
   () =>
@@ -43,11 +42,7 @@ import { client, orpc } from "@/lib/orpc";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useFocusRefetch } from "@/hooks/use-focus-refetch";
 import { useLatestRef } from "@/lib/hooks/use-latest-ref";
-import {
-  FREE_BOOKMARK_LIMIT,
-  FREE_GROUP_LIMIT,
-  hasActiveProAccess,
-} from "@/lib/plan-limits";
+import { hasActiveProAccess } from "@/lib/plan-limits";
 import type { BookmarkType, GroupItem, BookmarkItem } from "@/lib/schema";
 import type { Session } from "@/lib/auth";
 
@@ -68,7 +63,6 @@ interface DashboardContentProps {
   session: NonNullable<Session>;
   initialGroups: GroupItem[];
   initialBookmarks: BookmarkItem[];
-  initialTotalBookmarks: number;
   profile: ProfileData;
 }
 
@@ -82,7 +76,6 @@ export function DashboardContent({
   session,
   initialGroups,
   initialBookmarks,
-  initialTotalBookmarks,
   profile,
 }: DashboardContentProps) {
   const router = useRouter();
@@ -113,16 +106,6 @@ export function DashboardContent({
 
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data]);
   const hasProAccess = hasActiveProAccess(profile.plan, profile.subscriptionStatus);
-  const groupSumBookmarks = useMemo(
-    () => groups.reduce((sum, group) => sum + (group.bookmarkCount ?? 0), 0),
-    [groups],
-  );
-  const totalBookmarks = groupsQuery.dataUpdatedAt > mountedAt
-    ? groupSumBookmarks
-    : initialTotalBookmarks;
-  const hasReachedFreeBookmarkLimit =
-    !hasProAccess && totalBookmarks >= FREE_BOOKMARK_LIMIT;
-  const hasReachedFreeGroupLimit = !hasProAccess && groups.length >= FREE_GROUP_LIMIT;
 
   const hasUsername = profile.username !== null;
   const publicGroupIds = useMemo(
@@ -1034,11 +1017,6 @@ export function DashboardContent({
       const trimmedValue = value.trim();
       if (!trimmedValue) return;
 
-      if (hasReachedFreeBookmarkLimit) {
-        toast.error("You have reached the free bookmark limit. Upgrade to add more bookmarks.");
-        return;
-      }
-
       const colorResult = parseColor(trimmedValue);
 
       if (colorResult.isColor) {
@@ -1069,16 +1047,11 @@ export function DashboardContent({
       setSearchQuery("");
       setSelectedIndex(-1);
     },
-    [currentGroupId, createBookmarkMutation, hasReachedFreeBookmarkLimit],
+    [currentGroupId, createBookmarkMutation],
   );
 
   const handleCreateGroup = useCallback(
     (name: string) => {
-      if (hasReachedFreeGroupLimit) {
-        toast.error("You have reached the free group limit. Upgrade to create more groups.");
-        return;
-      }
-
       const palette = [
         "#3E63DD",
         "#208368",
@@ -1103,7 +1076,7 @@ export function DashboardContent({
 
       createGroupMutation.mutate({ name, color });
     },
-    [createGroupMutation, groups, hasReachedFreeGroupLimit],
+    [createGroupMutation, groups],
   );
 
   const handleDeleteGroup = useCallback(
@@ -1333,9 +1306,6 @@ export function DashboardContent({
           onChange={handleSearchChange}
           onSubmit={handleAddBookmark}
         />
-        {!hasProAccess && (
-          <UpgradeBanner totalBookmarks={totalBookmarks} />
-        )}
         {bookmarksQuery.isPending && !bookmarksQuery.data ? (
           <BookmarkListSkeleton />
         ) : (

@@ -14,11 +14,6 @@ import { getUrlMetadata } from "@/lib/url-metadata";
 import { normalizeUrl, canonicalizeUrl } from "@/lib/utils";
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
-import {
-  FREE_BOOKMARK_LIMIT,
-  FREE_GROUP_LIMIT,
-  hasActiveProAccess,
-} from "@/lib/plan-limits";
 
 async function assertGroupOwnership(groupId: string, userId: string) {
   const group = await db.group.findFirst({
@@ -27,37 +22,6 @@ async function assertGroupOwnership(groupId: string, userId: string) {
   });
   if (!group) {
     throw new ORPCError("NOT_FOUND", { message: "Group not found" });
-  }
-}
-
-async function hasProAccess(userId: string): Promise<boolean> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { plan: true, subscriptionStatus: true },
-  });
-
-  return hasActiveProAccess(user?.plan, user?.subscriptionStatus);
-}
-
-async function assertCanCreateBookmark(userId: string): Promise<void> {
-  if (await hasProAccess(userId)) return;
-
-  const bookmarkCount = await db.bookmark.count({ where: { userId } });
-  if (bookmarkCount >= FREE_BOOKMARK_LIMIT) {
-    throw new ORPCError("FORBIDDEN", {
-      message: "Free plan limit reached. Upgrade to add more bookmarks.",
-    });
-  }
-}
-
-async function assertCanCreateGroup(userId: string): Promise<void> {
-  if (await hasProAccess(userId)) return;
-
-  const groupCount = await db.group.count({ where: { userId } });
-  if (groupCount >= FREE_GROUP_LIMIT) {
-    throw new ORPCError("FORBIDDEN", {
-      message: "Free plan limit reached. Upgrade to create more groups.",
-    });
   }
 }
 
@@ -109,14 +73,10 @@ export const createBookmark = authed
         return bookmark;
       }
 
-      await assertCanCreateBookmark(context.user.id);
-
       if (metadata.title) {
         title = metadata.title;
       }
       favicon = metadata.favicon;
-    } else {
-      await assertCanCreateBookmark(context.user.id);
     }
 
     const bookmark = await db.bookmark.create({
@@ -189,8 +149,6 @@ export const listGroups = authed.handler(async ({ context }) => {
 export const createGroup = authed
   .input(createGroupSchema)
   .handler(async ({ context, input }) => {
-    await assertCanCreateGroup(context.user.id);
-
     const group = await db.group.create({
       data: {
         ...input,

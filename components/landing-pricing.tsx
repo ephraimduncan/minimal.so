@@ -7,13 +7,9 @@ import { toast } from "sonner";
 import { TextMorph } from "torph/react";
 import { authClient, useSession } from "@/lib/auth-client";
 import {
-  PRICING_FREE_BOOKMARKS_ICON,
-  PRICING_FREE_COLLECTIONS_ICON,
   PRICING_FREE_TAGS_ICON,
   PRICING_FREE_EXPORT_ICON,
   PRICING_FREE_SEARCH_ICON,
-  PRICING_FREE_DEVICE_ICON,
-  PRICING_FREE_MOVE_ICON,
   PRICING_FREE_SHARE_ICON,
   PRICING_PRO_EVERYTHING_ICON,
   PRICING_PRO_UNLIMITED_BOOKMARKS_ICON,
@@ -32,21 +28,19 @@ const CHECKOUT_SLUGS: Record<BillingCycle, string> = {
 };
 
 const FREE_PLAN_FEATURES = [
-  { icon: PRICING_FREE_BOOKMARKS_ICON, label: "Up to 500 bookmarks" },
-  { icon: PRICING_FREE_COLLECTIONS_ICON, label: "Up to 50 collections" },
+  { icon: PRICING_PRO_UNLIMITED_BOOKMARKS_ICON, label: "Unlimited bookmarks" },
+  {
+    icon: PRICING_PRO_UNLIMITED_COLLECTIONS_ICON,
+    label: "Unlimited collections",
+  },
   { icon: PRICING_FREE_EXPORT_ICON, label: "Export your data anytime" },
   { icon: PRICING_FREE_SEARCH_ICON, label: "Search & keyboard shortcuts" },
-  { icon: PRICING_FREE_DEVICE_ICON, label: "Works on any device" },
-  {
-    icon: PRICING_FREE_MOVE_ICON,
-    label: "Move bookmarks between collections",
-  },
   {
     icon: PRICING_FREE_SHARE_ICON,
     label: "Public profile",
   },
   {
-    icon: PRICING_FREE_COLLECTIONS_ICON,
+    icon: PRICING_PRO_UNLIMITED_COLLECTIONS_ICON,
     label: "Shared collections",
   },
 ];
@@ -58,16 +52,8 @@ const PRO_PLAN_FEATURES: {
 }[] = [
   { icon: PRICING_PRO_EVERYTHING_ICON, label: "Everything in Free" },
   {
-    icon: PRICING_PRO_UNLIMITED_BOOKMARKS_ICON,
-    label: "Unlimited bookmarks",
-  },
-  {
-    icon: PRICING_PRO_UNLIMITED_COLLECTIONS_ICON,
-    label: "Unlimited collections",
-  },
-  {
     icon: PRICING_FREE_TAGS_ICON,
-    label: "Tags, metadata, colors, and notes",
+    label: "Tags, colors, and notes",
     soon: true,
   },
   { icon: PRICING_PRO_IMPORT_ICON, label: "Import from browser" },
@@ -76,18 +62,9 @@ const PRO_PLAN_FEATURES: {
   { icon: PRICING_PRO_SUPPORT_ICON, label: "Priority support" },
 ];
 
-const PRO_PLAN_PRICING: Record<
-  BillingCycle,
-  { priceLabel: string; details: string }
-> = {
-  monthly: {
-    priceLabel: "$4.99/month",
-    details: "Billed monthly.",
-  },
-  yearly: {
-    priceLabel: "$49.99/year",
-    details: "Billed yearly.",
-  },
+const PRO_PLAN_PRICING: Record<BillingCycle, { priceLabel: string }> = {
+  monthly: { priceLabel: "$5/month" },
+  yearly: { priceLabel: "$50/year" },
 };
 
 function PricingFeature({
@@ -221,10 +198,6 @@ export function LandingPricing() {
         </h2>
         <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-zinc-200"></div>
       </div>
-      <p className="mx-auto max-w-[450px] text-center text-sm text-zinc-600">
-        Choose the plan that fits your workflow.
-      </p>
-
       <BillingToggle value={billingCycle} onChange={setBillingCycle} />
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -238,10 +211,7 @@ export function LandingPricing() {
           </button>
           <h3 className="mb-1 text-xl font-semibold">Free</h3>
           <p className="text-lg">$0</p>
-          <p className="my-4 text-sm text-zinc-600">
-            For individuals getting started.
-          </p>
-          <div className="flex flex-col gap-1.5">
+          <div className="mt-4 flex flex-col gap-1.5">
             {FREE_PLAN_FEATURES.map((feature) => (
               <PricingFeature key={feature.label} feature={feature} />
             ))}
@@ -265,11 +235,7 @@ export function LandingPricing() {
           >
             {selectedPricing.priceLabel}
           </TextMorph>
-          <p className="my-4 text-sm text-zinc-600">
-            {selectedPricing.details} For power users who need scale and
-            advanced portability.
-          </p>
-          <div className="flex flex-col gap-1.5">
+          <div className="mt-4 flex flex-col gap-1.5">
             {PRO_PLAN_FEATURES.map((feature) => (
               <PricingFeature key={feature.label} feature={feature} />
             ))}

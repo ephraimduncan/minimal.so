@@ -1,9 +1,6 @@
 export const VALID_PLANS = ["free", "pro"] as const;
 export type PlanValue = (typeof VALID_PLANS)[number];
 
-export const FREE_BOOKMARK_LIMIT = 500;
-export const FREE_GROUP_LIMIT = 50;
-
 type SubscriptionStatus = string | null | undefined;
 
 export function hasActiveProAccess(

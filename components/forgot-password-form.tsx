@@ -2,45 +2,45 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useForm } from "@tanstack/react-form";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { requestPasswordReset } from "@/lib/auth-client";
+import { forgotPasswordSchema } from "@/lib/schema";
 
 export function ForgotPasswordForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    const { error } = await requestPasswordReset({
-      email,
-      redirectTo: "/reset-password",
-    });
-
-    setLoading(false);
-
-    if (error) {
-      setError(error.message ?? "Something went wrong");
-      return;
-    }
-
-    setSubmitted(true);
-  };
+  const form = useForm({
+    defaultValues: { email: "" },
+    validators: {
+      onSubmit: forgotPasswordSchema,
+      onSubmitAsync: async ({ value }) => {
+        const { error } = await requestPasswordReset({
+          email: value.email,
+          redirectTo: "/reset-password",
+        });
+        if (error) {
+          return { form: error.message ?? "Something went wrong", fields: {} };
+        }
+        return null;
+      },
+    },
+    onSubmit: () => {
+      setSubmitted(true);
+    },
+  });
 
   if (submitted) {
     return (
@@ -69,35 +69,56 @@ export function ForgotPasswordForm({
         </p>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+      >
         <FieldGroup className="gap-4">
-          <Field>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
-            <Input
-              id="email"
-              type="email"
-              placeholder="hello@ephraimduncan.com"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </Field>
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
-          <Field>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Loading..." : "Send reset link"}
-            </Button>
-
-            <FieldDescription className="text-center">
-              Remember your password?{" "}
-              <Link href="/login" className="underline underline-offset-4">
-                Login
-              </Link>
-            </FieldDescription>
-          </Field>
+          <form.Field
+            name="email"
+            children={(field) => (
+              <Field>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="hello@ephraimduncan.com"
+                  autoComplete="email"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+                <FieldError errors={field.state.meta.errors} />
+              </Field>
+            )}
+          />
+          <form.Subscribe
+            selector={(state) => {
+              const e = state.errorMap.onSubmit;
+              return typeof e === "string" ? e : null;
+            }}
+            children={(error) =>
+              error ? <FieldError errors={[{ message: error }]} /> : null
+            }
+          />
+          <form.Subscribe
+            selector={(state) => state.isSubmitting}
+            children={(isSubmitting) => (
+              <Field>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Loading..." : "Send reset link"}
+                </Button>
+                <FieldDescription className="text-center">
+                  Remember your password?{" "}
+                  <Link href="/login" className="underline underline-offset-4">
+                    Login
+                  </Link>
+                </FieldDescription>
+              </Field>
+            )}
+          />
         </FieldGroup>
       </form>
     </div>

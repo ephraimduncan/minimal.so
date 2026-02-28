@@ -62,8 +62,7 @@ export async function sendEmail({
 const FONT_STACK =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif";
 
-export function emailLayout(content: string, baseUrl?: string): string {
-  const url = baseUrl ?? APP_URL;
+export function emailLayout(content: string): string {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8" /></head>
@@ -77,7 +76,7 @@ export function emailLayout(content: string, baseUrl?: string): string {
               ${content}
               <hr style="border:none;border-top:1px solid #e5e5e5;margin:32px 0 16px;" />
               <p style="font-size:0.8em;color:#999;margin:0;">
-                minimal — <a href="${url}" style="color:#999;">minimal.so</a>
+                minimal — <a href="${APP_URL}" style="color:#999;">minimal.so</a>
               </p>
             </td>
           </tr>

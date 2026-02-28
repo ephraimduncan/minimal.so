@@ -89,7 +89,7 @@ export const auth = betterAuth({
         });
         const result = await sendEmail({
           to: session.user.email,
-          ...welcomeEmail(session.user.name, APP_URL),
+          ...welcomeEmail(session.user.name),
         });
 
         if (!result.ok) {

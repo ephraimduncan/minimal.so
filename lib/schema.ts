@@ -132,6 +132,20 @@ export const bulkMoveBookmarksSchema = z.object({
   targetGroupId: z.string(),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.email("Invalid email address"),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
 export const signupSchema = z
   .object({
     name: z.string().min(1, "Name is required"),
@@ -159,9 +173,6 @@ export type UpdateBookmark = z.infer<typeof updateBookmarkSchema>;
 export type CreateGroup = z.infer<typeof createGroupSchema>;
 export type UpdateGroup = z.infer<typeof updateGroupSchema>;
 export type UpdateProfile = z.infer<typeof updateProfileSchema>;
-export type SignupFormData = z.infer<typeof signupSchema>;
-export type LoginFormData = z.infer<typeof loginSchema>;
-
 export interface ImportBookmarksResponse {
   success: boolean;
   groupId?: string;

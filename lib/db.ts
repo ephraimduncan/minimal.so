@@ -10,7 +10,11 @@ const databaseUrl =
   process.env.DATABASE_URL ??
   "file:./dev.db";
 
-if (process.env.NODE_ENV === "production" && databaseUrl === "file:./dev.db") {
+if (
+  process.env.NODE_ENV === "production" &&
+  !process.env.NEXT_PHASE &&
+  databaseUrl === "file:./dev.db"
+) {
   throw new Error("No database URL configured for production");
 }
 

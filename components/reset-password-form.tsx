@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useForm } from "@tanstack/react-form";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { resetPassword } from "@/lib/auth-client";
+import { resetPasswordSchema } from "@/lib/schema";
+import { toast } from "sonner";
 
 export function ResetPasswordForm({
   className,
@@ -23,9 +26,26 @@ export function ResetPasswordForm({
   const token = searchParams.get("token");
   const urlError = searchParams.get("error");
 
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const form = useForm({
+    defaultValues: { password: "", confirmPassword: "" },
+    validators: {
+      onSubmit: resetPasswordSchema,
+      onSubmitAsync: async ({ value }) => {
+        const { error } = await resetPassword({
+          newPassword: value.password,
+          token: token!,
+        });
+        if (error) {
+          return { form: error.message ?? "Something went wrong", fields: {} };
+        }
+        return null;
+      },
+    },
+    onSubmit: () => {
+      toast.success("Password reset successfully");
+      router.push("/login");
+    },
+  });
 
   if (urlError === "INVALID_TOKEN" || !token) {
     return (
@@ -48,23 +68,6 @@ export function ResetPasswordForm({
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    const { error } = await resetPassword({ newPassword: password, token });
-
-    setLoading(false);
-
-    if (error) {
-      setError(error.message ?? "Something went wrong");
-      return;
-    }
-
-    router.push("/login");
-  };
-
   return (
     <div className={cn("flex flex-col gap-2", className)} {...props}>
       <div className="flex flex-col gap-1">
@@ -74,34 +77,78 @@ export function ResetPasswordForm({
         </p>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+      >
         <FieldGroup className="gap-4">
-          <Field>
-            <FieldLabel htmlFor="password">New password</FieldLabel>
-            <Input
-              id="password"
-              type="password"
-              placeholder="********"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </Field>
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
-          <Field>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Loading..." : "Reset password"}
-            </Button>
-
-            <FieldDescription className="text-center">
-              <Link href="/login" className="underline underline-offset-4">
-                Back to login
-              </Link>
-            </FieldDescription>
-          </Field>
+          <form.Field
+            name="password"
+            children={(field) => (
+              <Field>
+                <FieldLabel htmlFor="password">New password</FieldLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="********"
+                  autoComplete="new-password"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+                <FieldError errors={field.state.meta.errors} />
+              </Field>
+            )}
+          />
+          <form.Field
+            name="confirmPassword"
+            children={(field) => (
+              <Field>
+                <FieldLabel htmlFor="confirm-password">
+                  Confirm password
+                </FieldLabel>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="********"
+                  autoComplete="new-password"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+                <FieldError errors={field.state.meta.errors} />
+              </Field>
+            )}
+          />
+          <form.Subscribe
+            selector={(state) => {
+              const e = state.errorMap.onSubmit;
+              return typeof e === "string" ? e : null;
+            }}
+            children={(error) =>
+              error ? <FieldError errors={[{ message: error }]} /> : null
+            }
+          />
+          <form.Subscribe
+            selector={(state) => state.isSubmitting}
+            children={(isSubmitting) => (
+              <Field>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Loading..." : "Reset password"}
+                </Button>
+                <FieldDescription className="text-center">
+                  <Link
+                    href="/login"
+                    className="underline underline-offset-4"
+                  >
+                    Back to login
+                  </Link>
+                </FieldDescription>
+              </Field>
+            )}
+          />
         </FieldGroup>
       </form>
     </div>

@@ -10,5 +10,6 @@ export function resetPasswordEmail(name: string, url: string) {
       <p style="margin:0 0 16px;"><a href="${url}" style="color:#1a1a1a;">reset password →</a></p>
       <p style="margin:0;">if you didn't request this, you can safely ignore this email.</p>
     `),
+    text: `hey ${firstName},\n\nsomeone requested a password reset for your minimal account. visit this link to set a new password:\n\n${url}\n\nif you didn't request this, you can safely ignore this email.`,
   };
 }

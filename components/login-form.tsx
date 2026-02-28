@@ -1,14 +1,15 @@
 "use client";
 
+import { useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
@@ -17,7 +18,7 @@ import { OAuthButton } from "@/components/oauth-button";
 import { useAutofill } from "@/hooks/use-autofill";
 import posthog from "posthog-js";
 import { signIn } from "@/lib/auth-client";
-import { loginSchema, type LoginFormData } from "@/lib/schema";
+import { loginSchema } from "@/lib/schema";
 
 const LOGIN_FIELDS = [
   { name: "email", id: "email" },
@@ -29,46 +30,42 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter();
+  type AuthData = Awaited<ReturnType<typeof signIn.email>>["data"];
+  const authRef = useRef<AuthData>(null);
 
-  const {
-    register,
-    handleSubmit,
-    setError,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
+  const form = useForm({
+    defaultValues: { email: "", password: "" },
+    validators: {
+      onSubmit: loginSchema,
+      onSubmitAsync: async ({ value }) => {
+        const { data, error } = await signIn.email({
+          email: value.email,
+          password: value.password,
+        });
+        if (error) {
+          return { form: error.message ?? "An error occurred", fields: {} };
+        }
+        authRef.current = data;
+        return null;
+      },
+    },
+    onSubmit: () => {
+      if (authRef.current?.user) {
+        posthog.identify(authRef.current.user.id, {
+          email: authRef.current.user.email,
+          name: authRef.current.user.name,
+          created_at: authRef.current.user.createdAt,
+        });
+        posthog.capture("login_completed");
+      }
+      router.push("/dashboard");
     },
   });
 
-  // Detect password manager autofill via CSS animation
-  const formRef = useAutofill(setValue, LOGIN_FIELDS);
-
-  const onSubmit = async (data: LoginFormData) => {
-    const { data: authData, error } = await signIn.email({
-      email: data.email,
-      password: data.password,
-    });
-
-    if (error) {
-      setError("root", { message: error.message ?? "An error occurred" });
-      return;
-    }
-
-    if (authData?.user) {
-      posthog.identify(authData.user.id, {
-        email: authData.user.email,
-        name: authData.user.name,
-        created_at: authData.user.createdAt,
-      });
-      posthog.capture("login_completed");
-    }
-
-    router.push("/dashboard");
-  };
+  const formRef = useAutofill(
+    (name, value) => form.setFieldValue(name, value),
+    LOGIN_FIELDS
+  );
 
   return (
     <div className={cn("flex flex-col gap-2", className)} {...props}>
@@ -92,57 +89,83 @@ export function LoginForm({
         </div>
       </div>
 
-      <form ref={formRef} onSubmit={handleSubmit(onSubmit)}>
+      <form
+        ref={formRef}
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+      >
         <FieldGroup className="gap-4">
-          <Field>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
-            <Input
-              id="email"
-              type="email"
-              placeholder="hello@ephraimduncan.com"
-              autoComplete="email"
-              {...register("email")}
-            />
-            {errors.email && (
-              <p className="text-sm text-red-500">{errors.email.message}</p>
+          <form.Field
+            name="email"
+            children={(field) => (
+              <Field>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="hello@ephraimduncan.com"
+                  autoComplete="email"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+                <FieldError errors={field.state.meta.errors} />
+              </Field>
             )}
-          </Field>
-          <Field>
-            <div className="flex items-center">
-              <FieldLabel htmlFor="password">Password</FieldLabel>
-              <a
-                href="#"
-                className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-              >
-                Forgot your password?
-              </a>
-            </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="********"
-              autoComplete="current-password"
-              {...register("password")}
-            />
-            {errors.password && (
-              <p className="text-sm text-red-500">{errors.password.message}</p>
+          />
+          <form.Field
+            name="password"
+            children={(field) => (
+              <Field>
+                <div className="flex items-center">
+                  <FieldLabel htmlFor="password">Password</FieldLabel>
+                  <Link
+                    href="/forgot-password"
+                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                  >
+                    Forgot your password?
+                  </Link>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="********"
+                  autoComplete="current-password"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+                <FieldError errors={field.state.meta.errors} />
+              </Field>
             )}
-          </Field>
-          {errors.root && (
-            <p className="text-sm text-red-500">{errors.root.message}</p>
-          )}
-          <Field>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Loading..." : "Login"}
-            </Button>
-
-            <FieldDescription className="text-center">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="underline underline-offset-4">
-                Sign up
-              </Link>
-            </FieldDescription>
-          </Field>
+          />
+          <form.Subscribe
+            selector={(state) => {
+              const e = state.errorMap.onSubmit;
+              return typeof e === "string" ? e : null;
+            }}
+            children={(error) =>
+              error ? <FieldError errors={[{ message: error }]} /> : null
+            }
+          />
+          <form.Subscribe
+            selector={(state) => state.isSubmitting}
+            children={(isSubmitting) => (
+              <Field>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Loading..." : "Login"}
+                </Button>
+                <FieldDescription className="text-center">
+                  Don&apos;t have an account?{" "}
+                  <Link href="/signup" className="underline underline-offset-4">
+                    Sign up
+                  </Link>
+                </FieldDescription>
+              </Field>
+            )}
+          />
         </FieldGroup>
       </form>
     </div>

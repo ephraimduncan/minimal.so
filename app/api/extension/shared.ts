@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import { APP_URL } from "@/lib/config";
 
 const extensionId = process.env.CHROME_EXTENSION_ID;
 
 export function getAllowedOrigins(
   options?: { includeWebOrigin?: boolean },
 ): string[] {
-  const origins: string[] = [];
-  if (extensionId) origins.push(`chrome-extension://${extensionId}`);
-  if (process.env.NODE_ENV === "development")
-    origins.push("http://localhost:3000");
-  if (options?.includeWebOrigin) origins.push("https://minimal.so");
-  return origins;
+  const origins = new Set<string>();
+  if (extensionId) origins.add(`chrome-extension://${extensionId}`);
+  if (process.env.NODE_ENV === "development") {
+    origins.add("http://localhost:3000");
+  }
+  if (options?.includeWebOrigin) {
+    origins.add(APP_URL);
+  }
+  return Array.from(origins);
 }
 
 export function corsHeaders(

@@ -1,3 +1,5 @@
+import { APP_URL } from "./config";
+
 const AUTOSEND_API_URL = "https://api.autosend.com/v1/mails/send";
 const FROM_EMAIL = "ephraim@minimal.so";
 const FROM_NAME = "minimal";
@@ -9,11 +11,23 @@ interface SendEmailParams {
   text?: string;
 }
 
-export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
+export interface SendEmailResult {
+  ok: boolean;
+  status?: number;
+  error?: string;
+}
+
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+}: SendEmailParams): Promise<SendEmailResult> {
   const apiKey = process.env.AUTOSEND_API_KEY;
   if (!apiKey) {
-    console.error("[email] AUTOSEND_API_KEY not set, skipping email to", to);
-    return;
+    const error = "AUTOSEND_API_KEY not set";
+    console.error(`[email] ${error}, skipping email to`, to);
+    return { ok: false, error };
   }
 
   try {
@@ -35,9 +49,13 @@ export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
     if (!res.ok) {
       const body = await res.text();
       console.error("[email] Autosend error:", res.status, body);
+      return { ok: false, status: res.status, error: body || "Autosend error" };
     }
+    return { ok: true, status: res.status };
   } catch (err) {
     console.error("[email] Failed to send:", err);
+    const error = err instanceof Error ? err.message : "Unknown email error";
+    return { ok: false, error };
   }
 }
 
@@ -49,7 +67,7 @@ export function emailLayout(content: string): string {
 <html>
 <head><meta charset="utf-8" /></head>
 <body style="margin:0;padding:0;background:#ffffff;font-family:${FONT_STACK};font-size:1.077em;line-height:155%;color:#1a1a1a;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:10px 0;">
     <tr>
       <td align="left">
         <table cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
@@ -58,7 +76,7 @@ export function emailLayout(content: string): string {
               ${content}
               <hr style="border:none;border-top:1px solid #e5e5e5;margin:32px 0 16px;" />
               <p style="font-size:0.8em;color:#999;margin:0;">
-                minimal — <a href="https://minimal.so" style="color:#999;">minimal.so</a>
+                minimal — <a href="${APP_URL}" style="color:#999;">minimal.so</a>
               </p>
             </td>
           </tr>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPublicProfileData } from "@/server/queries/public-profile";
 import { buildRssFeed, buildAtomFeed } from "@/lib/feed";
 import { slugify } from "@/lib/utils";
+import { APP_URL } from "@/lib/config";
 
 const FEED_FORMATS = {
   rss: {
@@ -35,14 +36,13 @@ export async function generateFeedResponse(
     ? data.bookmarks.filter((b) => b.groupName === matchedGroup.name)
     : data.bookmarks;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://minimal.so";
   const user = {
     name: data.user.name,
     username: data.user.username,
     bio: data.user.bio,
   };
   const { builder, contentType } = FEED_FORMATS[format];
-  const xml = builder(user, bookmarks, baseUrl, matchedGroup?.name, matchedGroup ? groupSlug : undefined);
+  const xml = builder(user, bookmarks, APP_URL, matchedGroup?.name, matchedGroup ? groupSlug : undefined);
 
   return new NextResponse(xml, {
     headers: {

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { getPublicProfileData } from "@/server/queries/public-profile";
 import { getSession } from "@/lib/auth-server";
 import { slugify } from "@/lib/utils";
+import { APP_URL } from "@/lib/config";
 import { PublicProfileContent } from "./public-profile-content";
 
 interface PageProps {
@@ -40,22 +41,21 @@ export async function generateMetadata({
   const description =
     data.user.bio || `Public bookmarks shared by ${data.user.name}`;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://minimal.so";
   const ogParams = new URLSearchParams({ username });
   if (group) ogParams.set("group", group);
-  const ogUrl = `${baseUrl}/api/og?${ogParams.toString()}`;
+  const ogUrl = `${APP_URL}/api/og?${ogParams.toString()}`;
 
   const pageUrl = group
-    ? `${baseUrl}/u/${username}?group=${encodeURIComponent(group)}`
-    : `${baseUrl}/u/${username}`;
+    ? `${APP_URL}/u/${username}?group=${encodeURIComponent(group)}`
+    : `${APP_URL}/u/${username}`;
 
   return {
     title,
     description,
     alternates: {
       types: {
-        "application/rss+xml": `${baseUrl}/u/${username}/feed.xml`,
-        "application/atom+xml": `${baseUrl}/u/${username}/feed.atom`,
+        "application/rss+xml": `${APP_URL}/u/${username}/feed.xml`,
+        "application/atom+xml": `${APP_URL}/u/${username}/feed.atom`,
       },
     },
     openGraph: {

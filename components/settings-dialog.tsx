@@ -727,15 +727,12 @@ function BillingTab({ profile }: { profile: ProfileData }) {
         <p className="text-sm font-medium">Current Plan</p>
         <div className="flex items-center gap-2">
           {hasProAccess ? (
-            <>
-              <span className="text-sm text-foreground">Pro</span>
-              <Badge
-                variant="outline"
-                className="h-5 rounded-md px-1.5 text-[10px]"
-              >
-                Pro
-              </Badge>
-            </>
+            <Badge
+              variant="outline"
+              className="h-5 rounded-md px-1.5 text-[10px]"
+            >
+              Pro
+            </Badge>
           ) : (
             <span className="text-sm text-foreground">Free</span>
           )}

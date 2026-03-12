@@ -41,6 +41,7 @@ export function PastDueBanner() {
       </Button>
       <button
         type="button"
+        aria-label="Dismiss"
         onClick={() => setDismissed(true)}
         className="shrink-0 rounded-md p-0.5 text-warning-foreground/60 transition-colors hover:text-warning-foreground"
       >

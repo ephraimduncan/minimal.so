@@ -72,7 +72,6 @@ async function syncCustomerData(input: {
       data: {
         polarCustomerId: input.customerId,
         polarCustomerExternalId: input.externalId,
-        planUpdatedAt: new Date(),
       },
     });
     return;
@@ -82,7 +81,6 @@ async function syncCustomerData(input: {
     where: { email: input.email },
     data: {
       polarCustomerId: input.customerId,
-      planUpdatedAt: new Date(),
     },
   });
 }
@@ -93,19 +91,17 @@ async function syncSubscriptionData(
 ): Promise<void> {
   const eventTime = eventTimestamp ?? new Date();
 
-  // Guard against out-of-order and duplicate webhook events.
-  // If the stored planUpdatedAt is newer than the incoming event, skip the update.
-  const existingUser = await db.user.findFirst({
-    where: { polarCustomerId: input.customerId },
-    select: { planUpdatedAt: true },
-  });
-
-  if (existingUser?.planUpdatedAt && existingUser.planUpdatedAt >= eventTime) {
-    return;
-  }
-
+  // Atomic guard against out-of-order and duplicate webhook events.
+  // The temporal check is in the where clause so the read + write is a single operation,
+  // eliminating the TOCTOU race condition. Uses strict lt so duplicate timestamps are no-ops.
   await db.user.updateMany({
-    where: { polarCustomerId: input.customerId },
+    where: {
+      polarCustomerId: input.customerId,
+      OR: [
+        { planUpdatedAt: null },
+        { planUpdatedAt: { lt: eventTime } },
+      ],
+    },
     data: {
       plan: resolvePlan(input.status, input.currentPeriodEnd),
       subscriptionStatus: input.status,

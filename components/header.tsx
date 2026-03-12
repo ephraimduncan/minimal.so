@@ -429,7 +429,7 @@ export function Header({
                 </DropdownMenuItem>
               ) : null}
               {isCancelledButActive && profile?.subscriptionCurrentPeriodEnd ? (
-                <p className="px-2 pb-1 text-xs text-muted-foreground">
+                <p className="px-2 py-1 text-xs text-muted-foreground">
                   Pro until{" "}
                   {new Date(
                     profile.subscriptionCurrentPeriodEnd,

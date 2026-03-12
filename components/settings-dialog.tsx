@@ -89,6 +89,7 @@ export function SettingsDialog({
   const hasProAccess = hasActiveProAccess(
     profile?.plan,
     profile?.subscriptionStatus,
+    profile?.subscriptionCurrentPeriodEnd,
   );
 
   const [prevOpen, setPrevOpen] = useState(open);

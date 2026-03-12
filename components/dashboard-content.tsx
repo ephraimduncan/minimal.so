@@ -56,6 +56,8 @@ export interface ProfileData {
   isProfilePublic: boolean;
   plan: string;
   subscriptionStatus: string | null;
+  subscriptionCurrentPeriodEnd: Date | string | null;
+  subscriptionCancelAtPeriodEnd: boolean;
   polarCustomerId: string | null;
 }
 
@@ -105,7 +107,7 @@ export function DashboardContent({
   });
 
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data]);
-  const hasProAccess = hasActiveProAccess(profile.plan, profile.subscriptionStatus);
+  const hasProAccess = hasActiveProAccess(profile.plan, profile.subscriptionStatus, profile.subscriptionCurrentPeriodEnd);
 
   const hasUsername = profile.username !== null;
   const publicGroupIds = useMemo(

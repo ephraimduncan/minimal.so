@@ -35,6 +35,8 @@ async function DashboardData() {
           isProfilePublic: true,
           plan: true,
           subscriptionStatus: true,
+          subscriptionCurrentPeriodEnd: true,
+          subscriptionCancelAtPeriodEnd: true,
           polarCustomerId: true,
         },
       }),
@@ -87,6 +89,8 @@ async function DashboardData() {
           isProfilePublic: false,
           plan: "free",
           subscriptionStatus: null,
+          subscriptionCurrentPeriodEnd: null,
+          subscriptionCancelAtPeriodEnd: false,
           polarCustomerId: null,
         }
       }

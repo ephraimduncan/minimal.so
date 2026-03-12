@@ -40,8 +40,8 @@ const polarProductMappings = [
     : null,
 ].filter((mapping): mapping is { productId: string; slug: string } => Boolean(mapping));
 
-function resolvePlan(status: string): PlanValue {
-  return hasActiveProAccess("pro", status) ? "pro" : "free";
+function resolvePlan(status: string, currentPeriodEnd?: Date | null): PlanValue {
+  return hasActiveProAccess("pro", status, currentPeriodEnd) ? "pro" : "free";
 }
 
 type CustomerSyncInput = {
@@ -91,7 +91,7 @@ async function syncSubscriptionData(input: SubscriptionSyncInput): Promise<void>
   await db.user.updateMany({
     where: { polarCustomerId: input.customerId },
     data: {
-      plan: resolvePlan(input.status),
+      plan: resolvePlan(input.status, input.currentPeriodEnd),
       subscriptionStatus: input.status,
       polarSubscriptionId: input.id,
       polarProductId: input.productId,

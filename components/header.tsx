@@ -130,6 +130,7 @@ export function Header({
   const hasProAccess = hasActiveProAccess(
     profile?.plan,
     profile?.subscriptionStatus,
+    profile?.subscriptionCurrentPeriodEnd,
   );
   const handleUpgradeClick = () => {
     const billingCycle =

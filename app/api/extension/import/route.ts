@@ -56,10 +56,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       select: {
         plan: true,
         subscriptionStatus: true,
+        subscriptionCurrentPeriodEnd: true,
       },
     });
 
-    if (!hasActiveProAccess(user?.plan, user?.subscriptionStatus)) {
+    if (!hasActiveProAccess(user?.plan, user?.subscriptionStatus, user?.subscriptionCurrentPeriodEnd)) {
       return jsonError(
         "Import is available on Pro only. Upgrade to continue.",
         "Forbidden",

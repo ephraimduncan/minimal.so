@@ -87,7 +87,23 @@ async function syncCustomerData(input: {
   });
 }
 
-async function syncSubscriptionData(input: SubscriptionSyncInput): Promise<void> {
+async function syncSubscriptionData(
+  input: SubscriptionSyncInput,
+  eventTimestamp?: Date,
+): Promise<void> {
+  const eventTime = eventTimestamp ?? new Date();
+
+  // Guard against out-of-order and duplicate webhook events.
+  // If the stored planUpdatedAt is newer than the incoming event, skip the update.
+  const existingUser = await db.user.findFirst({
+    where: { polarCustomerId: input.customerId },
+    select: { planUpdatedAt: true },
+  });
+
+  if (existingUser?.planUpdatedAt && existingUser.planUpdatedAt >= eventTime) {
+    return;
+  }
+
   await db.user.updateMany({
     where: { polarCustomerId: input.customerId },
     data: {
@@ -99,7 +115,7 @@ async function syncSubscriptionData(input: SubscriptionSyncInput): Promise<void>
       subscriptionCurrentPeriodEnd: input.currentPeriodEnd,
       subscriptionCancelAtPeriodEnd: input.cancelAtPeriodEnd,
       subscriptionCanceledAt: input.canceledAt,
-      planUpdatedAt: new Date(),
+      planUpdatedAt: eventTime,
     },
   });
 }
@@ -116,8 +132,9 @@ async function handleCustomerPayload(payload: {
 
 async function handleSubscriptionPayload(payload: {
   data: SubscriptionSyncInput;
+  timestamp?: Date;
 }): Promise<void> {
-  await syncSubscriptionData(payload.data);
+  await syncSubscriptionData(payload.data, payload.timestamp);
 }
 
 async function ensureDefaultGroup(userId: string): Promise<void> {

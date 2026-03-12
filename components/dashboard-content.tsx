@@ -43,6 +43,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { useFocusRefetch } from "@/hooks/use-focus-refetch";
 import { useLatestRef } from "@/lib/hooks/use-latest-ref";
 import { hasActiveProAccess } from "@/lib/plan-limits";
+import { PastDueBanner } from "@/components/past-due-banner";
 import type { BookmarkType, GroupItem, BookmarkItem } from "@/lib/schema";
 import type { Session } from "@/lib/auth";
 
@@ -1302,6 +1303,7 @@ export function DashboardContent({
         onExport={handleOpenExportDialog}
       />
       <main className="mx-auto w-full max-w-2xl px-5 py-20">
+        {profile.subscriptionStatus === "past_due" && <PastDueBanner />}
         <BookmarkInput
           ref={inputRef}
           value={searchQuery}

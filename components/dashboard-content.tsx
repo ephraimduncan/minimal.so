@@ -124,9 +124,9 @@ export function DashboardContent({
     }
 
     if (checkoutStatus === "success") {
-      toast.success("Checkout completed successfully", { duration: 5000 });
-    } else {
-      toast.error("Checkout failed. Please try again.", { duration: 5000 });
+      toast.success("Welcome to Pro! Your upgrade is complete.", {
+        duration: 5000,
+      });
     }
 
     const nextParams = new URLSearchParams(searchParams.toString());

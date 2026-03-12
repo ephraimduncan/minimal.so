@@ -132,6 +132,10 @@ export function Header({
     profile?.subscriptionStatus,
     profile?.subscriptionCurrentPeriodEnd,
   );
+
+  const isCancelledButActive =
+    profile?.subscriptionStatus === "canceled" && hasProAccess;
+
   const handleUpgradeClick = () => {
     const billingCycle =
       process.env.NEXT_PUBLIC_DEFAULT_BILLING_CYCLE === "monthly"
@@ -423,6 +427,17 @@ export function Header({
                   <IconCreditCard className="h-4 w-4" />
                   Billing Portal
                 </DropdownMenuItem>
+              ) : null}
+              {isCancelledButActive && profile?.subscriptionCurrentPeriodEnd ? (
+                <p className="px-2 pb-1 text-xs text-muted-foreground">
+                  Pro until{" "}
+                  {new Date(
+                    profile.subscriptionCurrentPeriodEnd,
+                  ).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </p>
               ) : null}
               <DropdownMenuSeparator />
               <DropdownMenuItem

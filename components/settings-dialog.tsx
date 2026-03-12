@@ -43,12 +43,15 @@ import {
   IconCopy,
   IconExternalLink,
   IconDownload,
+  IconCreditCard,
+  IconRocket,
 } from "@tabler/icons-react";
 import { ImagePlusIcon } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { usernameSchema, updateProfileSchema } from "@/lib/schema";
 import { Badge } from "@/components/ui/badge";
 import { hasActiveProAccess } from "@/lib/plan-limits";
+import { startCheckout } from "@/lib/checkout";
 
 const ACCEPTED_AVATAR_TYPES = new Set([
   "image/png",
@@ -247,6 +250,7 @@ export function SettingsDialog({
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="profile">Public Profile</TabsTrigger>
+            <TabsTrigger value="billing">Billing</TabsTrigger>
           </TabsList>
           <TabsContent value="general">
             <Form
@@ -383,6 +387,9 @@ export function SettingsDialog({
           </TabsContent>
           <TabsContent value="profile">
             {profile && <ProfileTab profile={profile} onOpenChange={onOpenChange} />}
+          </TabsContent>
+          <TabsContent value="billing">
+            {profile && <BillingTab profile={profile} />}
           </TabsContent>
         </Tabs>
       </DialogContent>
@@ -664,6 +671,128 @@ function ProfileTab({ profile, onOpenChange }: ProfileTabProps) {
         </Button>
       </DialogFooter>
     </Form>
+  );
+}
+
+function formatDate(date: Date | string | null | undefined): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function BillingTab({ profile }: { profile: ProfileData }) {
+  const [isBillingPending, setIsBillingPending] = useState(false);
+
+  const hasProAccess = hasActiveProAccess(
+    profile.plan,
+    profile.subscriptionStatus,
+    profile.subscriptionCurrentPeriodEnd,
+  );
+
+  const isCancelled =
+    profile.subscriptionStatus === "canceled" && hasProAccess;
+
+  const isFree = !hasProAccess;
+
+  const handleUpgrade = () => {
+    const billingCycle =
+      process.env.NEXT_PUBLIC_DEFAULT_BILLING_CYCLE === "monthly"
+        ? ("monthly" as const)
+        : ("yearly" as const);
+    setIsBillingPending(true);
+    startCheckout({ billingCycle, source: "settings_billing" }).finally(() =>
+      setIsBillingPending(false),
+    );
+  };
+
+  const handleManageBilling = async () => {
+    setIsBillingPending(true);
+    try {
+      const { error } = await authClient.customer.portal({ redirect: true });
+      if (error) {
+        toast.error(error.message || "Unable to open billing portal");
+      }
+    } finally {
+      setIsBillingPending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 pt-2">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Current Plan</p>
+        <div className="flex items-center gap-2">
+          {hasProAccess ? (
+            <>
+              <span className="text-sm text-foreground">Pro</span>
+              <Badge
+                variant="outline"
+                className="h-5 rounded-md px-1.5 text-[10px]"
+              >
+                Pro
+              </Badge>
+            </>
+          ) : (
+            <span className="text-sm text-foreground">Free</span>
+          )}
+        </div>
+      </div>
+      {hasProAccess && !isCancelled && profile.subscriptionCurrentPeriodEnd && (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Next Renewal</p>
+          <p className="text-sm text-muted-foreground">
+            {formatDate(profile.subscriptionCurrentPeriodEnd)}
+          </p>
+        </div>
+      )}
+      {isCancelled && (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Subscription Ending</p>
+          <p className="text-sm text-muted-foreground">
+            Pro until {formatDate(profile.subscriptionCurrentPeriodEnd)}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Your subscription will not renew after this date.
+          </p>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2 pt-1">
+        {isFree && (
+          <Button
+            variant="default"
+            className="h-8 rounded-lg gap-1.5"
+            onClick={handleUpgrade}
+            disabled={isBillingPending}
+          >
+            {isBillingPending ? (
+              <IconLoader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <IconRocket className="h-4 w-4" />
+            )}
+            Upgrade to Pro
+          </Button>
+        )}
+        {hasProAccess && (
+          <Button
+            variant="outline"
+            className="h-8 rounded-lg gap-1.5"
+            onClick={handleManageBilling}
+            disabled={isBillingPending}
+          >
+            {isBillingPending ? (
+              <IconLoader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <IconCreditCard className="h-4 w-4" />
+            )}
+            Manage Billing
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
 

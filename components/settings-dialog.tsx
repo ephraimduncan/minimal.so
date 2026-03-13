@@ -42,9 +42,23 @@ import {
   IconCopy,
   IconExternalLink,
   IconDownload,
+  IconKey,
+  IconRefresh,
+  IconTrash,
+  IconAlertTriangle,
 } from "@tabler/icons-react";
 import { ImagePlusIcon } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { usernameSchema, updateProfileSchema } from "@/lib/schema";
 
 const ACCEPTED_AVATAR_TYPES = new Set([
@@ -83,11 +97,13 @@ export function SettingsDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [viewOnceKey, setViewOnceKey] = useState<string | null>(null);
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open && !prevOpen) {
     setName(user.name);
     setAvatarUrl(user.image);
+    setViewOnceKey(null);
   }
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -230,10 +246,11 @@ export function SettingsDialog({
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>Manage your account settings.</DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="general">
+        <Tabs defaultValue="general" onValueChange={() => setViewOnceKey(null)}>
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="profile">Public Profile</TabsTrigger>
+            <TabsTrigger value="api">API</TabsTrigger>
           </TabsList>
           <TabsContent value="general">
             <Form
@@ -362,6 +379,9 @@ export function SettingsDialog({
           </TabsContent>
           <TabsContent value="profile">
             {profile && <ProfileTab profile={profile} onOpenChange={onOpenChange} />}
+          </TabsContent>
+          <TabsContent value="api">
+            <ApiKeyTab viewOnceKey={viewOnceKey} onKeyGenerated={setViewOnceKey} />
           </TabsContent>
         </Tabs>
       </DialogContent>
@@ -644,6 +664,268 @@ function ProfileTab({ profile, onOpenChange }: ProfileTabProps) {
       </DialogFooter>
     </Form>
   );
+}
+
+interface ApiKeyTabProps {
+  viewOnceKey: string | null;
+  onKeyGenerated: (key: string | null) => void;
+}
+
+function ApiKeyTab({ viewOnceKey, onKeyGenerated }: ApiKeyTabProps) {
+  const queryClient = useQueryClient();
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+
+  const apiKeyQuery = useQuery({
+    ...orpc.apiKey.get.queryOptions({ input: undefined }),
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: () => client.apiKey.generate(undefined),
+    onSuccess: (data) => {
+      onKeyGenerated(data.key);
+      queryClient.invalidateQueries({ queryKey: orpc.apiKey.key() });
+      toast.success("API key generated");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to generate API key");
+    },
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: () => client.apiKey.revoke(undefined),
+    onSuccess: () => {
+      onKeyGenerated(null);
+      queryClient.invalidateQueries({ queryKey: orpc.apiKey.key() });
+      toast.success("API key revoked");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to revoke API key");
+    },
+  });
+
+  const handleCopyKey = useCallback(async () => {
+    if (!viewOnceKey) return;
+    try {
+      await navigator.clipboard.writeText(viewOnceKey);
+      toast.success("Copied to clipboard");
+    } catch {
+      toast.error("Failed to copy to clipboard");
+    }
+  }, [viewOnceKey]);
+
+  const handleRevoke = () => {
+    setShowRevokeConfirm(false);
+    revokeMutation.mutate();
+  };
+
+  const existingKey = apiKeyQuery.data;
+  const isLoading = apiKeyQuery.isPending;
+  const hasKey = !!existingKey;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <IconLoader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // View-once: key was just generated
+  if (viewOnceKey) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-50/50 p-3 dark:bg-amber-950/20">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+            <IconAlertTriangle className="size-4 shrink-0" />
+            <p className="text-sm font-medium">
+              Copy this key now. It won&apos;t be shown again.
+            </p>
+          </div>
+        </div>
+        <Field>
+          <FieldLabel>API Key</FieldLabel>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 rounded-md border bg-muted px-3 py-2 font-mono text-sm break-all">
+              {viewOnceKey}
+            </code>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCopyKey}
+            >
+              <IconCopy className="size-4" />
+            </Button>
+          </div>
+        </Field>
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-destructive"
+            onClick={() => setShowRevokeConfirm(true)}
+            disabled={revokeMutation.isPending}
+          >
+            {revokeMutation.isPending ? (
+              <IconLoader2 className="size-4 animate-spin" />
+            ) : (
+              <IconTrash className="size-4" />
+            )}
+            Revoke
+          </Button>
+        </div>
+        <RevokeConfirmDialog
+          open={showRevokeConfirm}
+          onOpenChange={setShowRevokeConfirm}
+          onConfirm={handleRevoke}
+        />
+      </div>
+    );
+  }
+
+  // No key state
+  if (!hasKey) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="flex flex-col items-center justify-center gap-3 py-6">
+          <div className="rounded-full border bg-muted p-3">
+            <IconKey className="size-5 text-muted-foreground" />
+          </div>
+          <p className="text-sm text-muted-foreground">No API key generated</p>
+          <Button
+            type="button"
+            onClick={() => generateMutation.mutate()}
+            disabled={generateMutation.isPending}
+          >
+            {generateMutation.isPending ? (
+              <>
+                <IconLoader2 className="size-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <IconKey className="size-4" />
+                Generate API Key
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Key exists (normal view): show masked prefix, dates, actions
+  return (
+    <div className="space-y-4 pt-2">
+      <Field>
+        <FieldLabel>API Key</FieldLabel>
+        <code className="block rounded-md border bg-muted px-3 py-2 font-mono text-sm text-muted-foreground">
+          {existingKey.keyPrefix}••••••••
+        </code>
+      </Field>
+      <div className="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <p className="text-muted-foreground">Created</p>
+          <p>{formatDate(existingKey.createdAt)}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Last used</p>
+          <p>{existingKey.lastUsedAt ? formatRelativeDate(existingKey.lastUsedAt) : "Never"}</p>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => generateMutation.mutate()}
+          disabled={generateMutation.isPending}
+        >
+          {generateMutation.isPending ? (
+            <IconLoader2 className="size-4 animate-spin" />
+          ) : (
+            <IconRefresh className="size-4" />
+          )}
+          Regenerate
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="text-destructive"
+          onClick={() => setShowRevokeConfirm(true)}
+          disabled={revokeMutation.isPending}
+        >
+          {revokeMutation.isPending ? (
+            <IconLoader2 className="size-4 animate-spin" />
+          ) : (
+            <IconTrash className="size-4" />
+          )}
+          Revoke
+        </Button>
+      </div>
+      <RevokeConfirmDialog
+        open={showRevokeConfirm}
+        onOpenChange={setShowRevokeConfirm}
+        onConfirm={handleRevoke}
+      />
+    </div>
+  );
+}
+
+function RevokeConfirmDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Revoke API Key</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to revoke your API key? Any applications using
+            this key will lose access immediately. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onConfirm}>
+            Revoke Key
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function formatDate(date: Date | string): string {
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatRelativeDate(date: Date | string): string {
+  const now = new Date();
+  const then = new Date(date);
+  const diffMs = now.getTime() - then.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffSec < 60) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return formatDate(date);
 }
 
 async function responseError(

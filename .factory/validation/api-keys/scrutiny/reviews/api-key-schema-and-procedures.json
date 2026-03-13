@@ -1,0 +1,33 @@
+{
+  "featureId": "api-key-schema-and-procedures",
+  "reviewedAt": "2026-03-13T23:37:17Z",
+  "commitId": "d2c2a4d",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature correctly adds the Prisma apiKey model and the three required authed ORPC procedures. The schema matches the contract: id cuid, name default, unique keyHash, keyPrefix, unique userId with cascade relation, nullable lastUsedAt, and createdAt. generateApiKey creates an `mnk_`-prefixed raw key, hashes it with SHA-256 before storage, deletes any existing key for the user, and returns only the raw key. revokeApiKey deletes by userId and returns success. getApiKey returns only keyPrefix, lastUsedAt, and createdAt, so it does not leak the raw key or hash. Router wiring is correct. This satisfies VAL-KEYS-007 and VAL-KEYS-010.",
+    "issues": [
+      {
+        "file": "server/procedures/apiKey.ts",
+        "line": 20,
+        "severity": "non_blocking",
+        "description": "generateApiKey deletes the existing key and creates the replacement in separate operations instead of a single db.$transaction. If the create fails after the delete succeeds, the user is left without a key. This is a low-risk robustness issue, not a feature-blocking defect."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The api-worker skill's verification procedure does not match this mission's documented reality. SKILL.md says `bun run typecheck` must pass with 0 errors and `bun run lint` must pass, but mission AGENTS.md documents a known pre-existing typecheck failure and instructs workers to scope lint to changed files.",
+      "evidence": "api-worker SKILL.md section 5 says typecheck and lint must pass; mission AGENTS.md says `.next/types/validator.ts` causes an expected typecheck exit code 2 and lint should be run as `bunx eslint <your-files>`. Transcript shows the worker adapted to the AGENTS guidance and still marked followedProcedure true."
+    },
+    {
+      "area": "skills",
+      "observation": "The api-worker skill is overly REST-oriented for ORPC-only features. It requires manual `curl` endpoint testing and `{ success: boolean }` response verification, but this feature only added session-authenticated ORPC procedures and the worker did not perform curl validation.",
+      "evidence": "api-worker SKILL.md section 5 requires manual curl tests and Shiori-style response verification. Transcript and handoff show only db:generate, db:push, typecheck, and eslint were run; handoff notes `Manual curl testing deferred to integration with auth middleware (next feature)` while skillFeedback.followedProcedure remained true."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Pass. The implementation matches the feature contract: the Prisma apiKey model is correct, all three procedures are authenticated and behave as specified, the raw key is only returned once while SHA-256 hash storage is enforced, and the router exposes the new namespace. I found one non-blocking robustness issue in generateApiKey due to non-transactional replacement logic."
+}

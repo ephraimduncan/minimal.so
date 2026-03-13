@@ -1,0 +1,54 @@
+import { authed } from "../context";
+import { db } from "@/lib/db";
+import crypto from "crypto";
+
+function hashKey(raw: string): string {
+  return crypto.createHash("sha256").update(raw).digest("hex");
+}
+
+function generateRawKey(): string {
+  const token = crypto.randomBytes(20).toString("hex"); // 40 hex chars
+  return `mnk_${token}`;
+}
+
+export const generateApiKey = authed.handler(async ({ context }) => {
+  const rawKey = generateRawKey();
+  const keyHash = hashKey(rawKey);
+  const keyPrefix = rawKey.slice(0, 8); // "mnk_xxxx"
+
+  // Delete existing key if one exists (one key per user)
+  await db.apiKey.deleteMany({
+    where: { userId: context.user.id },
+  });
+
+  await db.apiKey.create({
+    data: {
+      keyHash,
+      keyPrefix,
+      userId: context.user.id,
+    },
+  });
+
+  return { key: rawKey };
+});
+
+export const revokeApiKey = authed.handler(async ({ context }) => {
+  await db.apiKey.deleteMany({
+    where: { userId: context.user.id },
+  });
+
+  return { success: true };
+});
+
+export const getApiKey = authed.handler(async ({ context }) => {
+  const apiKey = await db.apiKey.findUnique({
+    where: { userId: context.user.id },
+    select: {
+      keyPrefix: true,
+      lastUsedAt: true,
+      createdAt: true,
+    },
+  });
+
+  return apiKey;
+});

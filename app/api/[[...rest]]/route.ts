@@ -72,6 +72,17 @@ const handler = new OpenAPIHandler(apiRouter, {
           title: "bmrks API",
           version: "1.0.0",
         },
+        components: {
+          securitySchemes: {
+            BearerAuth: {
+              type: "http",
+              scheme: "bearer",
+              description:
+                "API key authentication. Generate a key in Settings → API. Use the raw key as the Bearer token.",
+            },
+          },
+        },
+        security: [{ BearerAuth: [] }],
       },
     }),
   ],
@@ -83,6 +94,28 @@ const handler = new OpenAPIHandler(apiRouter, {
   adapterInterceptors: [
     async (interceptorOptions) => {
       const { request, next } = interceptorOptions;
+
+      // Post-process OpenAPI spec: mark /health as not requiring auth
+      const url = new URL(request.url);
+      if (url.pathname === "/api/openapi.json") {
+        const handlerResult = await next();
+        if (handlerResult.matched && handlerResult.response?.ok) {
+          const spec = await handlerResult.response.json();
+          if (spec.paths?.["/health"]?.get) {
+            spec.paths["/health"].get.security = [];
+          }
+          return {
+            matched: true as const,
+            response: new Response(JSON.stringify(spec), {
+              status: 200,
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }),
+          };
+        }
+        return handlerResult;
+      }
 
       // Extract Bearer token from Authorization header for rate-limit keying
       const authHeader = request.headers.get("authorization");

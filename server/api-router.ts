@@ -211,7 +211,7 @@ const updateBookmark = apiAuthed
       id: z.string(),
       title: z.string().optional(),
       url: z.string().optional(),
-      groupId: z.string().nullable().optional(),
+      groupId: z.string().optional(),
       isPublic: z.boolean().nullable().optional(),
     }),
   )
@@ -237,8 +237,8 @@ const updateBookmark = apiAuthed
       });
     }
 
-    // Validate groupId if provided (non-null)
-    if (fields.groupId !== undefined && fields.groupId !== null) {
+    // Validate groupId if provided
+    if (fields.groupId !== undefined) {
       const group = await db.group.findFirst({
         where: { id: fields.groupId, userId: context.user.id },
         select: { id: true },

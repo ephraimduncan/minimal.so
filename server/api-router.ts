@@ -464,6 +464,42 @@ const deleteGroup = apiAuthed
     };
   });
 
+// ---------------------------------------------------------------------------
+// User API endpoints
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/user/me — Get authenticated user profile
+ */
+const getMe = apiAuthed
+  .route({ method: "GET", path: "/user/me" })
+  .output(
+    z.object({
+      success: z.boolean(),
+      user: z.object({
+        id: z.string(),
+        name: z.string(),
+        email: z.string(),
+        username: z.string().nullable(),
+        image: z.string().nullable(),
+        createdAt: z.string(),
+      }),
+    }),
+  )
+  .handler(async ({ context }) => {
+    return {
+      success: true,
+      user: {
+        id: context.user.id,
+        name: context.user.name,
+        email: context.user.email,
+        username: context.user.username ?? null,
+        image: context.user.image ?? null,
+        createdAt: context.user.createdAt.toISOString(),
+      },
+    };
+  });
+
 /**
  * Public API router — holds all REST API route definitions.
  * Uses OpenAPIHandler to serve these as REST endpoints at /api/*.
@@ -478,6 +514,7 @@ export const apiRouter = {
   createGroup,
   updateGroup,
   deleteGroup,
+  getMe,
 };
 
 export type ApiRouter = typeof apiRouter;

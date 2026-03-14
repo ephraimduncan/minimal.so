@@ -66,6 +66,7 @@ const handler = new OpenAPIHandler(apiRouter, {
     new CORSPlugin(),
     new OpenAPIReferencePlugin({
       schemaConverters: [new ZodToJsonSchemaConverter()],
+      specPath: "/openapi.json",
       specGenerateOptions: {
         info: {
           title: "bmrks API",

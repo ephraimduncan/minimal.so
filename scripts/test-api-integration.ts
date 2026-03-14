@@ -509,8 +509,8 @@ async function main() {
   // -----------------------------------------------------------------------
   console.log("\n── Test 13: OpenAPI Spec ──");
 
-  const specRes = await fetch(`${BASE}/api/spec.json`);
-  assert(specRes.status === 200, "GET /api/spec.json → 200", `got ${specRes.status}`);
+  const specRes = await fetch(`${BASE}/api/openapi.json`);
+  assert(specRes.status === 200, "GET /api/openapi.json → 200", `got ${specRes.status}`);
   const spec = await specRes.json();
   assert(spec.openapi?.startsWith("3."), "OpenAPI 3.x spec");
   assert(spec.info?.title === "bmrks API", "Spec title is correct");

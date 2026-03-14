@@ -296,6 +296,174 @@ const deleteBookmark = apiAuthed
     };
   });
 
+// ---------------------------------------------------------------------------
+// Group API endpoints
+// ---------------------------------------------------------------------------
+
+const groupItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  color: z.string(),
+  isPublic: z.boolean(),
+  bookmarkCount: z.number(),
+  createdAt: z.string(),
+});
+
+/**
+ * GET /api/groups — List groups for the authenticated user
+ */
+const listGroups = apiAuthed
+  .route({ method: "GET", path: "/groups" })
+  .output(
+    z.object({
+      success: z.boolean(),
+      groups: z.array(groupItemSchema),
+    }),
+  )
+  .handler(async ({ context }) => {
+    const groups = await db.group.findMany({
+      where: { userId: context.user.id },
+      include: { _count: { select: { bookmarks: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return {
+      success: true,
+      groups: groups.map((g) => ({
+        id: g.id,
+        name: g.name,
+        color: g.color,
+        isPublic: g.isPublic,
+        bookmarkCount: g._count.bookmarks,
+        createdAt: g.createdAt.toISOString(),
+      })),
+    };
+  });
+
+/**
+ * POST /api/groups — Create a new group
+ */
+const createGroup = apiAuthed
+  .route({ method: "POST", path: "/groups", successStatus: 201 })
+  .input(
+    z.object({
+      name: z.string().min(1, "name is required"),
+      color: z.string().min(1, "color is required"),
+    }),
+  )
+  .output(
+    z.object({
+      success: z.boolean(),
+      groupId: z.string(),
+    }),
+  )
+  .handler(async ({ context, input }) => {
+    const group = await db.group.create({
+      data: {
+        name: input.name,
+        color: input.color,
+        userId: context.user.id,
+      },
+    });
+
+    return {
+      success: true,
+      groupId: group.id,
+    };
+  });
+
+/**
+ * PATCH /api/groups/{id} — Update a group
+ */
+const updateGroup = apiAuthed
+  .route({ method: "PATCH", path: "/groups/{id}" })
+  .input(
+    z.object({
+      id: z.string(),
+      name: z.string().optional(),
+      color: z.string().optional(),
+      isPublic: z.boolean().optional(),
+    }),
+  )
+  .output(
+    z.object({
+      success: z.boolean(),
+      message: z.string(),
+      groupId: z.string(),
+    }),
+  )
+  .handler(async ({ context, input }) => {
+    const { id, ...fields } = input;
+
+    const existing = await db.group.findFirst({
+      where: { id, userId: context.user.id },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new ORPCError("NOT_FOUND", {
+        message: "Group not found",
+      });
+    }
+
+    const updateData: Record<string, unknown> = {};
+
+    if (fields.name !== undefined) updateData.name = fields.name;
+    if (fields.color !== undefined) updateData.color = fields.color;
+    if (fields.isPublic !== undefined) updateData.isPublic = fields.isPublic;
+
+    await db.group.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return {
+      success: true,
+      message: "Group updated",
+      groupId: id,
+    };
+  });
+
+/**
+ * DELETE /api/groups/{id} — Delete a group (cascades to bookmarks)
+ */
+const deleteGroup = apiAuthed
+  .route({ method: "DELETE", path: "/groups/{id}" })
+  .input(
+    z.object({
+      id: z.string(),
+    }),
+  )
+  .output(
+    z.object({
+      success: z.boolean(),
+      message: z.string(),
+      groupId: z.string(),
+    }),
+  )
+  .handler(async ({ context, input }) => {
+    const existing = await db.group.findFirst({
+      where: { id: input.id, userId: context.user.id },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new ORPCError("NOT_FOUND", {
+        message: "Group not found",
+      });
+    }
+
+    await db.group.delete({
+      where: { id: input.id },
+    });
+
+    return {
+      success: true,
+      message: "Group deleted",
+      groupId: input.id,
+    };
+  });
+
 /**
  * Public API router — holds all REST API route definitions.
  * Uses OpenAPIHandler to serve these as REST endpoints at /api/*.
@@ -306,6 +474,10 @@ export const apiRouter = {
   createBookmark,
   updateBookmark,
   deleteBookmark,
+  listGroups,
+  createGroup,
+  updateGroup,
+  deleteGroup,
 };
 
 export type ApiRouter = typeof apiRouter;

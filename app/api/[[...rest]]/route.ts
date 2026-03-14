@@ -4,6 +4,10 @@ import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { onError } from "@orpc/server";
 import { apiRouter } from "@/server/api-router";
+import {
+  checkRateLimit,
+  rateLimitHeaders,
+} from "@/server/api-rate-limit";
 
 const handler = new OpenAPIHandler(apiRouter, {
   plugins: [
@@ -22,6 +26,58 @@ const handler = new OpenAPIHandler(apiRouter, {
     onError((error: unknown) => {
       console.error("[API Error]", error);
     }),
+  ],
+  adapterInterceptors: [
+    async (interceptorOptions) => {
+      const { request, next } = interceptorOptions;
+
+      // Extract Bearer token from Authorization header for rate-limit keying
+      const authHeader = request.headers.get("authorization");
+      const token = authHeader?.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : null;
+
+      // Skip rate limiting for unauthenticated requests (auth middleware handles 401)
+      // and for OpenAPI spec / health endpoints
+      if (!token) {
+        return next();
+      }
+
+      const result = checkRateLimit(token, request.method);
+
+      if (!result.allowed) {
+        // Return 429 with rate limit headers
+        const rlHeaders = rateLimitHeaders(result);
+        return {
+          matched: true as const,
+          response: new Response(
+            JSON.stringify({
+              success: false,
+              error: "Rate limit exceeded",
+            }),
+            {
+              status: 429,
+              headers: {
+                "Content-Type": "application/json",
+                ...rlHeaders,
+              },
+            },
+          ),
+        };
+      }
+
+      // Proceed with the request and attach rate-limit headers to the response
+      const handlerResult = await next();
+
+      if (handlerResult.matched && handlerResult.response) {
+        const rlHeaders = rateLimitHeaders(result);
+        for (const [key, value] of Object.entries(rlHeaders)) {
+          handlerResult.response.headers.set(key, value);
+        }
+      }
+
+      return handlerResult;
+    },
   ],
 });
 

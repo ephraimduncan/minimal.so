@@ -123,7 +123,9 @@ const createBookmark = apiAuthed
     }),
   )
   .handler(async ({ context, input }) => {
-    // Validate groupId belongs to user if provided
+    // Resolve groupId: validate if provided, otherwise use user's first group
+    let resolvedGroupId: string;
+
     if (input.groupId) {
       const group = await db.group.findFirst({
         where: { id: input.groupId, userId: context.user.id },
@@ -133,6 +135,28 @@ const createBookmark = apiAuthed
         throw new ORPCError("BAD_REQUEST", {
           message: "Group not found",
         });
+      }
+      resolvedGroupId = group.id;
+    } else {
+      // No groupId provided — use the user's first group or create a default one
+      const firstGroup = await db.group.findFirst({
+        where: { userId: context.user.id },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      });
+
+      if (firstGroup) {
+        resolvedGroupId = firstGroup.id;
+      } else {
+        // Create a default group for the user
+        const defaultGroup = await db.group.create({
+          data: {
+            name: "Bookmarks",
+            color: "#737373",
+            userId: context.user.id,
+          },
+        });
+        resolvedGroupId = defaultGroup.id;
       }
     }
 
@@ -166,7 +190,7 @@ const createBookmark = apiAuthed
         normalizedUrl: canonical,
         favicon: metadata.favicon,
         type: "link",
-        groupId: input.groupId ?? "",
+        groupId: resolvedGroupId,
         userId: context.user.id,
       },
     });

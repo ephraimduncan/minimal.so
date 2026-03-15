@@ -78,11 +78,14 @@ export function SignupForm({
       }
 
       if (isProSignup) {
-        await startCheckout({
+        const ok = await startCheckout({
           billingCycle,
           source: "signup_form",
           userId: authRef.current?.user?.id,
         });
+        if (!ok) {
+          router.push("/dashboard");
+        }
         return;
       }
 

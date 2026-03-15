@@ -40,7 +40,14 @@ const polarProductMappings = [
     : null,
 ].filter((mapping): mapping is { productId: string; slug: string } => Boolean(mapping));
 
-function resolvePlan(status: string, currentPeriodEnd?: Date | null): PlanValue {
+const proProductIds = new Set(polarProductMappings.map((m) => m.productId));
+
+function resolvePlan(
+  status: string,
+  productId: string,
+  currentPeriodEnd?: Date | null,
+): PlanValue {
+  if (!proProductIds.has(productId)) return "free";
   return hasActiveProAccess("pro", status, currentPeriodEnd) ? "pro" : "free";
 }
 
@@ -103,7 +110,7 @@ async function syncSubscriptionData(
       ],
     },
     data: {
-      plan: resolvePlan(input.status, input.currentPeriodEnd),
+      plan: resolvePlan(input.status, input.productId, input.currentPeriodEnd),
       subscriptionStatus: input.status,
       polarSubscriptionId: input.id,
       polarProductId: input.productId,

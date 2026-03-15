@@ -2,6 +2,8 @@ import { betterAuth } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
+import { checkout, polar, portal, webhooks } from "@polar-sh/better-auth";
+import { Polar } from "@polar-sh/sdk";
 import { db } from "./db";
 import { APP_URL } from "./config";
 import { posthogServer } from "./posthog-server";
@@ -9,10 +11,134 @@ import { sendEmail } from "./email";
 import { welcomeEmail } from "./emails/welcome";
 import { verificationEmail } from "./emails/verify-email";
 import { resetPasswordEmail } from "./emails/reset-password";
+import { hasActiveProAccess, type PlanValue } from "./plan-limits";
 
-const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, CHROME_EXTENSION_ID } =
-  process.env;
+const {
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  CHROME_EXTENSION_ID,
+  POLAR_ACCESS_TOKEN,
+  POLAR_WEBHOOK_SECRET,
+  POLAR_SERVER,
+  POLAR_CREATE_CUSTOMER_ON_SIGN_UP,
+  POLAR_PRO_MONTHLY_PRODUCT_ID,
+  POLAR_PRO_YEARLY_PRODUCT_ID,
+  NEXT_PUBLIC_APP_URL,
+} = process.env;
 const googleOAuthEnabled = Boolean(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET);
+const polarServer = POLAR_SERVER === "sandbox" ? "sandbox" : "production";
+const polarEnabled = Boolean(POLAR_ACCESS_TOKEN && POLAR_WEBHOOK_SECRET);
+const polarCreateCustomerOnSignUp =
+  POLAR_CREATE_CUSTOMER_ON_SIGN_UP === "true";
+
+const polarProductMappings = [
+  POLAR_PRO_MONTHLY_PRODUCT_ID
+    ? { productId: POLAR_PRO_MONTHLY_PRODUCT_ID, slug: "pro-monthly" }
+    : null,
+  POLAR_PRO_YEARLY_PRODUCT_ID
+    ? { productId: POLAR_PRO_YEARLY_PRODUCT_ID, slug: "pro-yearly" }
+    : null,
+].filter((mapping): mapping is { productId: string; slug: string } => Boolean(mapping));
+
+const proProductIds = new Set(polarProductMappings.map((m) => m.productId));
+
+function resolvePlan(
+  status: string,
+  productId: string,
+  currentPeriodEnd?: Date | null,
+): PlanValue {
+  if (!proProductIds.has(productId)) return "free";
+  return hasActiveProAccess("pro", status, currentPeriodEnd) ? "pro" : "free";
+}
+
+type CustomerSyncInput = {
+  id: string;
+  externalId: string | null;
+  email: string;
+};
+
+type SubscriptionSyncInput = {
+  id: string;
+  status: string;
+  customerId: string;
+  productId: string;
+  checkoutId: string | null;
+  currentPeriodEnd: Date | null;
+  cancelAtPeriodEnd: boolean;
+  canceledAt: Date | null;
+};
+
+async function syncCustomerData(input: {
+  customerId: string;
+  externalId: string | null;
+  email: string;
+}): Promise<void> {
+  if (input.externalId) {
+    await db.user.updateMany({
+      where: { id: input.externalId },
+      data: {
+        polarCustomerId: input.customerId,
+        polarCustomerExternalId: input.externalId,
+      },
+    });
+    return;
+  }
+
+  await db.user.updateMany({
+    where: { email: input.email },
+    data: {
+      polarCustomerId: input.customerId,
+    },
+  });
+}
+
+async function syncSubscriptionData(
+  input: SubscriptionSyncInput,
+  eventTimestamp?: Date,
+): Promise<void> {
+  const eventTime = eventTimestamp ?? new Date();
+
+  // Atomic guard against out-of-order and duplicate webhook events.
+  // The temporal check is in the where clause so the read + write is a single operation,
+  // eliminating the TOCTOU race condition. Uses strict lt so duplicate timestamps are no-ops.
+  await db.user.updateMany({
+    where: {
+      polarCustomerId: input.customerId,
+      OR: [
+        { planUpdatedAt: null },
+        { planUpdatedAt: { lt: eventTime } },
+      ],
+    },
+    data: {
+      plan: resolvePlan(input.status, input.productId, input.currentPeriodEnd),
+      subscriptionStatus: input.status,
+      polarSubscriptionId: input.id,
+      polarProductId: input.productId,
+      polarCheckoutId: input.checkoutId,
+      subscriptionCurrentPeriodEnd: input.currentPeriodEnd,
+      subscriptionCancelAtPeriodEnd: input.cancelAtPeriodEnd,
+      subscriptionCanceledAt: input.canceledAt,
+      planUpdatedAt: eventTime,
+    },
+  });
+}
+
+async function handleCustomerPayload(payload: {
+  data: CustomerSyncInput;
+}): Promise<void> {
+  await syncCustomerData({
+    customerId: payload.data.id,
+    externalId: payload.data.externalId,
+    email: payload.data.email,
+  });
+}
+
+async function handleSubscriptionPayload(payload: {
+  data: SubscriptionSyncInput;
+  timestamp?: Date;
+}): Promise<void> {
+  await syncSubscriptionData(payload.data, payload.timestamp);
+}
 
 async function ensureDefaultGroup(userId: string): Promise<void> {
   const existingGroups = await db.group.count({ where: { userId } });
@@ -30,7 +156,51 @@ export const auth = betterAuth({
   trustedOrigins: CHROME_EXTENSION_ID
     ? [`chrome-extension://${CHROME_EXTENSION_ID}`]
     : [],
-  plugins: [nextCookies()],
+  plugins: [
+    nextCookies(),
+    ...(polarEnabled
+      ? [
+          polar({
+            client: new Polar({
+              accessToken: POLAR_ACCESS_TOKEN,
+              server: polarServer,
+            }),
+            createCustomerOnSignUp: polarCreateCustomerOnSignUp,
+            getCustomerCreateParams: async ({ user }) => ({
+              metadata: user.id
+                ? {
+                    appUserId: user.id,
+                  }
+                : undefined,
+            }),
+            use: [
+              checkout({
+                products: polarProductMappings,
+                successUrl: "/dashboard?checkout=success&checkout_id={CHECKOUT_ID}",
+                authenticatedUsersOnly: true,
+                returnUrl: NEXT_PUBLIC_APP_URL ?? undefined,
+              }),
+              portal({
+                returnUrl: NEXT_PUBLIC_APP_URL
+                  ? `${NEXT_PUBLIC_APP_URL}/dashboard`
+                  : undefined,
+              }),
+              webhooks({
+                secret: POLAR_WEBHOOK_SECRET!,
+                onCustomerCreated: handleCustomerPayload,
+                onCustomerUpdated: handleCustomerPayload,
+                onSubscriptionCreated: handleSubscriptionPayload,
+                onSubscriptionUpdated: handleSubscriptionPayload,
+                onSubscriptionActive: handleSubscriptionPayload,
+                onSubscriptionCanceled: handleSubscriptionPayload,
+                onSubscriptionRevoked: handleSubscriptionPayload,
+                onSubscriptionUncanceled: handleSubscriptionPayload,
+              }),
+            ],
+          }),
+        ]
+      : []),
+  ],
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,

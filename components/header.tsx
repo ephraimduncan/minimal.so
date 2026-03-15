@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -35,9 +35,12 @@ import {
   IconLoader2,
   IconKeyboard,
   IconLifebuoy,
+  IconRocket,
+  IconCreditCard,
 } from "@tabler/icons-react";
 import posthog from "posthog-js";
-import { signOut } from "@/lib/auth-client";
+import { authClient, signOut } from "@/lib/auth-client";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogClose,
@@ -53,6 +56,10 @@ import { cn } from "@/lib/utils";
 import { type GroupItem } from "@/lib/schema";
 import type { ProfileData } from "@/components/dashboard-content";
 import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog";
+import { ChromeIcon } from "@/components/chrome-icon";
+
+import { hasActiveProAccess } from "@/lib/plan-limits";
+import { startCheckout } from "@/lib/checkout";
 
 const SettingsDialog = dynamic(
   () => import("@/components/settings-dialog").then((m) => m.SettingsDialog),
@@ -112,8 +119,44 @@ export function Header({
   >(null);
   const [holdingGroupId, setHoldingGroupId] = useState<string | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
+  const [isBillingPending, startBillingTransition] = useTransition();
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const holdStartRef = useRef<number>(0);
+
+  const openExternal = useCallback((url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, []);
+
+  const hasProAccess = hasActiveProAccess(
+    profile?.plan,
+    profile?.subscriptionStatus,
+    profile?.subscriptionCurrentPeriodEnd,
+  );
+
+  const isCancelledButActive =
+    profile?.subscriptionStatus === "canceled" && hasProAccess;
+
+  const handleUpgradeClick = () => {
+    const billingCycle =
+      process.env.NEXT_PUBLIC_DEFAULT_BILLING_CYCLE === "monthly"
+        ? ("monthly" as const)
+        : ("yearly" as const);
+    startBillingTransition(async () => {
+      await startCheckout({ billingCycle, source: "dashboard_dropdown" });
+    });
+  };
+
+  const handleBillingPortalClick = () => {
+    startBillingTransition(async () => {
+      const { error } = await authClient.customer.portal({
+        redirect: true,
+      });
+
+      if (error) {
+        toast.error(error.message || "Unable to open billing portal");
+      }
+    });
+  };
   const handleSignOut = async () => {
     setSignOutOpen(false);
     posthog.reset();
@@ -350,13 +393,7 @@ export function Header({
               {username && (
                 <DropdownMenuItem
                   className="rounded-lg"
-                  render={
-                    <a
-                      href={`/u/${username}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    />
-                  }
+                  onClick={() => openExternal(`/u/${username}`)}
                 >
                   <IconUser className="h-4 w-4" />
                   Public Profile
@@ -364,14 +401,44 @@ export function Header({
               )}
               <DropdownMenuItem
                 className="rounded-lg"
-                render={
-                  <a href="/chrome" target="_blank" rel="noopener noreferrer" />
-                }
+                onClick={() => openExternal("/chrome")}
                 disabled={readOnly}
               >
                 <ChromeIcon />
                 Chrome Extension
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {!hasProAccess ? (
+                <DropdownMenuItem
+                  className="rounded-lg"
+                  onClick={handleUpgradeClick}
+                  disabled={readOnly || isBillingPending}
+                >
+                  <IconRocket className="h-4 w-4" />
+                  Upgrade
+                </DropdownMenuItem>
+              ) : null}
+              {hasProAccess ? (
+                <DropdownMenuItem
+                  className="rounded-lg"
+                  onClick={handleBillingPortalClick}
+                  disabled={readOnly || isBillingPending}
+                >
+                  <IconCreditCard className="h-4 w-4" />
+                  Billing Portal
+                </DropdownMenuItem>
+              ) : null}
+              {isCancelledButActive && profile?.subscriptionCurrentPeriodEnd ? (
+                <p className="px-2 py-1 text-xs text-muted-foreground">
+                  Pro until{" "}
+                  {new Date(
+                    profile.subscriptionCurrentPeriodEnd,
+                  ).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </p>
+              ) : null}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="rounded-lg"
@@ -382,9 +449,7 @@ export function Header({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="rounded-lg"
-                render={
-                  <a href="mailto:ephraimduncan68@gmail.com" target="_blank" rel="noopener noreferrer" />
-                }
+                onClick={() => openExternal("mailto:ephraimduncan68@gmail.com")}
               >
                 <IconLifebuoy className="h-4 w-4" />
                 Help & Support
@@ -517,6 +582,7 @@ function BmrksLogo({ size = 24 }: { size?: number }) {
       strokeLinejoin="round"
       aria-label="Logo"
     >
+      <title>bmrks logo</title>
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M12.432 17.949c.863 1.544 2.589 1.976 4.13 1.112c1.54 -.865 1.972 -2.594 1.048 -4.138c-.185 -.309 -.309 -.556 -.494 -.74c.247 .06 .555 .06 .925 .06c1.726 0 2.959 -1.234 2.959 -2.963c0 -1.73 -1.233 -2.965 -3.02 -2.965c-.37 0 -.617 0 -.925 .062c.185 -.185 .308 -.432 .493 -.74c.863 -1.545 .431 -3.274 -1.048 -4.138c-1.541 -.865 -3.205 -.433 -4.13 1.111c-.185 .309 -.308 .556 -.432 .803c-.123 -.247 -.246 -.494 -.431 -.803c-.802 -1.605 -2.528 -2.038 -4.007 -1.173c-1.541 .865 -1.973 2.594 -1.048 4.137c.185 .31 .308 .556 .493 .741c-.246 -.061 -.555 -.061 -.924 -.061c-1.788 0 -3.021 1.235 -3.021 2.964c0 1.729 1.233 2.964 3.02 2.964" />
       <path d="M4.073 21c4.286 -2.756 5.9 -5.254 7.927 -9" />
@@ -538,6 +604,7 @@ function UserAvatar({ name, image }: { name: string; image?: string | null }) {
 
   return (
     <svg viewBox="0 0 32 32" fill="none" width="18" height="18">
+      <title>User avatar</title>
       <rect width="32" height="32" rx="16" fill="#74B06F" />
       <text
         x="50%"
@@ -554,24 +621,3 @@ function UserAvatar({ name, image }: { name: string; image?: string | null }) {
   );
 }
 
-function ChromeIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="4" />
-      <line x1="21.17" y1="8" x2="12" y2="8" />
-      <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
-      <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
-    </svg>
-  );
-}

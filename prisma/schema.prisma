@@ -19,6 +19,17 @@ model user {
   twitter       String?
   website       String?
   isProfilePublic Boolean  @default(false)
+  plan            String   @default("free")
+  subscriptionStatus String?
+  polarCustomerId String?  @unique
+  polarCustomerExternalId String?
+  polarSubscriptionId String? @unique
+  polarProductId  String?
+  polarCheckoutId String?
+  subscriptionCurrentPeriodEnd DateTime?
+  subscriptionCancelAtPeriodEnd Boolean @default(false)
+  subscriptionCanceledAt DateTime?
+  planUpdatedAt DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

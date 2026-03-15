@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import posthog from "posthog-js";
 import dynamic from "next/dynamic";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/header";
 import { BookmarkInput } from "@/components/bookmark-input";
 import { BookmarkList } from "@/components/bookmark-list";
@@ -36,10 +37,13 @@ const preloadBulkDeleteDialog = () => import("@/components/bulk-delete-dialog");
 const preloadExportDialog = () => import("@/components/export-dialog");
 import { handleQuickExport } from "@/components/export-dialog";
 import { parseColor, isUrl, normalizeUrl, slugify } from "@/lib/utils";
+
 import { client, orpc } from "@/lib/orpc";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useFocusRefetch } from "@/hooks/use-focus-refetch";
 import { useLatestRef } from "@/lib/hooks/use-latest-ref";
+import { hasActiveProAccess } from "@/lib/plan-limits";
+import { PastDueBanner } from "@/components/past-due-banner";
 import type { BookmarkType, GroupItem, BookmarkItem } from "@/lib/schema";
 import type { Session } from "@/lib/auth";
 
@@ -51,6 +55,11 @@ export interface ProfileData {
   twitter: string | null;
   website: string | null;
   isProfilePublic: boolean;
+  plan: string;
+  subscriptionStatus: string | null;
+  subscriptionCurrentPeriodEnd: Date | string | null;
+  subscriptionCancelAtPeriodEnd: boolean;
+  polarCustomerId: string | null;
 }
 
 interface DashboardContentProps {
@@ -72,6 +81,9 @@ export function DashboardContent({
   initialBookmarks,
   profile,
 }: DashboardContentProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [mountedAt] = useState(Date.now);
 
@@ -88,6 +100,7 @@ export function DashboardContent({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
+
   const groupsQuery = useQuery({
     ...orpc.group.list.queryOptions(),
     initialData: initialGroups,
@@ -95,12 +108,35 @@ export function DashboardContent({
   });
 
   const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data]);
+  const hasProAccess = hasActiveProAccess(profile.plan, profile.subscriptionStatus, profile.subscriptionCurrentPeriodEnd);
 
   const hasUsername = profile.username !== null;
   const publicGroupIds = useMemo(
     () => new Set(groups.filter((g) => g.isPublic).map((g) => g.id)),
     [groups],
   );
+
+  useEffect(() => {
+    const checkoutStatus = searchParams.get("checkout");
+
+    if (!checkoutStatus) {
+      return;
+    }
+
+    if (checkoutStatus === "success") {
+      toast.success("Welcome to Pro! Your upgrade is complete.", {
+        duration: 5000,
+      });
+    }
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("checkout");
+    nextParams.delete("checkout_id");
+    router.replace(
+      nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname,
+      { scroll: false },
+    );
+  }, [pathname, router, searchParams]);
 
   useEffect(() => {
     if (posthog.get_distinct_id() === session.user.id) return;
@@ -127,6 +163,7 @@ export function DashboardContent({
       preloadExportDialog();
     }
   }, [selectionMode]);
+
 
   const groupIdBySlug = useMemo(
     () => new Map(groups.map((g) => [slugify(g.name), g.id])),
@@ -211,7 +248,7 @@ export function DashboardContent({
         groupId: newBookmark.groupId,
       };
     },
-    onError: (_err, _newBookmark, context) => {
+    onError: (err, _newBookmark, context) => {
       if (context?.previousBookmarks) {
         queryClient.setQueryData<BookmarkItem[]>(
           bookmarkListKey(context.groupId),
@@ -224,7 +261,7 @@ export function DashboardContent({
           context.previousGroups,
         );
       }
-      toast.error("Failed to create bookmark");
+      toast.error(err.message || "Failed to create bookmark");
     },
     onSuccess: () => {
       posthog.capture("bookmark_created");
@@ -444,7 +481,7 @@ export function DashboardContent({
     onSuccess: () => {
       posthog.capture("collection_created");
     },
-    onError: (_err, _newGroup, context) => {
+    onError: (err, _newGroup, context) => {
       if (context?.previousGroups) {
         queryClient.setQueryData<GroupItem[]>(
           groupListKey(),
@@ -454,7 +491,7 @@ export function DashboardContent({
       if (context?.previousGroupSlug !== undefined) {
         setGroupSlug(context.previousGroupSlug);
       }
-      toast.error("Failed to create group");
+      toast.error(err.message || "Failed to create group");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: orpc.group.key() });
@@ -1266,6 +1303,7 @@ export function DashboardContent({
         onExport={handleOpenExportDialog}
       />
       <main className="mx-auto w-full max-w-2xl px-5 py-20">
+        {profile.subscriptionStatus === "past_due" && <PastDueBanner />}
         <BookmarkInput
           ref={inputRef}
           value={searchQuery}

@@ -68,4 +68,5 @@ prisma/generated
 # Nightshift plan artifacts (keep out of version control)
 .nightshift-plan
 CLAUDE.md
+
 .factory

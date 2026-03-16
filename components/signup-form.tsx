@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { useAutofill } from "@/hooks/use-autofill";
 import posthog from "posthog-js";
 import { signUp } from "@/lib/auth-client";
 import { signupSchema } from "@/lib/schema";
+import { type BillingCycle, startCheckout } from "@/lib/checkout";
 
 const SIGNUP_FIELDS = [
   { name: "name", id: "name" },
@@ -32,6 +33,16 @@ export function SignupForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedPlan = searchParams.get("plan");
+  const billingCycleParam = searchParams.get("billingCycle");
+  const billingCycle: BillingCycle =
+    billingCycleParam === "monthly" ? "monthly" : "yearly";
+  const isProSignup = selectedPlan === "pro";
+  const checkoutCallbackURL = isProSignup
+    ? `/signup/complete?plan=pro&billingCycle=${billingCycle}`
+    : "/dashboard";
+
   type AuthData = Awaited<ReturnType<typeof signUp.email>>["data"];
   const authRef = useRef<AuthData>(null);
 
@@ -56,7 +67,7 @@ export function SignupForm({
         return null;
       },
     },
-    onSubmit: () => {
+    onSubmit: async () => {
       if (authRef.current?.user) {
         posthog.identify(authRef.current.user.id, {
           email: authRef.current.user.email,
@@ -65,13 +76,26 @@ export function SignupForm({
         });
         posthog.capture("signup_completed");
       }
+
+      if (isProSignup) {
+        const ok = await startCheckout({
+          billingCycle,
+          source: "signup_form",
+          userId: authRef.current?.user?.id,
+        });
+        if (!ok) {
+          router.push("/dashboard");
+        }
+        return;
+      }
+
       router.push("/dashboard");
     },
   });
 
   const formRef = useAutofill(
     (name, value) => form.setFieldValue(name, value),
-    SIGNUP_FIELDS
+    SIGNUP_FIELDS,
   );
 
   return (
@@ -83,7 +107,11 @@ export function SignupForm({
         </p>
       </div>
 
-      <OAuthButton provider="google" mode="signup" />
+      <OAuthButton
+        provider="google"
+        mode="signup"
+        callbackURL={checkoutCallbackURL}
+      />
 
       <div className="relative my-3">
         <div className="absolute inset-0 flex items-center">

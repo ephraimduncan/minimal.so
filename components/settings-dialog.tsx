@@ -18,6 +18,7 @@ import {
 } from "@/lib/extension";
 import type { ImportBookmarksResponse } from "@/lib/schema";
 import type { ProfileData } from "@/components/dashboard-content";
+import { ChromeIcon } from "@/components/chrome-icon";
 import {
   Dialog,
   DialogClose,
@@ -46,6 +47,8 @@ import {
   IconRefresh,
   IconTrash,
   IconAlertTriangle,
+  IconCreditCard,
+  IconRocket,
 } from "@tabler/icons-react";
 import { ImagePlusIcon } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -60,6 +63,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { usernameSchema, updateProfileSchema } from "@/lib/schema";
+import { Badge } from "@/components/ui/badge";
+import { hasActiveProAccess } from "@/lib/plan-limits";
+import { startCheckout } from "@/lib/checkout";
 
 const ACCEPTED_AVATAR_TYPES = new Set([
   "image/png",
@@ -98,6 +104,11 @@ export function SettingsDialog({
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [viewOnceKey, setViewOnceKey] = useState<string | null>(null);
+  const hasProAccess = hasActiveProAccess(
+    profile?.plan,
+    profile?.subscriptionStatus,
+    profile?.subscriptionCurrentPeriodEnd,
+  );
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open && !prevOpen) {
@@ -194,6 +205,11 @@ export function SettingsDialog({
   };
 
   const handleImportBookmarks = async () => {
+    if (!hasProAccess) {
+      toast.error("Import is a Pro feature. Upgrade to unlock browser import.");
+      return;
+    }
+
     if (!isExtensionAvailable()) {
       toast.error("Install the Chrome extension to import bookmarks", {
         action: {
@@ -251,6 +267,7 @@ export function SettingsDialog({
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="profile">Public Profile</TabsTrigger>
             <TabsTrigger value="api">API</TabsTrigger>
+            <TabsTrigger value="billing">Billing</TabsTrigger>
           </TabsList>
           <TabsContent value="general">
             <Form
@@ -328,7 +345,7 @@ export function SettingsDialog({
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <ChromeIcon />
+                  <ChromeIcon size={20} />
                   <span>Get the Chrome Extension</span>
                 </a>
               </Field>
@@ -347,7 +364,7 @@ export function SettingsDialog({
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={isImporting}
+                    disabled={isImporting || !hasProAccess}
                     onClick={handleImportBookmarks}
                   >
                     {isImporting ? (
@@ -359,6 +376,14 @@ export function SettingsDialog({
                       <>
                         <IconDownload className="size-4" />
                         Import Browser Bookmarks
+                        {!hasProAccess ? (
+                          <Badge
+                            variant="outline"
+                            className="ml-1 h-5 rounded-md px-1.5 text-[10px]"
+                          >
+                            Pro
+                          </Badge>
+                        ) : null}
                       </>
                     )}
                   </Button>
@@ -382,6 +407,9 @@ export function SettingsDialog({
           </TabsContent>
           <TabsContent value="api">
             <ApiKeyTab viewOnceKey={viewOnceKey} onKeyGenerated={setViewOnceKey} />
+          </TabsContent>
+          <TabsContent value="billing">
+            {profile && <BillingTab profile={profile} />}
           </TabsContent>
         </Tabs>
       </DialogContent>
@@ -738,23 +766,23 @@ function ApiKeyTab({ viewOnceKey, onKeyGenerated }: ApiKeyTabProps) {
           <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
             <IconAlertTriangle className="size-4 shrink-0" />
             <p className="text-sm font-medium">
-              Copy this key now. It won&apos;t be shown again.
+              Copy your key now. It won&apos;t appear again.
             </p>
           </div>
         </div>
         <Field>
           <FieldLabel>API Key</FieldLabel>
           <div className="flex items-center gap-2">
-            <code className="flex-1 rounded-md border bg-muted px-3 py-2 font-mono text-sm break-all">
+            <code className="min-w-0 flex-1 truncate rounded-md border bg-muted px-2 font-mono text-xs h-7 flex items-center">
               {viewOnceKey}
             </code>
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="icon-sm"
               onClick={handleCopyKey}
             >
-              <IconCopy className="size-4" />
+              <IconCopy className="size-3.5" />
             </Button>
           </div>
         </Field>
@@ -904,8 +932,10 @@ function RevokeConfirmDialog({
   );
 }
 
-function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString("en-US", {
+function formatDate(date: Date | string | null | undefined): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -926,6 +956,115 @@ function formatRelativeDate(date: Date | string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   if (diffDay < 7) return `${diffDay}d ago`;
   return formatDate(date);
+}
+
+function BillingTab({ profile }: { profile: ProfileData }) {
+  const [isBillingPending, setIsBillingPending] = useState(false);
+
+  const hasProAccess = hasActiveProAccess(
+    profile.plan,
+    profile.subscriptionStatus,
+    profile.subscriptionCurrentPeriodEnd,
+  );
+
+  const isCancelled =
+    profile.subscriptionStatus === "canceled" && hasProAccess;
+
+  const isFree = !hasProAccess;
+
+  const handleUpgrade = () => {
+    const billingCycle =
+      process.env.NEXT_PUBLIC_DEFAULT_BILLING_CYCLE === "monthly"
+        ? ("monthly" as const)
+        : ("yearly" as const);
+    setIsBillingPending(true);
+    startCheckout({ billingCycle, source: "settings_billing" }).finally(() =>
+      setIsBillingPending(false),
+    );
+  };
+
+  const handleManageBilling = async () => {
+    setIsBillingPending(true);
+    try {
+      const { error } = await authClient.customer.portal({ redirect: true });
+      if (error) {
+        toast.error(error.message || "Unable to open billing portal");
+      }
+    } finally {
+      setIsBillingPending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 pt-2">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Current Plan</p>
+        <div className="flex items-center gap-2">
+          {hasProAccess ? (
+            <Badge
+              variant="outline"
+              className="h-5 rounded-md px-1.5 text-[10px]"
+            >
+              Pro
+            </Badge>
+          ) : (
+            <span className="text-sm text-foreground">Free</span>
+          )}
+        </div>
+      </div>
+      {hasProAccess && !isCancelled && profile.subscriptionCurrentPeriodEnd && (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Next Renewal</p>
+          <p className="text-sm text-muted-foreground">
+            {formatDate(profile.subscriptionCurrentPeriodEnd)}
+          </p>
+        </div>
+      )}
+      {isCancelled && (
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Subscription Ending</p>
+          <p className="text-sm text-muted-foreground">
+            Pro until {formatDate(profile.subscriptionCurrentPeriodEnd)}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Your subscription will not renew after this date.
+          </p>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2 pt-1">
+        {isFree && (
+          <Button
+            variant="default"
+            className="h-8 rounded-lg gap-1.5"
+            onClick={handleUpgrade}
+            disabled={isBillingPending}
+          >
+            {isBillingPending ? (
+              <IconLoader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <IconRocket className="h-4 w-4" />
+            )}
+            Upgrade to Pro
+          </Button>
+        )}
+        {hasProAccess && (
+          <Button
+            variant="outline"
+            className="h-8 rounded-lg gap-1.5"
+            onClick={handleManageBilling}
+            disabled={isBillingPending}
+          >
+            {isBillingPending ? (
+              <IconLoader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <IconCreditCard className="h-4 w-4" />
+            )}
+            Manage Billing
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 async function responseError(
@@ -982,24 +1121,3 @@ function UsernameStatusIcon({ status }: { status: UsernameStatus }) {
   }
 }
 
-function ChromeIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="4" />
-      <line x1="21.17" y1="8" x2="12" y2="8" />
-      <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
-      <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
-    </svg>
-  );
-}

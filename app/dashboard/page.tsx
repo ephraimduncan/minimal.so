@@ -12,38 +12,44 @@ async function DashboardData() {
     redirect("/login");
   }
 
-  const [groups, user, firstGroupWithBookmarks] = await Promise.all([
-    db.group.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "asc" },
-      include: {
-        _count: {
-          select: { bookmarks: true },
+  const [groups, user, firstGroupWithBookmarks] =
+    await Promise.all([
+      db.group.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "asc" },
+        include: {
+          _count: {
+            select: { bookmarks: true },
+          },
         },
-      },
-    }),
-    db.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        image: true,
-        username: true,
-        bio: true,
-        github: true,
-        twitter: true,
-        website: true,
-        isProfilePublic: true,
-      },
-    }),
-    db.group.findFirst({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "asc" },
-      select: {
-        bookmarks: {
-          orderBy: { createdAt: "desc" },
+      }),
+      db.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          image: true,
+          username: true,
+          bio: true,
+          github: true,
+          twitter: true,
+          website: true,
+          isProfilePublic: true,
+          plan: true,
+          subscriptionStatus: true,
+          subscriptionCurrentPeriodEnd: true,
+          subscriptionCancelAtPeriodEnd: true,
+          polarCustomerId: true,
         },
-      },
-    }),
-  ]);
+      }),
+      db.group.findFirst({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "asc" },
+        select: {
+          bookmarks: {
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      }),
+    ]);
 
   const groupItems: GroupItem[] = groups.map((g) => ({
     id: g.id,
@@ -81,6 +87,11 @@ async function DashboardData() {
           twitter: null,
           website: null,
           isProfilePublic: false,
+          plan: "free",
+          subscriptionStatus: null,
+          subscriptionCurrentPeriodEnd: null,
+          subscriptionCancelAtPeriodEnd: false,
+          polarCustomerId: null,
         }
       }
     />

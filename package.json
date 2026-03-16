@@ -25,6 +25,8 @@
     "@orpc/server": "1.13.7",
     "@orpc/tanstack-query": "1.13.7",
     "@orpc/zod": "1.13.7",
+    "@polar-sh/better-auth": "^1.8.1",
+    "@polar-sh/sdk": "^0.43.1",
     "@prisma/adapter-libsql": "^7.0.1",
     "@prisma/client": "^7.0.1",
     "@tabler/icons-react": "^3.36.1",
@@ -55,6 +57,7 @@
     "sharp": "^0.34.5",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
+    "torph": "^0.0.5",
     "vaul": "^1.1.2",
     "zod": "^4.1.13"
   },

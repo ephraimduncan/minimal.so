@@ -11,6 +11,7 @@ type Provider = "google";
 interface OAuthButtonProps {
   provider: Provider;
   mode: "signin" | "signup";
+  callbackURL?: string;
 }
 
 const providerConfig = {
@@ -20,7 +21,11 @@ const providerConfig = {
   },
 };
 
-export function OAuthButton({ provider, mode }: OAuthButtonProps) {
+export function OAuthButton({
+  provider,
+  mode,
+  callbackURL = "/dashboard",
+}: OAuthButtonProps) {
   const [isPending, startTransition] = useTransition();
   const config = providerConfig[provider];
   const Icon = config.icon;
@@ -29,7 +34,7 @@ export function OAuthButton({ provider, mode }: OAuthButtonProps) {
     startTransition(async () => {
       const { error } = await signIn.social({
         provider,
-        callbackURL: "/dashboard",
+        callbackURL,
       });
 
       if (error) {
@@ -47,7 +52,7 @@ export function OAuthButton({ provider, mode }: OAuthButtonProps) {
     <Button
       type="button"
       variant="outline"
-      className="w-full gap-0"
+      className="w-full cursor-pointer gap-0"
       onClick={handleClick}
       disabled={isPending}
     >

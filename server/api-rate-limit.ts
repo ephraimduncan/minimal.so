@@ -1,12 +1,6 @@
-/**
- * In-memory rate limiting for the public API.
- *
- * Two sliding-window buckets per API key:
- *   - General  : 60 requests / minute
- *   - Write    : 30 requests / minute (POST, PATCH, DELETE)
- *
- * Expired entries are purged every 5 minutes to prevent memory leaks.
- */
+// Sliding-window rate limiter. Two buckets per API key:
+//   General: 60 req/min — Write (POST/PATCH/DELETE): 30 req/min
+// Expired entries purged every 5 min.
 
 const GENERAL_LIMIT = 60;
 const WRITE_LIMIT = 30;
@@ -19,15 +13,10 @@ interface BucketEntry {
   timestamps: number[];
 }
 
-/** Per-key, per-bucket request timestamps. Key format: `${apiKey}:${bucket}` */
 const buckets = new Map<string, BucketEntry>();
 
-/**
- * Prune timestamps older than the current window and return the live count.
- */
 function pruneAndCount(entry: BucketEntry, now: number): number {
   const windowStart = now - WINDOW_MS;
-  // Remove expired timestamps from the front (oldest first)
   let i = 0;
   while (i < entry.timestamps.length && entry.timestamps[i]! <= windowStart) {
     i++;
@@ -38,9 +27,6 @@ function pruneAndCount(entry: BucketEntry, now: number): number {
   return entry.timestamps.length;
 }
 
-/**
- * Get or create a bucket entry for the given key.
- */
 function getEntry(key: string): BucketEntry {
   let entry = buckets.get(key);
   if (!entry) {
@@ -58,13 +44,6 @@ export interface RateLimitResult {
   retryAfter?: number; // seconds until window resets
 }
 
-/**
- * Check (and record) a request against both buckets.
- *
- * Returns the *tightest* limit info — i.e. whichever bucket is closer to
- * exhaustion dictates the headers. If either bucket is exceeded the request
- * is denied.
- */
 export function checkRateLimit(
   apiKey: string,
   method: string,
@@ -72,7 +51,6 @@ export function checkRateLimit(
   const now = Date.now();
   const isWrite = WRITE_METHODS.has(method.toUpperCase());
 
-  // --- General bucket ---
   const generalEntry = getEntry(`${apiKey}:general`);
   const generalCount = pruneAndCount(generalEntry, now);
   const generalResetAt = Math.ceil((now + WINDOW_MS) / 1000);
@@ -89,7 +67,6 @@ export function checkRateLimit(
     };
   }
 
-  // --- Write bucket (only for mutating methods) ---
   if (isWrite) {
     const writeEntry = getEntry(`${apiKey}:write`);
     const writeCount = pruneAndCount(writeEntry, now);
@@ -107,17 +84,13 @@ export function checkRateLimit(
       };
     }
 
-    // Record the write timestamp
     writeEntry.timestamps.push(now);
 
-    // Return write bucket info when it's the tighter constraint
     const writeRemaining = WRITE_LIMIT - (writeCount + 1);
     const generalRemaining = GENERAL_LIMIT - (generalCount + 1);
 
-    // Record general timestamp too (writes also count towards the general bucket)
     generalEntry.timestamps.push(now);
 
-    // Return whichever bucket is closer to exhaustion
     if (writeRemaining < generalRemaining) {
       return {
         allowed: true,
@@ -135,7 +108,6 @@ export function checkRateLimit(
     };
   }
 
-  // --- Read-only request: only general bucket applies ---
   generalEntry.timestamps.push(now);
 
   return {
@@ -146,9 +118,6 @@ export function checkRateLimit(
   };
 }
 
-/**
- * Build rate-limit headers to attach to every response.
- */
 export function rateLimitHeaders(
   result: RateLimitResult,
 ): Record<string, string> {
@@ -165,9 +134,6 @@ export function rateLimitHeaders(
   return headers;
 }
 
-// ---------------------------------------------------------------------------
-// Periodic cleanup of expired entries
-// ---------------------------------------------------------------------------
 
 function cleanupExpiredEntries(): void {
   const now = Date.now();
@@ -179,7 +145,6 @@ function cleanupExpiredEntries(): void {
   }
 }
 
-// Start cleanup interval (non-blocking, doesn't prevent process exit)
 const cleanupTimer = setInterval(cleanupExpiredEntries, CLEANUP_INTERVAL_MS);
 if (typeof cleanupTimer === "object" && "unref" in cleanupTimer) {
   cleanupTimer.unref();

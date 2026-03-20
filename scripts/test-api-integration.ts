@@ -1,22 +1,7 @@
-/**
- * Cross-area integration test script.
- *
- * Tests the full lifecycle of API key generation and public API usage:
- * 1. Create a test user + API key programmatically via Prisma
- * 2. Test API authentication (Bearer token)
- * 3. Test group-bookmark chain
- * 4. Test key revocation (401 after delete)
- * 5. Test key regeneration (old key 401, new key 200)
- * 6. Test lastUsedAt update
- *
- * Usage: bun run scripts/test-api-integration.ts
- */
+// API integration tests. Usage: bun run scripts/test-api-integration.ts
 
 import crypto from "crypto";
 
-/* -------------------------------------------------------------------------- */
-/*  Prisma client (inline – avoids importing from lib/db which needs Next)     */
-/* -------------------------------------------------------------------------- */
 
 import { PrismaClient } from "../prisma/generated/client/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
@@ -26,9 +11,6 @@ const db = new PrismaClient({ adapter });
 
 const BASE = "http://localhost:3000";
 
-/* -------------------------------------------------------------------------- */
-/*  Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
 
 function hashKey(raw: string): string {
   return crypto.createHash("sha256").update(raw).digest("hex");
@@ -100,17 +82,14 @@ function assert(
   detail?: string,
 ): void {
   if (condition) {
-    console.log(`  ✅ ${testName}`);
+    console.log(`  PASS ${testName}`);
     passed++;
   } else {
-    console.error(`  ❌ ${testName}${detail ? ` — ${detail}` : ""}`);
+    console.error(`  FAIL ${testName}${detail ? ` — ${detail}` : ""}`);
     failed++;
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Cleanup helper — removes all test data                                     */
-/* -------------------------------------------------------------------------- */
 
 const TEST_EMAIL = "api-integration-test@test.local";
 
@@ -130,18 +109,12 @@ async function cleanup() {
   } catch { /* ignore */ }
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Main test suite                                                            */
-/* -------------------------------------------------------------------------- */
 
 async function main() {
-  console.log("\n🔧 Cross-Area Integration Tests\n");
+  console.log("\nCross-Area Integration Tests\n");
   console.log("=".repeat(60));
 
-  // -----------------------------------------------------------------------
-  // Setup: create test user + API key
-  // -----------------------------------------------------------------------
-  console.log("\n📋 Setup: creating test user and API key...\n");
+  console.log("\nSetup: creating test user and API key...\n");
 
   await cleanup();
 
@@ -167,9 +140,6 @@ async function main() {
   });
   console.log(`  Created API key: ${rawKey1.slice(0, 12)}...`);
 
-  // -----------------------------------------------------------------------
-  // Test 1: API Key Format
-  // -----------------------------------------------------------------------
   console.log("\n── Test 1: API Key Format ──");
 
   assert(rawKey1.startsWith("mnk_"), "Key starts with mnk_ prefix");
@@ -183,9 +153,6 @@ async function main() {
   assert(dbKey!.keyPrefix === rawKey1.slice(0, 8), "Stored prefix is correct");
   assert(dbKey!.lastUsedAt === null, "lastUsedAt is initially null");
 
-  // -----------------------------------------------------------------------
-  // Test 2: API Authentication
-  // -----------------------------------------------------------------------
   console.log("\n── Test 2: API Authentication ──");
 
   // Valid key → 200
@@ -202,9 +169,6 @@ async function main() {
   const badKeyRes = await apiGet("/api/user/me", "mnk_invalidkey12345678");
   assert(badKeyRes.status === 401, "GET /api/user/me with invalid key → 401", `got ${badKeyRes.status}`);
 
-  // -----------------------------------------------------------------------
-  // Test 3: Rate Limit Headers
-  // -----------------------------------------------------------------------
   console.log("\n── Test 3: Rate Limit Headers ──");
 
   assert(
@@ -220,9 +184,6 @@ async function main() {
     "X-RateLimit-Reset header present",
   );
 
-  // -----------------------------------------------------------------------
-  // Test 4: Group-Bookmark Chain
-  // -----------------------------------------------------------------------
   console.log("\n── Test 4: Group → Bookmark Chain ──");
 
   // Create group
@@ -263,9 +224,6 @@ async function main() {
   );
   assert(bkmk?.groupId === groupId, "Bookmark groupId matches");
 
-  // -----------------------------------------------------------------------
-  // Test 5: Bookmark CRUD
-  // -----------------------------------------------------------------------
   console.log("\n── Test 5: Bookmark CRUD ──");
 
   // Update bookmark
@@ -296,9 +254,6 @@ async function main() {
   );
   assert(!stillThere, "Deleted bookmark no longer in listing");
 
-  // -----------------------------------------------------------------------
-  // Test 6: Group CRUD
-  // -----------------------------------------------------------------------
   console.log("\n── Test 6: Group CRUD ──");
 
   // List groups
@@ -322,9 +277,6 @@ async function main() {
   const delGrp = await apiDelete(`/api/groups/${groupId}`, rawKey1);
   assert(delGrp.status === 200, "DELETE /api/groups/:id → 200", `got ${delGrp.status}`);
 
-  // -----------------------------------------------------------------------
-  // Test 7: Group Delete Cascades Bookmarks
-  // -----------------------------------------------------------------------
   console.log("\n── Test 7: Group Delete Cascades Bookmarks ──");
 
   // Create group
@@ -357,9 +309,6 @@ async function main() {
   const dbBkmk = await db.bookmark.findUnique({ where: { id: bookmarkId2 } });
   assert(dbBkmk === null, "Bookmark not in database after cascade delete");
 
-  // -----------------------------------------------------------------------
-  // Test 8: Error Cases
-  // -----------------------------------------------------------------------
   console.log("\n── Test 8: Error Cases ──");
 
   // Create bookmark without url
@@ -394,9 +343,6 @@ async function main() {
   );
   assert(badGroup.status === 400, "POST bookmark with invalid groupId → 400", `got ${badGroup.status}`);
 
-  // -----------------------------------------------------------------------
-  // Test 9: lastUsedAt Update
-  // -----------------------------------------------------------------------
   console.log("\n── Test 9: lastUsedAt Update ──");
 
   const keyBefore = await db.apiKey.findUnique({ where: { userId: user.id } });
@@ -417,9 +363,6 @@ async function main() {
     `before=${lastUsedBefore}, after=${keyAfter!.lastUsedAt!.getTime()}`,
   );
 
-  // -----------------------------------------------------------------------
-  // Test 10: Key Revocation
-  // -----------------------------------------------------------------------
   console.log("\n── Test 10: Key Revocation ──");
 
   // Revoke key via direct DB delete (simulating ORPC procedure)
@@ -434,9 +377,6 @@ async function main() {
     JSON.stringify(revokedRes.body),
   );
 
-  // -----------------------------------------------------------------------
-  // Test 11: Key Regeneration
-  // -----------------------------------------------------------------------
   console.log("\n── Test 11: Key Regeneration ──");
 
   // Generate new key
@@ -483,9 +423,6 @@ async function main() {
   const keyCount = await db.apiKey.count({ where: { userId: user.id } });
   assert(keyCount === 1, "Only one API key exists per user", `count=${keyCount}`);
 
-  // -----------------------------------------------------------------------
-  // Test 12: Duplicate Bookmark Detection
-  // -----------------------------------------------------------------------
   console.log("\n── Test 12: Duplicate Bookmark Detection ──");
 
   const dup1 = await apiPost(
@@ -504,9 +441,6 @@ async function main() {
   assert(dup2.body.duplicate === true, "Response indicates duplicate");
   assert(dup2.body.bookmarkId === dup1.body.bookmarkId, "Same bookmarkId returned");
 
-  // -----------------------------------------------------------------------
-  // Test 13: OpenAPI Spec
-  // -----------------------------------------------------------------------
   console.log("\n── Test 13: OpenAPI Spec ──");
 
   const specRes = await fetch(`${BASE}/api/openapi.json`);
@@ -518,27 +452,18 @@ async function main() {
   assert("/groups" in (spec.paths ?? {}), "Groups endpoint in spec");
   assert("/user/me" in (spec.paths ?? {}), "User/me endpoint in spec");
 
-  // -----------------------------------------------------------------------
-  // Test 14: Health Endpoint (no auth needed)
-  // -----------------------------------------------------------------------
   console.log("\n── Test 14: Health Endpoint ──");
 
   const healthRes = await apiGet("/api/health");
   assert(healthRes.status === 200, "GET /api/health → 200 (no auth)", `got ${healthRes.status}`);
   assert(healthRes.body.success === true, "Health response is successful");
 
-  // -----------------------------------------------------------------------
-  // Cleanup
-  // -----------------------------------------------------------------------
   console.log("\n── Cleanup ──");
   await cleanup();
   console.log("  Test data cleaned up.");
 
-  // -----------------------------------------------------------------------
-  // Summary
-  // -----------------------------------------------------------------------
   console.log("\n" + "=".repeat(60));
-  console.log(`\n📊 Results: ${passed} passed, ${failed} failed\n`);
+  console.log(`\nResults: ${passed} passed, ${failed} failed\n`);
 
   if (failed > 0) {
     process.exit(1);
@@ -547,7 +472,7 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error("❌ Test script crashed:", err);
+    console.error("Test script crashed:", err);
     process.exit(1);
   })
   .finally(() => {

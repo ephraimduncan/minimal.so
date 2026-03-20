@@ -1,3 +1,5 @@
+import { ORPCError } from "@orpc/server";
+import { hasActiveProAccess } from "@/lib/plan-limits";
 import { authed } from "../context";
 import { db } from "@/lib/db";
 import crypto from "crypto";
@@ -12,6 +14,17 @@ function generateRawKey(): string {
 }
 
 export const generateApiKey = authed.handler(async ({ context }) => {
+  const user = await db.user.findUnique({
+    where: { id: context.user.id },
+    select: { plan: true, subscriptionStatus: true, subscriptionCurrentPeriodEnd: true },
+  });
+
+  if (!hasActiveProAccess(user?.plan, user?.subscriptionStatus, user?.subscriptionCurrentPeriodEnd)) {
+    throw new ORPCError("FORBIDDEN", {
+      message: "API key generation requires an active Pro subscription",
+    });
+  }
+
   const rawKey = generateRawKey();
   const keyHash = hashKey(rawKey);
   const keyPrefix = rawKey.slice(0, 8); // "mnk_xxxx"

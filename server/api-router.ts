@@ -5,10 +5,6 @@ import { db } from "@/lib/db";
 import { normalizeUrl, canonicalizeUrl } from "@/lib/utils";
 import { getUrlMetadata } from "@/lib/url-metadata";
 
-/**
- * Health check endpoint — no auth required.
- * GET /api/health → { success: true, message: "ok" }
- */
 const health = os
   .route({ method: "GET", path: "/health" })
   .output(
@@ -21,9 +17,6 @@ const health = os
     return { success: true, message: "ok" };
   });
 
-// ---------------------------------------------------------------------------
-// Bookmark API endpoints
-// ---------------------------------------------------------------------------
 
 const bookmarkItemSchema = z.object({
   id: z.string(),
@@ -37,9 +30,6 @@ const bookmarkItemSchema = z.object({
   createdAt: z.string(),
 });
 
-/**
- * GET /api/bookmarks — List bookmarks (paginated)
- */
 const listBookmarks = apiAuthed
   .route({ method: "GET", path: "/bookmarks" })
   .input(
@@ -103,9 +93,6 @@ const listBookmarks = apiAuthed
     };
   });
 
-/**
- * POST /api/bookmarks — Create a bookmark
- */
 const createBookmark = apiAuthed
   .route({ method: "POST", path: "/bookmarks", successStatus: 201 })
   .input(
@@ -123,7 +110,6 @@ const createBookmark = apiAuthed
     }),
   )
   .handler(async ({ context, input }) => {
-    // Resolve groupId: validate if provided, otherwise use user's first group
     let resolvedGroupId: string;
 
     if (input.groupId) {
@@ -138,7 +124,6 @@ const createBookmark = apiAuthed
       }
       resolvedGroupId = group.id;
     } else {
-      // No groupId provided — use the user's first group or create a default one
       const firstGroup = await db.group.findFirst({
         where: { userId: context.user.id },
         orderBy: { createdAt: "asc" },
@@ -148,7 +133,6 @@ const createBookmark = apiAuthed
       if (firstGroup) {
         resolvedGroupId = firstGroup.id;
       } else {
-        // Create a default group for the user
         const defaultGroup = await db.group.create({
           data: {
             name: "Bookmarks",
@@ -163,7 +147,6 @@ const createBookmark = apiAuthed
     const normalized = normalizeUrl(input.url);
     const canonical = canonicalizeUrl(normalized);
 
-    // Check for duplicate by normalizedUrl across all of user's bookmarks
     const existing = await db.bookmark.findFirst({
       where: {
         userId: context.user.id,
@@ -180,7 +163,6 @@ const createBookmark = apiAuthed
       };
     }
 
-    // Fetch metadata for the URL
     const metadata = await getUrlMetadata(normalized);
 
     const bookmark = await db.bookmark.create({
@@ -201,9 +183,6 @@ const createBookmark = apiAuthed
     };
   });
 
-/**
- * PATCH /api/bookmarks/{id} — Update a bookmark
- */
 const updateBookmark = apiAuthed
   .route({ method: "PATCH", path: "/bookmarks/{id}" })
   .input(
@@ -225,7 +204,6 @@ const updateBookmark = apiAuthed
   .handler(async ({ context, input }) => {
     const { id, ...fields } = input;
 
-    // Check bookmark exists and belongs to user
     const existing = await db.bookmark.findFirst({
       where: { id, userId: context.user.id },
       select: { id: true },
@@ -237,7 +215,6 @@ const updateBookmark = apiAuthed
       });
     }
 
-    // Validate groupId if provided
     if (fields.groupId !== undefined) {
       const group = await db.group.findFirst({
         where: { id: fields.groupId, userId: context.user.id },
@@ -260,7 +237,6 @@ const updateBookmark = apiAuthed
     }
     if (fields.groupId !== undefined) {
       updateData.groupId = fields.groupId;
-      // Reset public status when moving groups
       if (fields.isPublic === undefined) {
         updateData.isPublic = null;
       }
@@ -279,9 +255,6 @@ const updateBookmark = apiAuthed
     };
   });
 
-/**
- * DELETE /api/bookmarks/{id} — Delete a bookmark
- */
 const deleteBookmark = apiAuthed
   .route({ method: "DELETE", path: "/bookmarks/{id}" })
   .input(
@@ -297,7 +270,6 @@ const deleteBookmark = apiAuthed
     }),
   )
   .handler(async ({ context, input }) => {
-    // Check bookmark exists and belongs to user
     const existing = await db.bookmark.findFirst({
       where: { id: input.id, userId: context.user.id },
       select: { id: true },
@@ -320,9 +292,6 @@ const deleteBookmark = apiAuthed
     };
   });
 
-// ---------------------------------------------------------------------------
-// Group API endpoints
-// ---------------------------------------------------------------------------
 
 const groupItemSchema = z.object({
   id: z.string(),
@@ -333,9 +302,6 @@ const groupItemSchema = z.object({
   createdAt: z.string(),
 });
 
-/**
- * GET /api/groups — List groups for the authenticated user
- */
 const listGroups = apiAuthed
   .route({ method: "GET", path: "/groups" })
   .output(
@@ -364,9 +330,6 @@ const listGroups = apiAuthed
     };
   });
 
-/**
- * POST /api/groups — Create a new group
- */
 const createGroup = apiAuthed
   .route({ method: "POST", path: "/groups", successStatus: 201 })
   .input(
@@ -396,9 +359,6 @@ const createGroup = apiAuthed
     };
   });
 
-/**
- * PATCH /api/groups/{id} — Update a group
- */
 const updateGroup = apiAuthed
   .route({ method: "PATCH", path: "/groups/{id}" })
   .input(
@@ -448,9 +408,6 @@ const updateGroup = apiAuthed
     };
   });
 
-/**
- * DELETE /api/groups/{id} — Delete a group (cascades to bookmarks)
- */
 const deleteGroup = apiAuthed
   .route({ method: "DELETE", path: "/groups/{id}" })
   .input(
@@ -488,13 +445,7 @@ const deleteGroup = apiAuthed
     };
   });
 
-// ---------------------------------------------------------------------------
-// User API endpoints
-// ---------------------------------------------------------------------------
 
-/**
- * GET /api/user/me — Get authenticated user profile
- */
 const getMe = apiAuthed
   .route({ method: "GET", path: "/user/me" })
   .output(
@@ -526,10 +477,6 @@ const getMe = apiAuthed
     };
   });
 
-/**
- * Public API router — holds all REST API route definitions.
- * Uses OpenAPIHandler to serve these as REST endpoints at /api/*.
- */
 export const apiRouter = {
   health,
   listBookmarks,

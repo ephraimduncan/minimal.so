@@ -406,7 +406,7 @@ export function SettingsDialog({
             {profile && <ProfileTab profile={profile} onOpenChange={onOpenChange} />}
           </TabsContent>
           <TabsContent value="api">
-            <ApiKeyTab viewOnceKey={viewOnceKey} onKeyGenerated={setViewOnceKey} />
+            <ApiKeyTab viewOnceKey={viewOnceKey} onKeyGenerated={setViewOnceKey} hasProAccess={hasProAccess} />
           </TabsContent>
           <TabsContent value="billing">
             {profile && <BillingTab profile={profile} />}
@@ -697,9 +697,10 @@ function ProfileTab({ profile, onOpenChange }: ProfileTabProps) {
 interface ApiKeyTabProps {
   viewOnceKey: string | null;
   onKeyGenerated: (key: string | null) => void;
+  hasProAccess: boolean;
 }
 
-function ApiKeyTab({ viewOnceKey, onKeyGenerated }: ApiKeyTabProps) {
+function ApiKeyTab({ viewOnceKey, onKeyGenerated, hasProAccess }: ApiKeyTabProps) {
   const queryClient = useQueryClient();
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
 
@@ -754,6 +755,28 @@ function ApiKeyTab({ viewOnceKey, onKeyGenerated }: ApiKeyTabProps) {
     return (
       <div className="flex items-center justify-center py-8">
         <IconLoader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!hasProAccess) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="flex flex-col items-center justify-center gap-3 py-6">
+          <div className="rounded-full border bg-muted p-3">
+            <IconRocket className="size-5 text-muted-foreground" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium">API access requires Pro</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Upgrade to generate API keys and access your bookmarks programmatically.
+            </p>
+          </div>
+          <Button type="button" onClick={() => startCheckout({ billingCycle: "yearly", source: "settings_api" })}>
+            <IconRocket className="size-4" />
+            Upgrade to Pro
+          </Button>
+        </div>
       </div>
     );
   }

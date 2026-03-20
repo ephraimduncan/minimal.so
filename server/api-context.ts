@@ -1,6 +1,7 @@
 import { ORPCError, os } from "@orpc/server";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
+import { hasActiveProAccess } from "@/lib/plan-limits";
 
 async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -45,6 +46,12 @@ export const apiBase = os.use(async ({ next }) => {
     where: { id: apiKey.id },
     data: { lastUsedAt: new Date() },
   });
+
+  if (!hasActiveProAccess(apiKey.user.plan, apiKey.user.subscriptionStatus, apiKey.user.subscriptionCurrentPeriodEnd)) {
+    throw new ORPCError("FORBIDDEN", {
+      message: "API access requires an active Pro subscription",
+    });
+  }
 
   return next({
     context: {

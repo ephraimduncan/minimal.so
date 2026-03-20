@@ -51,7 +51,11 @@ const PRO_PLAN_FEATURES: {
   },
   { icon: PRICING_PRO_IMPORT_ICON, label: "Import from browser" },
   { icon: PRICING_PRO_API_ICON, label: "API access with rate limits" },
-  { icon: PRICING_PRO_FILTER_ICON, label: "Advanced search and filtering", soon: true },
+  {
+    icon: PRICING_PRO_FILTER_ICON,
+    label: "Advanced search and filtering",
+    soon: true,
+  },
   { icon: PRICING_PRO_SUPPORT_ICON, label: "Priority support" },
 ];
 

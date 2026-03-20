@@ -21,6 +21,11 @@ import {
   checkUsername,
 } from "./procedures/profile";
 import { getPublicProfile } from "./procedures/public";
+import {
+  generateApiKey,
+  revokeApiKey,
+  getApiKey,
+} from "./procedures/apiKey";
 
 export const router = base.router({
   bookmark: {
@@ -48,6 +53,11 @@ export const router = base.router({
   },
   public: {
     getProfile: getPublicProfile,
+  },
+  apiKey: {
+    generate: generateApiKey,
+    revoke: revokeApiKey,
+    get: getApiKey,
   },
 });
 

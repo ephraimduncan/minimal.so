@@ -37,6 +37,7 @@ model user {
   accounts  account[]
   bookmarks bookmark[]
   groups    group[]
+  apiKey    apiKey?
 
   @@index([createdAt])
 }
@@ -124,4 +125,16 @@ model bookmark {
   @@index([groupId])
   @@index([createdAt])
   @@index([userId, normalizedUrl])
+}
+
+model apiKey {
+  id         String    @id @default(cuid())
+  name       String    @default("Default")
+  keyHash    String    @unique
+  keyPrefix  String
+  userId     String    @unique
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user user @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

@@ -1,21 +1,13 @@
 "use client";
 
-import {
-  useState,
-  useCallback,
-  useRef,
-  type ChangeEvent,
-} from "react";
+import { useState, useCallback, useRef, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import posthog from "posthog-js";
 import { authClient } from "@/lib/auth-client";
 import { client, orpc } from "@/lib/orpc";
-import {
-  isExtensionAvailable,
-  sendExtensionMessage,
-} from "@/lib/extension";
+import { isExtensionAvailable, sendExtensionMessage } from "@/lib/extension";
 import type { ImportBookmarksResponse } from "@/lib/schema";
 import type { ProfileData } from "@/components/dashboard-content";
 import { ChromeIcon } from "@/components/chrome-icon";
@@ -43,11 +35,25 @@ import {
   IconCopy,
   IconExternalLink,
   IconDownload,
+  IconKey,
+  IconRefresh,
+  IconTrash,
+  IconAlertTriangle,
   IconCreditCard,
   IconRocket,
 } from "@tabler/icons-react";
 import { ImagePlusIcon } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { usernameSchema, updateProfileSchema } from "@/lib/schema";
 import { Badge } from "@/components/ui/badge";
 import { hasActiveProAccess } from "@/lib/plan-limits";
@@ -89,6 +95,7 @@ export function SettingsDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [viewOnceKey, setViewOnceKey] = useState<string | null>(null);
   const hasProAccess = hasActiveProAccess(
     profile?.plan,
     profile?.subscriptionStatus,
@@ -99,6 +106,7 @@ export function SettingsDialog({
   if (open && !prevOpen) {
     setName(user.name);
     setAvatarUrl(user.image);
+    setViewOnceKey(null);
   }
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -127,7 +135,8 @@ export function SettingsDialog({
         body: formData,
       });
 
-      if (!response.ok) throw await responseError(response, "Failed to upload avatar");
+      if (!response.ok)
+        throw await responseError(response, "Failed to upload avatar");
 
       const data = (await response.json()) as { url?: string };
       if (!data.url) throw new Error("Invalid upload response");
@@ -136,7 +145,9 @@ export function SettingsDialog({
       toast.success("Avatar updated");
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload avatar");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload avatar",
+      );
     } finally {
       setIsUploading(false);
     }
@@ -155,13 +166,16 @@ export function SettingsDialog({
     try {
       const response = await fetch("/api/avatar", { method: "DELETE" });
 
-      if (!response.ok) throw await responseError(response, "Failed to remove avatar");
+      if (!response.ok)
+        throw await responseError(response, "Failed to remove avatar");
 
       setAvatarUrl(null);
       toast.success("Avatar removed");
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove avatar");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to remove avatar",
+      );
     } finally {
       setIsUploading(false);
     }
@@ -208,21 +222,24 @@ export function SettingsDialog({
     const loadingId = toast.loading("Importing browser bookmarks...");
 
     try {
-      const result =
-        await sendExtensionMessage<ImportBookmarksResponse>({
-          type: "import-bookmarks",
-        });
+      const result = await sendExtensionMessage<ImportBookmarksResponse>({
+        type: "import-bookmarks",
+      });
 
       if (!result.success) {
         if (result.status === 401) {
           toast.error("Please log in to import bookmarks");
         } else {
-          toast.error(result.message || "Failed to import bookmarks. Please try again.");
+          toast.error(
+            result.message || "Failed to import bookmarks. Please try again.",
+          );
         }
         return;
       }
 
-      const parts = [`Imported ${result.importedCount} bookmarks into '${result.groupName}'`];
+      const parts = [
+        `Imported ${result.importedCount} bookmarks into '${result.groupName}'`,
+      ];
       const skippedTotal = result.skippedCount ?? 0;
       if (skippedTotal > 0) {
         parts.push(`Skipped ${skippedTotal} (duplicates/invalid)`);
@@ -246,10 +263,11 @@ export function SettingsDialog({
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>Manage your account settings.</DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="general">
+        <Tabs defaultValue="general" onValueChange={() => setViewOnceKey(null)}>
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="profile">Public Profile</TabsTrigger>
+            <TabsTrigger value="api">API</TabsTrigger>
             <TabsTrigger value="billing">Billing</TabsTrigger>
           </TabsList>
           <TabsContent value="general">
@@ -336,11 +354,7 @@ export function SettingsDialog({
                 <FieldLabel>Data</FieldLabel>
                 <div className="flex flex-wrap gap-2">
                   {onExport && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={onExport}
-                    >
+                    <Button type="button" variant="outline" onClick={onExport}>
                       Export Bookmarks
                     </Button>
                   )}
@@ -386,7 +400,16 @@ export function SettingsDialog({
             </Form>
           </TabsContent>
           <TabsContent value="profile">
-            {profile && <ProfileTab profile={profile} onOpenChange={onOpenChange} />}
+            {profile && (
+              <ProfileTab profile={profile} onOpenChange={onOpenChange} />
+            )}
+          </TabsContent>
+          <TabsContent value="api">
+            <ApiKeyTab
+              viewOnceKey={viewOnceKey}
+              onKeyGenerated={setViewOnceKey}
+              hasProAccess={hasProAccess}
+            />
           </TabsContent>
           <TabsContent value="billing">
             {profile && <BillingTab profile={profile} />}
@@ -674,14 +697,306 @@ function ProfileTab({ profile, onOpenChange }: ProfileTabProps) {
   );
 }
 
+interface ApiKeyTabProps {
+  viewOnceKey: string | null;
+  onKeyGenerated: (key: string | null) => void;
+  hasProAccess: boolean;
+}
+
+function ApiKeyTab({
+  viewOnceKey,
+  onKeyGenerated,
+  hasProAccess,
+}: ApiKeyTabProps) {
+  const queryClient = useQueryClient();
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+
+  const apiKeyQuery = useQuery({
+    ...orpc.apiKey.get.queryOptions({ input: undefined }),
+    enabled: hasProAccess,
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: () => client.apiKey.generate(undefined),
+    onSuccess: (data) => {
+      onKeyGenerated(data.key);
+      queryClient.invalidateQueries({ queryKey: orpc.apiKey.key() });
+      toast.success("API key generated");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to generate API key");
+    },
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: () => client.apiKey.revoke(undefined),
+    onSuccess: () => {
+      onKeyGenerated(null);
+      queryClient.invalidateQueries({ queryKey: orpc.apiKey.key() });
+      toast.success("API key revoked");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to revoke API key");
+    },
+  });
+
+  const handleCopyKey = useCallback(async () => {
+    if (!viewOnceKey) return;
+    try {
+      await navigator.clipboard.writeText(viewOnceKey);
+      toast.success("Copied to clipboard");
+    } catch {
+      toast.error("Failed to copy to clipboard");
+    }
+  }, [viewOnceKey]);
+
+  const handleRevoke = () => {
+    setShowRevokeConfirm(false);
+    revokeMutation.mutate();
+  };
+
+  if (!hasProAccess) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">API Access</p>
+          <p className="text-sm text-muted-foreground">
+            Upgrade to generate API keys and access your bookmarks
+            programmatically.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button
+            type="button"
+            onClick={() =>
+              startCheckout({ billingCycle: "yearly", source: "settings_api" })
+            }
+          >
+            <IconRocket className="size-4" />
+            Upgrade to Pro
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (viewOnceKey) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-50/50 p-3 dark:bg-amber-950/20">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+            <IconAlertTriangle className="size-4 shrink-0" />
+            <p className="text-sm font-medium">
+              Copy your key now. It won&apos;t appear again.
+            </p>
+          </div>
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium">API Key</p>
+          <div className="flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-md border bg-muted px-2 font-mono text-xs h-7 flex items-center">
+              {viewOnceKey}
+            </code>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              onClick={handleCopyKey}
+            >
+              <IconCopy className="size-3.5" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-destructive"
+            onClick={() => setShowRevokeConfirm(true)}
+            disabled={revokeMutation.isPending}
+          >
+            {revokeMutation.isPending ? (
+              <IconLoader2 className="size-4 animate-spin" />
+            ) : (
+              <IconTrash className="size-4" />
+            )}
+            Revoke
+          </Button>
+        </div>
+        <RevokeConfirmDialog
+          open={showRevokeConfirm}
+          onOpenChange={setShowRevokeConfirm}
+          onConfirm={handleRevoke}
+        />
+      </div>
+    );
+  }
+
+  const existingKey = apiKeyQuery.data;
+  const isLoading = apiKeyQuery.isPending;
+  const hasKey = !!existingKey;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">API Key</p>
+          <div className="h-[38px] rounded-md bg-muted animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasKey) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">API Key</p>
+          <p className="text-sm text-muted-foreground">
+            No API key generated yet.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button
+            type="button"
+            onClick={() => generateMutation.mutate()}
+            disabled={generateMutation.isPending}
+          >
+            {generateMutation.isPending ? (
+              <>
+                <IconLoader2 className="size-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <IconKey className="size-4" />
+                Generate API Key
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 pt-2">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">API Key</p>
+        <code className="block rounded-md border bg-muted px-3 py-2 font-mono text-sm text-muted-foreground">
+          {existingKey.keyPrefix}••••••••
+        </code>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Created</p>
+          <p className="text-sm text-muted-foreground">
+            {formatDate(existingKey.createdAt)}
+          </p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Last Used</p>
+          <p className="text-sm text-muted-foreground">
+            {existingKey.lastUsedAt
+              ? formatRelativeDate(existingKey.lastUsedAt)
+              : "Never"}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2 pt-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => generateMutation.mutate()}
+          disabled={generateMutation.isPending}
+        >
+          {generateMutation.isPending ? (
+            <IconLoader2 className="size-4 animate-spin" />
+          ) : (
+            <IconRefresh className="size-4" />
+          )}
+          Regenerate
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="text-destructive"
+          onClick={() => setShowRevokeConfirm(true)}
+          disabled={revokeMutation.isPending}
+        >
+          {revokeMutation.isPending ? (
+            <IconLoader2 className="size-4 animate-spin" />
+          ) : (
+            <IconTrash className="size-4" />
+          )}
+          Revoke
+        </Button>
+      </div>
+      <RevokeConfirmDialog
+        open={showRevokeConfirm}
+        onOpenChange={setShowRevokeConfirm}
+        onConfirm={handleRevoke}
+      />
+    </div>
+  );
+}
+
+function RevokeConfirmDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Revoke API Key</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to revoke your API key? Any applications using
+            this key will lose access immediately. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onConfirm}>
+            Revoke Key
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
 function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "";
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleDateString("en-US", {
-    month: "long",
+    month: "short",
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatRelativeDate(date: Date | string): string {
+  const now = new Date();
+  const then = new Date(date);
+  const diffMs = now.getTime() - then.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffSec < 60) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  return formatDate(date);
 }
 
 function BillingTab({ profile }: { profile: ProfileData }) {
@@ -693,8 +1008,7 @@ function BillingTab({ profile }: { profile: ProfileData }) {
     profile.subscriptionCurrentPeriodEnd,
   );
 
-  const isCancelled =
-    profile.subscriptionStatus === "canceled" && hasProAccess;
+  const isCancelled = profile.subscriptionStatus === "canceled" && hasProAccess;
 
   const isFree = !hasProAccess;
 
@@ -846,4 +1160,3 @@ function UsernameStatusIcon({ status }: { status: UsernameStatus }) {
       return null;
   }
 }
-

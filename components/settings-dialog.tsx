@@ -706,6 +706,7 @@ function ApiKeyTab({ viewOnceKey, onKeyGenerated, hasProAccess }: ApiKeyTabProps
 
   const apiKeyQuery = useQuery({
     ...orpc.apiKey.get.queryOptions({ input: undefined }),
+    enabled: hasProAccess,
   });
 
   const generateMutation = useMutation({
@@ -747,31 +748,16 @@ function ApiKeyTab({ viewOnceKey, onKeyGenerated, hasProAccess }: ApiKeyTabProps
     revokeMutation.mutate();
   };
 
-  const existingKey = apiKeyQuery.data;
-  const isLoading = apiKeyQuery.isPending;
-  const hasKey = !!existingKey;
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <IconLoader2 className="size-5 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
   if (!hasProAccess) {
     return (
       <div className="space-y-4 pt-2">
-        <div className="flex flex-col items-center justify-center gap-3 py-6">
-          <div className="rounded-full border bg-muted p-3">
-            <IconRocket className="size-5 text-muted-foreground" />
-          </div>
-          <div className="text-center">
-            <p className="text-sm font-medium">API access requires Pro</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Upgrade to generate API keys and access your bookmarks programmatically.
-            </p>
-          </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium">API Access</p>
+          <p className="text-sm text-muted-foreground">
+            Upgrade to generate API keys and access your bookmarks programmatically.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1">
           <Button type="button" onClick={() => startCheckout({ billingCycle: "yearly", source: "settings_api" })}>
             <IconRocket className="size-4" />
             Upgrade to Pro
@@ -781,7 +767,6 @@ function ApiKeyTab({ viewOnceKey, onKeyGenerated, hasProAccess }: ApiKeyTabProps
     );
   }
 
-  // View-once: key was just generated
   if (viewOnceKey) {
     return (
       <div className="space-y-4 pt-2">
@@ -793,23 +778,18 @@ function ApiKeyTab({ viewOnceKey, onKeyGenerated, hasProAccess }: ApiKeyTabProps
             </p>
           </div>
         </div>
-        <Field>
-          <FieldLabel>API Key</FieldLabel>
+        <div className="space-y-1">
+          <p className="text-sm font-medium">API Key</p>
           <div className="flex items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded-md border bg-muted px-2 font-mono text-xs h-7 flex items-center">
               {viewOnceKey}
             </code>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={handleCopyKey}
-            >
+            <Button type="button" variant="outline" size="icon-sm" onClick={handleCopyKey}>
               <IconCopy className="size-3.5" />
             </Button>
           </div>
-        </Field>
-        <div>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1">
           <Button
             type="button"
             variant="outline"
@@ -818,32 +798,38 @@ function ApiKeyTab({ viewOnceKey, onKeyGenerated, hasProAccess }: ApiKeyTabProps
             onClick={() => setShowRevokeConfirm(true)}
             disabled={revokeMutation.isPending}
           >
-            {revokeMutation.isPending ? (
-              <IconLoader2 className="size-4 animate-spin" />
-            ) : (
-              <IconTrash className="size-4" />
-            )}
+            {revokeMutation.isPending ? <IconLoader2 className="size-4 animate-spin" /> : <IconTrash className="size-4" />}
             Revoke
           </Button>
         </div>
-        <RevokeConfirmDialog
-          open={showRevokeConfirm}
-          onOpenChange={setShowRevokeConfirm}
-          onConfirm={handleRevoke}
-        />
+        <RevokeConfirmDialog open={showRevokeConfirm} onOpenChange={setShowRevokeConfirm} onConfirm={handleRevoke} />
       </div>
     );
   }
 
-  // No key state
+  const existingKey = apiKeyQuery.data;
+  const isLoading = apiKeyQuery.isPending;
+  const hasKey = !!existingKey;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">API Key</p>
+          <div className="h-[38px] rounded-md bg-muted animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
   if (!hasKey) {
     return (
       <div className="space-y-4 pt-2">
-        <div className="flex flex-col items-center justify-center gap-3 py-6">
-          <div className="rounded-full border bg-muted p-3">
-            <IconKey className="size-5 text-muted-foreground" />
-          </div>
-          <p className="text-sm text-muted-foreground">No API key generated</p>
+        <div className="space-y-1">
+          <p className="text-sm font-medium">API Key</p>
+          <p className="text-sm text-muted-foreground">No API key generated yet.</p>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1">
           <Button
             type="button"
             onClick={() => generateMutation.mutate()}
@@ -866,26 +852,25 @@ function ApiKeyTab({ viewOnceKey, onKeyGenerated, hasProAccess }: ApiKeyTabProps
     );
   }
 
-  // Key exists (normal view): show masked prefix, dates, actions
   return (
     <div className="space-y-4 pt-2">
-      <Field>
-        <FieldLabel>API Key</FieldLabel>
+      <div className="space-y-1">
+        <p className="text-sm font-medium">API Key</p>
         <code className="block rounded-md border bg-muted px-3 py-2 font-mono text-sm text-muted-foreground">
           {existingKey.keyPrefix}••••••••
         </code>
-      </Field>
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <div>
-          <p className="text-muted-foreground">Created</p>
-          <p>{formatDate(existingKey.createdAt)}</p>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Created</p>
+          <p className="text-sm text-muted-foreground">{formatDate(existingKey.createdAt)}</p>
         </div>
-        <div>
-          <p className="text-muted-foreground">Last used</p>
-          <p>{existingKey.lastUsedAt ? formatRelativeDate(existingKey.lastUsedAt) : "Never"}</p>
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Last Used</p>
+          <p className="text-sm text-muted-foreground">{existingKey.lastUsedAt ? formatRelativeDate(existingKey.lastUsedAt) : "Never"}</p>
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2 pt-1">
         <Button
           type="button"
           variant="outline"
@@ -893,11 +878,7 @@ function ApiKeyTab({ viewOnceKey, onKeyGenerated, hasProAccess }: ApiKeyTabProps
           onClick={() => generateMutation.mutate()}
           disabled={generateMutation.isPending}
         >
-          {generateMutation.isPending ? (
-            <IconLoader2 className="size-4 animate-spin" />
-          ) : (
-            <IconRefresh className="size-4" />
-          )}
+          {generateMutation.isPending ? <IconLoader2 className="size-4 animate-spin" /> : <IconRefresh className="size-4" />}
           Regenerate
         </Button>
         <Button
@@ -908,19 +889,11 @@ function ApiKeyTab({ viewOnceKey, onKeyGenerated, hasProAccess }: ApiKeyTabProps
           onClick={() => setShowRevokeConfirm(true)}
           disabled={revokeMutation.isPending}
         >
-          {revokeMutation.isPending ? (
-            <IconLoader2 className="size-4 animate-spin" />
-          ) : (
-            <IconTrash className="size-4" />
-          )}
+          {revokeMutation.isPending ? <IconLoader2 className="size-4 animate-spin" /> : <IconTrash className="size-4" />}
           Revoke
         </Button>
       </div>
-      <RevokeConfirmDialog
-        open={showRevokeConfirm}
-        onOpenChange={setShowRevokeConfirm}
-        onConfirm={handleRevoke}
-      />
+      <RevokeConfirmDialog open={showRevokeConfirm} onOpenChange={setShowRevokeConfirm} onConfirm={handleRevoke} />
     </div>
   );
 }

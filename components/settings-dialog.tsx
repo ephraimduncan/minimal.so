@@ -263,7 +263,7 @@ export function SettingsDialog({
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>Manage your account settings.</DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="general" onValueChange={() => setViewOnceKey(null)}>
+        <Tabs defaultValue="general">
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="profile">Public Profile</TabsTrigger>
@@ -710,6 +710,7 @@ function ApiKeyTab({
 }: ApiKeyTabProps) {
   const queryClient = useQueryClient();
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
 
   const apiKeyQuery = useQuery({
     ...orpc.apiKey.get.queryOptions({ input: undefined }),
@@ -753,6 +754,11 @@ function ApiKeyTab({
   const handleRevoke = () => {
     setShowRevokeConfirm(false);
     revokeMutation.mutate();
+  };
+
+  const handleRegenerate = () => {
+    setShowRegenerateConfirm(false);
+    generateMutation.mutate();
   };
 
   if (!hasProAccess) {
@@ -909,7 +915,7 @@ function ApiKeyTab({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => generateMutation.mutate()}
+          onClick={() => setShowRegenerateConfirm(true)}
           disabled={generateMutation.isPending}
         >
           {generateMutation.isPending ? (
@@ -940,6 +946,11 @@ function ApiKeyTab({
         onOpenChange={setShowRevokeConfirm}
         onConfirm={handleRevoke}
       />
+      <RegenerateConfirmDialog
+        open={showRegenerateConfirm}
+        onOpenChange={setShowRegenerateConfirm}
+        onConfirm={handleRegenerate}
+      />
     </div>
   );
 }
@@ -967,6 +978,37 @@ function RevokeConfirmDialog({
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={onConfirm}>
             Revoke Key
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function RegenerateConfirmDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Regenerate API Key</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to regenerate your API key? Your current key
+            will be permanently revoked and any applications using it will lose
+            access immediately.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onConfirm}>
+            Regenerate Key
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

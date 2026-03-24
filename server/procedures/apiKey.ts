@@ -29,20 +29,15 @@ export const generateApiKey = authed.handler(async ({ context }) => {
   const keyHash = hashKey(rawKey);
   const keyPrefix = rawKey.slice(0, 8); // "mnk_xxxx"
 
-  // Delete existing key if one exists (one key per user)
-  await db.apiKey.deleteMany({
-    where: { userId: context.user.id },
+  const result = await db.$transaction(async (tx) => {
+    await tx.apiKey.deleteMany({ where: { userId: context.user.id } });
+    await tx.apiKey.create({
+      data: { keyHash, keyPrefix, userId: context.user.id },
+    });
+    return { key: rawKey };
   });
 
-  await db.apiKey.create({
-    data: {
-      keyHash,
-      keyPrefix,
-      userId: context.user.id,
-    },
-  });
-
-  return { key: rawKey };
+  return result;
 });
 
 export const revokeApiKey = authed.handler(async ({ context }) => {

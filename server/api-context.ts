@@ -23,11 +23,6 @@ export const apiBase = os.use(async ({ next }) => {
 
   const token = authorization.slice(7);
 
-  if (!token) {
-    throw new ORPCError("UNAUTHORIZED", {
-      message: "Invalid API key",
-    });
-  }
 
   const keyHash = await hashToken(token);
 
@@ -61,22 +56,4 @@ export const apiBase = os.use(async ({ next }) => {
   });
 });
 
-export const apiAuthed = apiBase.use(({ context, next }) => {
-  if (!context.user) {
-    throw new ORPCError("UNAUTHORIZED", {
-      message: "Invalid API key",
-    });
-  }
-
-  return next({
-    context: {
-      ...context,
-      user: context.user,
-    },
-  });
-});
-
-export type ApiContext = {
-  user: NonNullable<Awaited<ReturnType<typeof db.user.findUnique>>>;
-  apiKeyId: string;
-};
+export const apiAuthed = apiBase;

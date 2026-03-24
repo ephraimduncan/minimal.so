@@ -16,8 +16,6 @@ const health = os
   .handler(async () => {
     return { success: true, message: "ok" };
   });
-
-
 const bookmarkItemSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -189,7 +187,7 @@ const updateBookmark = apiAuthed
     z.object({
       id: z.string(),
       title: z.string().optional(),
-      url: z.string().optional(),
+      url: z.string().min(1).optional(),
       groupId: z.string().optional(),
       isPublic: z.boolean().nullable().optional(),
     }),
@@ -206,7 +204,7 @@ const updateBookmark = apiAuthed
 
     const existing = await db.bookmark.findFirst({
       where: { id, userId: context.user.id },
-      select: { id: true },
+      select: { id: true, groupId: true },
     });
 
     if (!existing) {
@@ -237,7 +235,7 @@ const updateBookmark = apiAuthed
     }
     if (fields.groupId !== undefined) {
       updateData.groupId = fields.groupId;
-      if (fields.isPublic === undefined) {
+      if (fields.isPublic === undefined && existing.groupId !== fields.groupId) {
         updateData.isPublic = null;
       }
     }
@@ -291,8 +289,6 @@ const deleteBookmark = apiAuthed
       bookmarkId: input.id,
     };
   });
-
-
 const groupItemSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -420,6 +416,7 @@ const deleteGroup = apiAuthed
       success: z.boolean(),
       message: z.string(),
       groupId: z.string(),
+      deletedBookmarkCount: z.number(),
     }),
   )
   .handler(async ({ context, input }) => {
@@ -434,6 +431,8 @@ const deleteGroup = apiAuthed
       });
     }
 
+    const deletedBookmarkCount = await db.bookmark.count({ where: { groupId: input.id } });
+
     await db.group.delete({
       where: { id: input.id },
     });
@@ -442,6 +441,7 @@ const deleteGroup = apiAuthed
       success: true,
       message: "Group deleted",
       groupId: input.id,
+      deletedBookmarkCount,
     };
   });
 

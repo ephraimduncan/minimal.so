@@ -9,32 +9,22 @@ import {
   rateLimitHeaders,
 } from "@/server/api-rate-limit";
 
-/**
- * Transform an ORPC error response body into the Shiori-style
- * { success: false, error: 'message' } format.
- *
- * ORPC serializes errors as { defined, code, status, message, data }.
- * We normalise to { success: false, error: '<message>' }.
- */
 async function normalizeErrorResponse(
   response: Response,
   extraHeaders?: Record<string, string>,
 ): Promise<Response> {
-  // Only transform JSON error responses
   if (response.status < 400) return response;
 
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) return response;
 
   try {
-    const body = await response.json();
+    const body = await response.clone().json();
 
-    // Already in the correct format
     if (body && typeof body === "object" && "success" in body) {
       return response;
     }
 
-    // ORPC error format: { defined, code, status, message, data? }
     const message =
       typeof body?.message === "string"
         ? body.message
@@ -56,7 +46,6 @@ async function normalizeErrorResponse(
       },
     );
   } catch {
-    // If we can't parse the body, return original response
     return response;
   }
 }
@@ -95,7 +84,6 @@ const handler = new OpenAPIHandler(apiRouter, {
     async (interceptorOptions) => {
       const { request, next } = interceptorOptions;
 
-      // Post-process OpenAPI spec: mark /health as not requiring auth
       const url = new URL(request.url);
       if (url.pathname === "/api/openapi.json") {
         const handlerResult = await next();
@@ -117,18 +105,14 @@ const handler = new OpenAPIHandler(apiRouter, {
         return handlerResult;
       }
 
-      // Extract Bearer token from Authorization header for rate-limit keying
       const authHeader = request.headers.get("authorization");
       const token = authHeader?.startsWith("Bearer ")
         ? authHeader.slice(7)
         : null;
 
-      // Skip rate limiting for unauthenticated requests (auth middleware handles 401)
-      // and for OpenAPI spec / health endpoints
       if (!token) {
         const handlerResult = await next();
 
-        // Normalize error responses for unauthenticated requests
         if (handlerResult.matched && handlerResult.response) {
           return {
             matched: true as const,
@@ -142,7 +126,6 @@ const handler = new OpenAPIHandler(apiRouter, {
       const result = checkRateLimit(token, request.method);
 
       if (!result.allowed) {
-        // Return 429 with rate limit headers
         const rlHeaders = rateLimitHeaders(result);
         return {
           matched: true as const,
@@ -162,19 +145,16 @@ const handler = new OpenAPIHandler(apiRouter, {
         };
       }
 
-      // Proceed with the request and attach rate-limit headers to the response
       const handlerResult = await next();
 
       if (handlerResult.matched && handlerResult.response) {
         const rlHeaders = rateLimitHeaders(result);
 
-        // Normalize error responses for authenticated requests
         const normalized = await normalizeErrorResponse(
           handlerResult.response,
           rlHeaders,
         );
 
-        // For success responses, just attach rate-limit headers
         if (normalized === handlerResult.response) {
           for (const [key, value] of Object.entries(rlHeaders)) {
             handlerResult.response.headers.set(key, value);

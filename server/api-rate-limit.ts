@@ -2,6 +2,8 @@
 //   General: 60 req/min — Write (POST/PATCH/DELETE): 30 req/min
 // Expired entries purged every 5 min.
 
+const MAX_BUCKETS = 10_000;
+
 const GENERAL_LIMIT = 60;
 const WRITE_LIMIT = 30;
 const WINDOW_MS = 60_000; // 1 minute
@@ -48,6 +50,19 @@ export function checkRateLimit(
   apiKey: string,
   method: string,
 ): RateLimitResult {
+  if (buckets.size >= MAX_BUCKETS) {
+    cleanupExpiredEntries();
+    if (buckets.size >= MAX_BUCKETS) {
+      return {
+        allowed: false,
+        limit: GENERAL_LIMIT,
+        remaining: 0,
+        resetAt: Math.ceil((Date.now() + WINDOW_MS) / 1000),
+        retryAfter: 60,
+      };
+    }
+  }
+
   const now = Date.now();
   const isWrite = WRITE_METHODS.has(method.toUpperCase());
 
@@ -133,7 +148,6 @@ export function rateLimitHeaders(
 
   return headers;
 }
-
 
 function cleanupExpiredEntries(): void {
   const now = Date.now();

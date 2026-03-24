@@ -741,6 +741,8 @@ function ApiKeyTab({
     },
   });
 
+  const isMutating = generateMutation.isPending || revokeMutation.isPending;
+
   const handleCopyKey = useCallback(async () => {
     if (!viewOnceKey) return;
     try {
@@ -820,7 +822,7 @@ function ApiKeyTab({
             size="sm"
             className="text-destructive"
             onClick={() => setShowRevokeConfirm(true)}
-            disabled={revokeMutation.isPending}
+            disabled={isMutating}
           >
             {revokeMutation.isPending ? (
               <IconLoader2 className="size-4 animate-spin" />
@@ -867,7 +869,7 @@ function ApiKeyTab({
           <Button
             type="button"
             onClick={() => generateMutation.mutate()}
-            disabled={generateMutation.isPending}
+            disabled={isMutating}
           >
             {generateMutation.isPending ? (
               <>
@@ -916,7 +918,7 @@ function ApiKeyTab({
           variant="outline"
           size="sm"
           onClick={() => setShowRegenerateConfirm(true)}
-          disabled={generateMutation.isPending}
+          disabled={isMutating}
         >
           {generateMutation.isPending ? (
             <IconLoader2 className="size-4 animate-spin" />
@@ -931,7 +933,7 @@ function ApiKeyTab({
           size="sm"
           className="text-destructive"
           onClick={() => setShowRevokeConfirm(true)}
-          disabled={revokeMutation.isPending}
+          disabled={isMutating}
         >
           {revokeMutation.isPending ? (
             <IconLoader2 className="size-4 animate-spin" />

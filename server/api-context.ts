@@ -2,14 +2,8 @@ import { ORPCError, os } from "@orpc/server";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { hasActiveProAccess } from "@/lib/plan-limits";
+import { hashApiKey } from "@/lib/api-key-hash";
 
-async function hashToken(token: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(token);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 export const apiBase = os.use(async ({ next }) => {
   const headersList = await headers();
@@ -23,8 +17,7 @@ export const apiBase = os.use(async ({ next }) => {
 
   const token = authorization.slice(7);
 
-
-  const keyHash = await hashToken(token);
+  const keyHash = hashApiKey(token);
 
   const apiKey = await db.apiKey.findUnique({
     where: { keyHash },

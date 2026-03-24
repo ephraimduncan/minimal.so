@@ -87,18 +87,24 @@ const handler = new OpenAPIHandler(apiRouter, {
       const url = new URL(request.url);
       if (url.pathname === "/api/openapi.json") {
         const handlerResult = await next();
-        if (handlerResult.matched && handlerResult.response?.ok) {
+        if (
+          handlerResult.matched &&
+          handlerResult.response?.ok &&
+          handlerResult.response.headers
+            .get("content-type")
+            ?.includes("application/json")
+        ) {
           const spec = await handlerResult.response.json();
           if (spec.paths?.["/health"]?.get) {
             spec.paths["/health"].get.security = [];
           }
+          const headers = new Headers(handlerResult.response.headers);
+          headers.set("Content-Type", "application/json");
           return {
             matched: true as const,
             response: new Response(JSON.stringify(spec), {
               status: 200,
-              headers: {
-                "Content-Type": "application/json",
-              },
+              headers,
             }),
           };
         }
@@ -178,7 +184,10 @@ async function handleRequest(request: Request) {
     context: {},
   });
 
-  return response ?? new Response("Not found", { status: 404 });
+  return response ?? new Response(
+    JSON.stringify({ success: false, error: "Not found" }),
+    { status: 404, headers: { "Content-Type": "application/json" } },
+  );
 }
 
 export const GET = handleRequest;

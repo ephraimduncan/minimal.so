@@ -92,7 +92,7 @@ const listBookmarks = apiAuthed
   });
 
 const createBookmark = apiAuthed
-  .route({ method: "POST", path: "/bookmarks", successStatus: 201 })
+  .route({ method: "POST", path: "/bookmarks" })
   .input(
     z.object({
       url: z.string().min(1, "url is required"),
@@ -279,8 +279,8 @@ const deleteBookmark = apiAuthed
       });
     }
 
-    await db.bookmark.delete({
-      where: { id: input.id },
+    await db.bookmark.deleteMany({
+      where: { id: input.id, userId: context.user.id },
     });
 
     return {
@@ -392,8 +392,8 @@ const updateGroup = apiAuthed
     if (fields.color !== undefined) updateData.color = fields.color;
     if (fields.isPublic !== undefined) updateData.isPublic = fields.isPublic;
 
-    await db.group.update({
-      where: { id },
+    await db.group.updateMany({
+      where: { id, userId: context.user.id },
       data: updateData,
     });
 
@@ -433,8 +433,8 @@ const deleteGroup = apiAuthed
 
     const deletedBookmarkCount = await db.bookmark.count({ where: { groupId: input.id } });
 
-    await db.group.delete({
-      where: { id: input.id },
+    await db.group.deleteMany({
+      where: { id: input.id, userId: context.user.id },
     });
 
     return {

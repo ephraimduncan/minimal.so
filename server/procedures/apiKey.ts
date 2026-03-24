@@ -2,11 +2,8 @@ import { ORPCError } from "@orpc/server";
 import { hasActiveProAccess } from "@/lib/plan-limits";
 import { authed } from "../context";
 import { db } from "@/lib/db";
+import { hashApiKey } from "@/lib/api-key-hash";
 import crypto from "crypto";
-
-function hashKey(raw: string): string {
-  return crypto.createHash("sha256").update(raw).digest("hex");
-}
 
 function generateRawKey(): string {
   const token = crypto.randomBytes(20).toString("hex"); // 40 hex chars
@@ -26,7 +23,7 @@ export const generateApiKey = authed.handler(async ({ context }) => {
   }
 
   const rawKey = generateRawKey();
-  const keyHash = hashKey(rawKey);
+  const keyHash = hashApiKey(rawKey);
   const keyPrefix = rawKey.slice(0, 8); // "mnk_xxxx"
 
   const result = await db.$transaction(async (tx) => {

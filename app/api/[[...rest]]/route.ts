@@ -113,7 +113,7 @@ const handler = new OpenAPIHandler(apiRouter, {
 
       const authHeader = request.headers.get("authorization");
       const token = authHeader?.startsWith("Bearer ")
-        ? authHeader.slice(7)
+        ? authHeader.slice(7).trim() || null
         : null;
 
       if (!token) {

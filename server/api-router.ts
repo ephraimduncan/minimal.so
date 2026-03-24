@@ -145,6 +145,8 @@ const createBookmark = apiAuthed
     const normalized = normalizeUrl(input.url);
     const canonical = canonicalizeUrl(normalized);
 
+    const metadata = await getUrlMetadata(normalized);
+
     const result = await db.$transaction(async (tx) => {
       const existing = await tx.bookmark.findFirst({
         where: {
@@ -157,8 +159,6 @@ const createBookmark = apiAuthed
       if (existing) {
         return { bookmarkId: existing.id, duplicate: true as const };
       }
-
-      const metadata = await getUrlMetadata(normalized);
 
       const bookmark = await tx.bookmark.create({
         data: {

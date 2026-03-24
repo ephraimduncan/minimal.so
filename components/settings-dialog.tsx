@@ -856,6 +856,29 @@ function ApiKeyTab({
     );
   }
 
+  if (apiKeyQuery.isError) {
+    return (
+      <div className="space-y-4 pt-2">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+          <p className="text-sm text-destructive">
+            Failed to load API key status. Please try again.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => apiKeyQuery.refetch()}
+          >
+            <IconRefresh className="size-4" />
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (!hasKey) {
     return (
       <div className="space-y-4 pt-2">

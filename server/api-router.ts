@@ -145,39 +145,40 @@ const createBookmark = apiAuthed
     const normalized = normalizeUrl(input.url);
     const canonical = canonicalizeUrl(normalized);
 
-    const existing = await db.bookmark.findFirst({
-      where: {
-        userId: context.user.id,
-        normalizedUrl: canonical,
-      },
-      select: { id: true },
-    });
+    const result = await db.$transaction(async (tx) => {
+      const existing = await tx.bookmark.findFirst({
+        where: {
+          userId: context.user.id,
+          normalizedUrl: canonical,
+        },
+        select: { id: true },
+      });
 
-    if (existing) {
-      return {
-        success: true,
-        bookmarkId: existing.id,
-        duplicate: true,
-      };
-    }
+      if (existing) {
+        return { bookmarkId: existing.id, duplicate: true as const };
+      }
 
-    const metadata = await getUrlMetadata(normalized);
+      const metadata = await getUrlMetadata(normalized);
 
-    const bookmark = await db.bookmark.create({
-      data: {
-        title: input.title || metadata.title || normalized,
-        url: normalized,
-        normalizedUrl: canonical,
-        favicon: metadata.favicon,
-        type: "link",
-        groupId: resolvedGroupId,
-        userId: context.user.id,
-      },
+      const bookmark = await tx.bookmark.create({
+        data: {
+          title: input.title || metadata.title || normalized,
+          url: normalized,
+          normalizedUrl: canonical,
+          favicon: metadata.favicon,
+          type: "link",
+          groupId: resolvedGroupId,
+          userId: context.user.id,
+        },
+      });
+
+      return { bookmarkId: bookmark.id, duplicate: false as const };
     });
 
     return {
       success: true,
-      bookmarkId: bookmark.id,
+      bookmarkId: result.bookmarkId,
+      ...(result.duplicate ? { duplicate: true } : {}),
     };
   });
 
@@ -431,7 +432,7 @@ const deleteGroup = apiAuthed
       });
     }
 
-    const deletedBookmarkCount = await db.bookmark.count({ where: { groupId: input.id } });
+    const deletedBookmarkCount = await db.bookmark.count({ where: { groupId: input.id, userId: context.user.id } });
 
     await db.group.deleteMany({
       where: { id: input.id, userId: context.user.id },

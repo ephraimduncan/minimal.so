@@ -53,13 +53,18 @@ export function checkRateLimit(
   if (buckets.size >= MAX_BUCKETS) {
     cleanupExpiredEntries();
     if (buckets.size >= MAX_BUCKETS) {
-      return {
-        allowed: false,
-        limit: GENERAL_LIMIT,
-        remaining: 0,
-        resetAt: Math.ceil((Date.now() + WINDOW_MS) / 1000),
-        retryAfter: 60,
-      };
+      // Overflow: only reject keys that don't already have a bucket.
+      // This prevents DoS via fake tokens exhausting bucket space while
+      // keeping rate limiting functional for legitimate (existing) keys.
+      if (!buckets.has(`${apiKey}:general`)) {
+        return {
+          allowed: false,
+          limit: GENERAL_LIMIT,
+          remaining: 0,
+          resetAt: Math.ceil((Date.now() + WINDOW_MS) / 1000),
+          retryAfter: 60,
+        };
+      }
     }
   }
 

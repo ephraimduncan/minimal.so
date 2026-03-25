@@ -19,7 +19,7 @@ import { useAutofill } from "@/hooks/use-autofill";
 import posthog from "posthog-js";
 import { signUp } from "@/lib/auth-client";
 import { signupSchema } from "@/lib/schema";
-import { type BillingCycle, startCheckout } from "@/lib/checkout";
+import { type BillingCycle } from "@/lib/checkout";
 
 const SIGNUP_FIELDS = [
   { name: "name", id: "name" },
@@ -67,7 +67,7 @@ export function SignupForm({
         return null;
       },
     },
-    onSubmit: async () => {
+    onSubmit: async ({ value }) => {
       if (authRef.current?.user) {
         posthog.identify(authRef.current.user.id, {
           email: authRef.current.user.email,
@@ -77,19 +77,11 @@ export function SignupForm({
         posthog.capture("signup_completed");
       }
 
-      if (isProSignup) {
-        const ok = await startCheckout({
-          billingCycle,
-          source: "signup_form",
-          userId: authRef.current?.user?.id,
-        });
-        if (!ok) {
-          router.push("/dashboard");
-        }
-        return;
-      }
-
-      router.push("/dashboard");
+      // Email verification is required — redirect to check-email page.
+      // OAuth signups bypass this path entirely (handled by OAuthButton).
+      router.push(
+        `/signup/verify-email?email=${encodeURIComponent(value.email)}`,
+      );
     },
   });
 

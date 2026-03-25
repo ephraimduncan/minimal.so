@@ -45,8 +45,8 @@ export function VerifyEmailClient() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1 text-center">
-        <h1 className="text-xl font-semibold">Check your email</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-xl font-semibold text-balance">Check your email</h1>
+        <p className="text-sm text-muted-foreground text-pretty">
           We sent a verification link to{" "}
           {email ? (
             <span className="font-medium text-foreground">{email}</span>

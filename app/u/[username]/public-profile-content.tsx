@@ -174,12 +174,12 @@ export function PublicProfileContent({
               {user.name.charAt(0).toUpperCase()}
             </div>
           )}
-          <h1 className="mt-3 text-lg font-medium">{user.name}</h1>
+          <h1 className="mt-3 text-lg font-medium text-balance">{user.name}</h1>
           <p className="-mt-0.5 text-sm text-muted-foreground">
             @{user.username}
           </p>
           {user.bio && (
-            <p className="mt-2 text-sm text-muted-foreground">{user.bio}</p>
+            <p className="mt-2 text-sm text-muted-foreground text-pretty">{user.bio}</p>
           )}
           <div className="mt-4 flex gap-3">
             {socials.map((social) => (
@@ -189,7 +189,7 @@ export function PublicProfileContent({
                 target="_blank"
                 rel="noopener"
                 aria-label={social.label}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors relative before:absolute before:-inset-2.5 before:content-['']"
               >
                 <social.icon size={18} strokeWidth={1.5} />
               </a>
@@ -230,7 +230,7 @@ export function PublicProfileContent({
           )}
 
           {filteredBookmarks.length === 0 ? (
-            <p className="py-16 text-center text-sm text-muted-foreground">
+            <p className="py-16 text-center text-sm text-muted-foreground text-pretty">
               No public bookmarks yet.
             </p>
           ) : (
@@ -249,7 +249,7 @@ export function PublicProfileContent({
                     className={cn(
                       "group relative flex items-center justify-between rounded-xl px-4 py-3 text-left transition-transform duration-200",
                       bookmark.url
-                        ? "hover:bg-muted/50 active:scale-[0.99]"
+                        ? "hover:bg-muted/50 active:scale-[0.96]"
                         : "cursor-default",
                     )}
                   >
@@ -265,7 +265,7 @@ export function PublicProfileContent({
                     <div className="flex items-center shrink-0">
                       <span
                         className={cn(
-                          "text-[13px] text-muted-foreground whitespace-nowrap",
+                          "text-[13px] text-muted-foreground whitespace-nowrap tabular-nums",
                           bookmark.url &&
                             "transition-transform duration-200 group-hover:-translate-x-5",
                         )}
@@ -283,7 +283,7 @@ export function PublicProfileContent({
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          className="text-muted-foreground transition-opacity duration-200 opacity-0 group-hover:opacity-100 absolute right-4"
+                          className="text-muted-foreground transition-[opacity,transform,filter] duration-200 ease-[cubic-bezier(0.2,0,0,1)] opacity-0 scale-[0.25] blur-[4px] group-hover:opacity-100 group-hover:scale-100 group-hover:blur-0 absolute right-4"
                         >
                           <path d="M7 7h10v10" />
                           <path d="M7 17 17 7" />

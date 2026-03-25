@@ -54,7 +54,7 @@ export function FaviconImage({ url, className }: FaviconImageProps) {
     <img
       src={src}
       alt=""
-      className={cn("h-5 w-5 rounded object-contain", className)}
+      className={cn("h-5 w-5 rounded object-contain outline outline-1 -outline-offset-1 outline-black/5 dark:outline-white/10", className)}
       onError={() => setErrorUrl(url)}
     />
   );

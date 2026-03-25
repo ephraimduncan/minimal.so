@@ -98,7 +98,7 @@ function BillingToggle({
           type="button"
           aria-pressed={!isYearly}
           onClick={() => onChange("monthly")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+          className={`rounded-full px-4 py-2 text-sm font-medium transition-colors active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
             isYearly
               ? "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               : "bg-primary text-primary-foreground hover:bg-primary/90"
@@ -110,7 +110,7 @@ function BillingToggle({
           type="button"
           aria-pressed={isYearly}
           onClick={() => onChange("yearly")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+          className={`rounded-full px-4 py-2 text-sm font-medium transition-colors active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
             isYearly
               ? "bg-primary text-primary-foreground hover:bg-primary/90"
               : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -174,7 +174,7 @@ export function LandingPricing() {
   return (
     <div id="pricing" className="mx-auto max-w-[600px] scroll-mt-16">
       <div className="relative mx-auto mb-2 flex max-w-[450px] items-center justify-center">
-        <h2 className="z-10 bg-background px-5 text-lg font-medium text-foreground">
+        <h2 className="z-10 bg-background px-5 text-lg font-medium text-foreground text-balance">
           Pricing
         </h2>
         <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border"></div>
@@ -186,11 +186,11 @@ export function LandingPricing() {
           <button
             type="button"
             onClick={handleFreeAction}
-            className="absolute right-4 top-4 cursor-pointer rounded-full bg-primary px-3 py-1 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="absolute right-4 top-4 cursor-pointer rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring before:absolute before:-inset-1 before:content-['']"
           >
             {isSignedIn ? "Go to dashboard" : "Sign up"}
           </button>
-          <h3 className="mb-1 text-xl font-semibold">Free</h3>
+          <h3 className="mb-1 text-xl font-semibold text-balance">Free</h3>
           <p className="text-lg">$0</p>
           <div className="mt-4 flex flex-col gap-1.5">
             {FREE_PLAN_FEATURES.map((feature) => (
@@ -204,15 +204,15 @@ export function LandingPricing() {
             type="button"
             onClick={handleProAction}
             disabled={isCheckoutPending}
-            className="absolute right-4 top-4 cursor-pointer rounded-full bg-primary px-3 py-1 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60"
+            className="absolute right-4 top-4 cursor-pointer rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60 before:absolute before:-inset-1 before:content-['']"
           >
             {proActionLabel}
           </button>
-          <h3 className="mb-1 text-xl font-semibold">Pro</h3>
+          <h3 className="mb-1 text-xl font-semibold text-balance">Pro</h3>
           <TextMorph
             as="p"
             duration={450}
-            className="text-lg font-medium text-foreground"
+            className="text-lg font-medium text-foreground tabular-nums"
           >
             {selectedPricing.priceLabel}
           </TextMorph>

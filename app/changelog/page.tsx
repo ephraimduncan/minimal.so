@@ -143,7 +143,7 @@ function ChangelogSection({
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-foreground">
+      <h3 className="text-sm font-semibold text-foreground text-balance">
         {category}
       </h3>
       <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
@@ -176,8 +176,8 @@ export default function ChangelogPage() {
             <IconChevronLeft className="size-4" />
             Back to home
           </Link>
-          <h1 className="text-3xl font-semibold text-foreground">Changelog</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-3xl font-semibold text-foreground text-balance">Changelog</h1>
+          <p className="mt-1 text-sm text-muted-foreground text-pretty">
             All notable changes to Minimal will be documented here.
           </p>
         </div>
@@ -193,7 +193,7 @@ export default function ChangelogPage() {
               </time>
             </div>
             <section id={`v${version.version}`} className="mb-8 space-y-4">
-              <h2 className="text-lg font-medium text-foreground">
+              <h2 className="text-lg font-medium text-foreground text-balance">
                 <a
                   href={`#v${version.version}`}
                   className="hover:underline"

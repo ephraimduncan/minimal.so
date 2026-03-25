@@ -19,7 +19,7 @@ import { useAutofill } from "@/hooks/use-autofill";
 import posthog from "posthog-js";
 import { signUp } from "@/lib/auth-client";
 import { signupSchema } from "@/lib/schema";
-import { type BillingCycle, startCheckout } from "@/lib/checkout";
+import { type BillingCycle } from "@/lib/checkout";
 
 const SIGNUP_FIELDS = [
   { name: "name", id: "name" },
@@ -59,6 +59,7 @@ export function SignupForm({
           name: value.name,
           email: value.email,
           password: value.password,
+          callbackURL: checkoutCallbackURL,
         });
         if (error) {
           return { form: error.message ?? "An error occurred", fields: {} };
@@ -67,29 +68,22 @@ export function SignupForm({
         return null;
       },
     },
-    onSubmit: async () => {
+    onSubmit: async ({ value }) => {
       if (authRef.current?.user) {
         posthog.identify(authRef.current.user.id, {
           email: authRef.current.user.email,
           name: authRef.current.user.name,
           created_at: authRef.current.user.createdAt,
         });
-        posthog.capture("signup_completed");
+        posthog.capture("signup_account_created");
       }
 
+      const verifyParams = new URLSearchParams({ email: value.email });
       if (isProSignup) {
-        const ok = await startCheckout({
-          billingCycle,
-          source: "signup_form",
-          userId: authRef.current?.user?.id,
-        });
-        if (!ok) {
-          router.push("/dashboard");
-        }
-        return;
+        verifyParams.set("plan", "pro");
+        verifyParams.set("billingCycle", billingCycle);
       }
-
-      router.push("/dashboard");
+      router.push(`/signup/verify-email?${verifyParams}`);
     },
   });
 

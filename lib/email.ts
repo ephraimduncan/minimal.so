@@ -1,6 +1,6 @@
 import { APP_URL } from "./config";
 
-const PLUNK_API_URL = "https://api.useplunk.com/v1/send";
+const PLUNK_API_URL = "https://next-api.useplunk.com/v1/send";
 const FROM_EMAIL = "ephraim@minimal.so";
 const FROM_NAME = "minimal";
 

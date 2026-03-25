@@ -16,7 +16,6 @@ export function VerifyEmailClient() {
   const [resent, setResent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // After verification, pro users go to checkout; free users go to dashboard.
   const billingCycle = billingCycleParam === "monthly" ? "monthly" : "yearly";
   const callbackURL =
     plan === "pro"

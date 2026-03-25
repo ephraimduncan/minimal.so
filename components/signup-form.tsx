@@ -78,9 +78,6 @@ export function SignupForm({
         posthog.capture("signup_account_created");
       }
 
-      // Email verification is required — redirect to check-email page.
-      // OAuth signups bypass this path entirely (handled by OAuthButton).
-      // Forward plan context so the resend button preserves checkout intent.
       const verifyParams = new URLSearchParams({ email: value.email });
       if (isProSignup) {
         verifyParams.set("plan", "pro");

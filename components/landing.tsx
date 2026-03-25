@@ -18,7 +18,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 
 export function Landing() {
   return (
-    <main className="flex grow flex-col bg-white text-zinc-900">
+    <main className="flex grow flex-col bg-background text-foreground">
       <article
         className="mx-auto w-full max-w-5xl p-4 sm:p-6"
         aria-labelledby="landing-title"
@@ -27,23 +27,23 @@ export function Landing() {
           {LOGO_SVG}
           <h1
             id="landing-title"
-            className="mb-1.5 text-2xl font-semibold text-zinc-900"
+            className="mb-1.5 text-2xl font-semibold text-foreground"
           >
             minimal
           </h1>
-          <p className="text-zinc-600">
+          <p className="text-muted-foreground">
             simple, fast, and minimal bookmark manager.
           </p>
           <nav className="mt-5 flex flex-wrap items-center justify-center gap-2" aria-label="Primary">
             <Link
               href="/login"
-              className="rounded-full bg-zinc-900 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 sm:px-8"
+              className="rounded-full bg-primary px-6 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-8"
             >
               Login
             </Link>
             <Link
               href="/signup"
-              className="cursor-pointer rounded-full bg-zinc-900 px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 sm:px-8"
+              className="cursor-pointer rounded-full bg-primary px-6 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-8"
             >
               Sign Up
             </Link>
@@ -51,14 +51,14 @@ export function Landing() {
               href="/chrome"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full border border-zinc-200 p-2 text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+              className="rounded-full border border-border p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               title="Chrome Extension"
             >
               {CHROME_ICON}
             </a>
             <a
               href="#pricing"
-              className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
+              className="rounded-full border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               Pricing
             </a>
@@ -78,10 +78,10 @@ export function Landing() {
             <div className="flex items-start">
               {BOOKMARK_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
                   Save in seconds
                 </h3>
-                <p className="text-zinc-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Paste any URL, hit enter. Done. No friction, no extra steps.
                 </p>
               </div>
@@ -89,10 +89,10 @@ export function Landing() {
             <div className="flex items-start">
               {AUTO_FETCH_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
                   Auto-fetch metadata
                 </h3>
-                <p className="text-zinc-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Titles, descriptions, and favicons are pulled automatically.
                   Your links look great without any effort.
                 </p>
@@ -101,10 +101,10 @@ export function Landing() {
             <div className="flex items-start">
               {ORGANIZE_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
                   Organize with groups
                 </h3>
-                <p className="text-zinc-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Create collections to categorize your bookmarks. Keep work,
                   personal, and inspiration separate.
                 </p>
@@ -113,10 +113,10 @@ export function Landing() {
             <div className="flex items-start">
               {SEARCH_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
                   Instant search
                 </h3>
-                <p className="text-zinc-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Find any bookmark by title, URL, or group. Results appear as
                   you type.
                 </p>
@@ -125,10 +125,10 @@ export function Landing() {
             <div className="flex items-start">
               {KEYBOARD_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
                   Keyboard shortcuts
                 </h3>
-                <p className="text-zinc-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Navigate, search, and manage everything without touching your
                   mouse. Built for speed.
                 </p>
@@ -137,10 +137,10 @@ export function Landing() {
             <div className="flex items-start">
               {PRIVACY_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
                   Private by default
                 </h3>
-                <p className="text-zinc-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Your bookmarks are yours alone. No ads, no data selling.
                 </p>
               </div>
@@ -148,10 +148,10 @@ export function Landing() {
             <div className="flex items-start">
               {MINIMAL_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
                   Minimal interface
                 </h3>
-                <p className="text-zinc-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   No clutter, no distractions. Just your bookmarks in a clean,
                   focused layout.
                 </p>
@@ -160,10 +160,10 @@ export function Landing() {
             <div className="flex items-start">
               {ACCESS_ANYWHERE_ICON}
               <div>
-                <h3 className="font-medium text-zinc-900 text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
                   Access anywhere
                 </h3>
-                <p className="text-zinc-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Web-only means no apps to install. Works on any device with a
                   browser.
                 </p>
@@ -174,23 +174,23 @@ export function Landing() {
 
         <LandingPricing />
 
-        <footer className="mb-10 mt-10 text-center text-sm text-zinc-500 sm:mb-16 sm:mt-16">
+        <footer className="mb-10 mt-10 text-center text-sm text-muted-foreground sm:mb-16 sm:mt-16">
           <div className="mb-4 flex flex-wrap flex-row items-center justify-center">
             <Link
               href="/terms"
-              className="rounded-full px-3 py-1 transition-colors hover:bg-zinc-900 hover:text-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
+              className="rounded-full px-3 py-1 transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               Terms of Service
             </Link>
             <Link
               href="/privacy"
-              className="rounded-full px-3 py-1 transition-colors hover:bg-zinc-900 hover:text-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
+              className="rounded-full px-3 py-1 transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               Privacy Policy
             </Link>
             <Link
               href="/changelog"
-              className="rounded-full px-3 py-1 transition-colors hover:bg-zinc-900 hover:text-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
+              className="rounded-full px-3 py-1 transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               Changelog
             </Link>

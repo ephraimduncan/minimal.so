@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { QueryProvider } from "@/lib/query-provider";
 import { ToasterProvider } from "@/components/toaster-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Agentation } from "agentation";
 import { APP_URL } from "@/lib/config";
 import "./globals.css";
@@ -46,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
 <Script
           defer
@@ -58,9 +59,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NuqsAdapter>
-          <QueryProvider>{children}</QueryProvider>
-        </NuqsAdapter>
+        <ThemeProvider>
+          <NuqsAdapter>
+            <QueryProvider>{children}</QueryProvider>
+          </NuqsAdapter>
+        </ThemeProvider>
         <ToasterProvider />
         {process.env.NODE_ENV === "development" && <Agentation />}
       </body>

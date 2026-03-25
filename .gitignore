@@ -70,3 +70,7 @@ prisma/generated
 CLAUDE.md
 
 .factory
+
+
+# reports with private data
+power-users-report.html

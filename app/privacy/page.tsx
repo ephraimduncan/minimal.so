@@ -11,7 +11,7 @@ export default function PrivacyPage() {
     <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
       <Link
         href="/"
-        className="mb-8 inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+        className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -30,39 +30,39 @@ export default function PrivacyPage() {
         Back to home
       </Link>
 
-      <h1 className="mb-2 text-3xl font-semibold text-zinc-900">
+      <h1 className="mb-2 text-3xl font-semibold text-foreground">
         Privacy Policy
       </h1>
-      <p className="mb-8 text-sm text-zinc-500">
+      <p className="mb-8 text-sm text-muted-foreground">
         Effective date: January 10, 2025
       </p>
 
-      <div className="prose prose-zinc max-w-none">
+      <div className="prose max-w-none">
         <section className="mb-8">
-          <h2 className="mb-3 text-xl font-medium text-zinc-900">
+          <h2 className="mb-3 text-xl font-medium text-foreground">
             Introduction
           </h2>
-          <p className="mb-4 text-zinc-600">
+          <p className="mb-4 text-muted-foreground">
             Minimal (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) is
             committed to protecting your privacy. This Privacy Policy explains
             how we collect, use, and share information when you use our bookmark
             manager service.
           </p>
-          <p className="text-zinc-600">
+          <p className="text-muted-foreground">
             By using Minimal, you agree to the collection and use of information
             in accordance with this policy.
           </p>
         </section>
 
         <section className="mb-8">
-          <h2 className="mb-3 text-xl font-medium text-zinc-900">
+          <h2 className="mb-3 text-xl font-medium text-foreground">
             Information We Collect
           </h2>
 
-          <h3 className="mb-2 mt-4 text-lg font-medium text-zinc-800">
+          <h3 className="mb-2 mt-4 text-lg font-medium text-foreground">
             Information You Provide
           </h3>
-          <ul className="mb-4 list-disc space-y-2 pl-6 text-zinc-600">
+          <ul className="mb-4 list-disc space-y-2 pl-6 text-muted-foreground">
             <li>
               <strong>Account Information:</strong> When you create an account,
               we collect your name, email address, and profile photo (if
@@ -74,10 +74,10 @@ export default function PrivacyPage() {
             </li>
           </ul>
 
-          <h3 className="mb-2 mt-4 text-lg font-medium text-zinc-800">
+          <h3 className="mb-2 mt-4 text-lg font-medium text-foreground">
             Information Collected Automatically
           </h3>
-          <ul className="list-disc space-y-2 pl-6 text-zinc-600">
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
             <li>
               <strong>Usage Data:</strong> We collect analytics data about how
               you interact with our service, including pages visited, features
@@ -95,11 +95,11 @@ export default function PrivacyPage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="mb-3 text-xl font-medium text-zinc-900">
+          <h2 className="mb-3 text-xl font-medium text-foreground">
             How We Use Your Information
           </h2>
-          <p className="mb-4 text-zinc-600">We use the information we collect to:</p>
-          <ul className="list-disc space-y-2 pl-6 text-zinc-600">
+          <p className="mb-4 text-muted-foreground">We use the information we collect to:</p>
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
             <li>Provide, maintain, and improve our service</li>
             <li>Process and store your bookmarks</li>
             <li>Send you service-related communications</li>
@@ -109,14 +109,14 @@ export default function PrivacyPage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="mb-3 text-xl font-medium text-zinc-900">
+          <h2 className="mb-3 text-xl font-medium text-foreground">
             Information Sharing
           </h2>
-          <p className="mb-4 text-zinc-600">
+          <p className="mb-4 text-muted-foreground">
             We do not sell your personal information. We may share your
             information in the following circumstances:
           </p>
-          <ul className="list-disc space-y-2 pl-6 text-zinc-600">
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
             <li>
               <strong>Service Providers:</strong> With third-party services that
               help us operate our platform (e.g., hosting, analytics).
@@ -133,10 +133,10 @@ export default function PrivacyPage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="mb-3 text-xl font-medium text-zinc-900">
+          <h2 className="mb-3 text-xl font-medium text-foreground">
             Data Security
           </h2>
-          <p className="text-zinc-600">
+          <p className="text-muted-foreground">
             We implement reasonable security measures to protect your
             information. However, no method of transmission over the Internet or
             electronic storage is 100% secure, and we cannot guarantee absolute
@@ -145,9 +145,9 @@ export default function PrivacyPage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="mb-3 text-xl font-medium text-zinc-900">Your Rights</h2>
-          <p className="mb-4 text-zinc-600">You have the right to:</p>
-          <ul className="list-disc space-y-2 pl-6 text-zinc-600">
+          <h2 className="mb-3 text-xl font-medium text-foreground">Your Rights</h2>
+          <p className="mb-4 text-muted-foreground">You have the right to:</p>
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
             <li>Access the personal information we hold about you</li>
             <li>Request correction of inaccurate data</li>
             <li>Request deletion of your account and associated data</li>
@@ -156,10 +156,10 @@ export default function PrivacyPage() {
         </section>
 
         <section className="mb-8">
-          <h2 className="mb-3 text-xl font-medium text-zinc-900">
+          <h2 className="mb-3 text-xl font-medium text-foreground">
             Changes to This Policy
           </h2>
-          <p className="text-zinc-600">
+          <p className="text-muted-foreground">
             We may update this Privacy Policy from time to time. We will notify
             you of any changes by posting the new policy on this page and
             updating the effective date.
@@ -167,13 +167,13 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-xl font-medium text-zinc-900">Contact Us</h2>
-          <p className="text-zinc-600">
+          <h2 className="mb-3 text-xl font-medium text-foreground">Contact Us</h2>
+          <p className="text-muted-foreground">
             If you have any questions about this Privacy Policy, please contact
             us at{" "}
             <a
               href="mailto:ephraimduncan68@gmail.com"
-              className="text-zinc-900 underline hover:no-underline"
+              className="text-foreground underline hover:no-underline"
             >
               ephraimduncan68@gmail.com
             </a>

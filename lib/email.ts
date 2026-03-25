@@ -1,6 +1,6 @@
 import { APP_URL } from "./config";
 
-const AUTOSEND_API_URL = "https://api.autosend.com/v1/mails/send";
+const PLUNK_API_URL = "https://api.useplunk.com/v1/send";
 const FROM_EMAIL = "ephraim@minimal.so";
 const FROM_NAME = "minimal";
 
@@ -23,34 +23,41 @@ export async function sendEmail({
   html,
   text,
 }: SendEmailParams): Promise<SendEmailResult> {
-  const apiKey = process.env.AUTOSEND_API_KEY;
+  const apiKey = process.env.PLUNK_API_KEY;
   if (!apiKey) {
-    const error = "AUTOSEND_API_KEY not set";
+    const error = "PLUNK_API_KEY not set";
     console.error(`[email] ${error}, skipping email to`, to);
     return { ok: false, error };
   }
 
   try {
-    const res = await fetch(AUTOSEND_API_URL, {
+    const res = await fetch(PLUNK_API_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: { email: FROM_EMAIL, name: FROM_NAME },
-        to: { email: to },
+        to: [to],
         subject,
-        html,
-        ...(text && { text }),
+        body: html,
+        from: FROM_EMAIL,
+        name: FROM_NAME,
       }),
     });
 
     if (!res.ok) {
       const body = await res.text();
-      console.error("[email] Autosend error:", res.status, body);
-      return { ok: false, status: res.status, error: body || "Autosend error" };
+      console.error("[email] Plunk error:", res.status, body);
+      return { ok: false, status: res.status, error: body || "Plunk error" };
     }
+
+    const data = await res.json();
+    if (!data.success) {
+      console.error("[email] Plunk rejected:", data);
+      return { ok: false, error: "Plunk rejected the request" };
+    }
+
     return { ok: true, status: res.status };
   } catch (err) {
     console.error("[email] Failed to send:", err);

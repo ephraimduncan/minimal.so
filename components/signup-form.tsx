@@ -59,6 +59,7 @@ export function SignupForm({
           name: value.name,
           email: value.email,
           password: value.password,
+          callbackURL: checkoutCallbackURL,
         });
         if (error) {
           return { form: error.message ?? "An error occurred", fields: {} };
@@ -74,14 +75,18 @@ export function SignupForm({
           name: authRef.current.user.name,
           created_at: authRef.current.user.createdAt,
         });
-        posthog.capture("signup_completed");
+        posthog.capture("signup_account_created");
       }
 
       // Email verification is required — redirect to check-email page.
       // OAuth signups bypass this path entirely (handled by OAuthButton).
-      router.push(
-        `/signup/verify-email?email=${encodeURIComponent(value.email)}`,
-      );
+      // Forward plan context so the resend button preserves checkout intent.
+      const verifyParams = new URLSearchParams({ email: value.email });
+      if (isProSignup) {
+        verifyParams.set("plan", "pro");
+        verifyParams.set("billingCycle", billingCycle);
+      }
+      router.push(`/signup/verify-email?${verifyParams}`);
     },
   });
 

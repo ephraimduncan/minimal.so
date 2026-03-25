@@ -148,7 +148,14 @@ export const resetPasswordSchema = z
 
 export const signupSchema = z
   .object({
-    name: z.string().min(1, "Name is required"),
+    name: z
+      .string()
+      .min(1, "Name is required")
+      .max(100, "Name is too long")
+      .refine(
+        (v) => !/https?:\/\/|bit\.ly|tinyurl\.com/i.test(v),
+        "Name cannot contain URLs",
+      ),
     email: z.email("Invalid email address"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),

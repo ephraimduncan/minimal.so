@@ -156,6 +156,11 @@ export const auth = betterAuth({
   trustedOrigins: CHROME_EXTENSION_ID
     ? [`chrome-extension://${CHROME_EXTENSION_ID}`]
     : [],
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 10,
+  },
   plugins: [
     nextCookies(),
     ...(polarEnabled
@@ -207,6 +212,7 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       const result = await sendEmail({
         to: user.email,

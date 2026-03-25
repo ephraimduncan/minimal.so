@@ -7,7 +7,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -37,6 +41,9 @@ import {
   IconLifebuoy,
   IconRocket,
   IconCreditCard,
+  IconPalette,
+  IconSun,
+  IconMoon,
 } from "@tabler/icons-react";
 import posthog from "posthog-js";
 import { authClient, signOut } from "@/lib/auth-client";
@@ -57,6 +64,7 @@ import { type GroupItem } from "@/lib/schema";
 import type { ProfileData } from "@/components/dashboard-content";
 import { KeyboardShortcutsDialog } from "@/components/keyboard-shortcuts-dialog";
 import { ChromeIcon } from "@/components/chrome-icon";
+import { useTheme } from "next-themes";
 
 import { hasActiveProAccess } from "@/lib/plan-limits";
 import { startCheckout } from "@/lib/checkout";
@@ -105,6 +113,7 @@ export function Header({
   logoSize = 24,
 }: HeaderProps) {
   const router = useRouter();
+  const { setTheme, theme } = useTheme();
   const [newGroupName, setNewGroupName] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -440,6 +449,32 @@ export function Header({
                 </p>
               ) : null}
               <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="rounded-lg">
+                  <IconPalette className="h-4 w-4" />
+                  Theme
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="rounded-2xl">
+                    <DropdownMenuItem
+                      className="rounded-lg"
+                      onClick={() => setTheme("light")}
+                    >
+                      <IconSun className="h-4 w-4" />
+                      Light
+                      {theme === "light" && <IconCheck className="ml-auto h-4 w-4" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="rounded-lg"
+                      onClick={() => setTheme("dark")}
+                    >
+                      <IconMoon className="h-4 w-4" />
+                      Dark
+                      {theme === "dark" && <IconCheck className="ml-auto h-4 w-4" />}
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
               <DropdownMenuItem
                 className="rounded-lg"
                 onClick={() => setShortcutsOpen(true)}

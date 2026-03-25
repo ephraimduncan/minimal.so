@@ -74,7 +74,7 @@ function PricingFeature({
       <div className="mt-0.5">{feature.icon}</div>
       <span>{feature.label}</span>
       {feature.soon && (
-        <span className="ml-auto shrink-0 rounded-full border border-zinc-200 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+        <span className="ml-auto shrink-0 rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
           Soon
         </span>
       )}
@@ -93,15 +93,15 @@ function BillingToggle({
 
   return (
     <div className="mt-6 flex justify-center">
-      <div className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white p-1">
+      <div className="inline-flex items-center gap-1 rounded-full border border-border bg-background p-1">
         <button
           type="button"
           aria-pressed={!isYearly}
           onClick={() => onChange("monthly")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 ${
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
             isYearly
-              ? "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-              : "bg-zinc-900 text-white hover:bg-zinc-800"
+              ? "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              : "bg-primary text-primary-foreground hover:bg-primary/90"
           }`}
         >
           Monthly
@@ -110,10 +110,10 @@ function BillingToggle({
           type="button"
           aria-pressed={isYearly}
           onClick={() => onChange("yearly")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 ${
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
             isYearly
-              ? "bg-zinc-900 text-white hover:bg-zinc-800"
-              : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           }`}
         >
           Yearly
@@ -174,19 +174,19 @@ export function LandingPricing() {
   return (
     <div id="pricing" className="mx-auto max-w-[600px] scroll-mt-16">
       <div className="relative mx-auto mb-2 flex max-w-[450px] items-center justify-center">
-        <h2 className="z-10 bg-white px-5 text-lg font-medium text-zinc-900">
+        <h2 className="z-10 bg-background px-5 text-lg font-medium text-foreground">
           Pricing
         </h2>
-        <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-zinc-200"></div>
+        <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border"></div>
       </div>
       <BillingToggle value={billingCycle} onChange={setBillingCycle} />
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1 rounded-lg border border-zinc-200 bg-white px-4 py-5">
+        <div className="relative flex-1 rounded-lg border border-border bg-background px-4 py-5">
           <button
             type="button"
             onClick={handleFreeAction}
-            className="absolute right-4 top-4 cursor-pointer rounded-full bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900"
+            className="absolute right-4 top-4 cursor-pointer rounded-full bg-primary px-3 py-1 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {isSignedIn ? "Go to dashboard" : "Sign up"}
           </button>
@@ -199,12 +199,12 @@ export function LandingPricing() {
           </div>
         </div>
 
-        <div className="relative flex-1 rounded-lg border border-zinc-200 bg-white px-4 py-5">
+        <div className="relative flex-1 rounded-lg border border-border bg-background px-4 py-5">
           <button
             type="button"
             onClick={handleProAction}
             disabled={isCheckoutPending}
-            className="absolute right-4 top-4 cursor-pointer rounded-full bg-zinc-900 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60"
+            className="absolute right-4 top-4 cursor-pointer rounded-full bg-primary px-3 py-1 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-60"
           >
             {proActionLabel}
           </button>
@@ -212,7 +212,7 @@ export function LandingPricing() {
           <TextMorph
             as="p"
             duration={450}
-            className="text-lg font-medium text-zinc-900"
+            className="text-lg font-medium text-foreground"
           >
             {selectedPricing.priceLabel}
           </TextMorph>

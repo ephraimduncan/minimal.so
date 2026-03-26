@@ -167,10 +167,10 @@ export function PublicProfileContent({
             <img
               src={user.image}
               alt={user.name}
-              className="h-14 w-14 rounded-full object-cover ring-1 ring-border"
+              className="h-14 w-14 rounded-full object-cover outline outline-1 -outline-offset-1 outline-black/5 dark:outline-white/10"
             />
           ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted ring-1 ring-border text-lg font-medium">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted outline outline-1 -outline-offset-1 outline-black/5 dark:outline-white/10 text-lg font-medium">
               {user.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -329,7 +329,7 @@ function RssFeedMenu({ username, groups }: RssFeedMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="RSS feeds"
-        className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer relative before:absolute before:-inset-2.5 before:content-['']"
       >
         <IconRss size={18} strokeWidth={1.5} />
       </DropdownMenuTrigger>

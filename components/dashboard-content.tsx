@@ -1340,7 +1340,7 @@ export function DashboardContent({
             onToggleVisibility={handleToggleBookmarkVisibility}
           />
         )}
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
         {selectionMode && selectedIds.size > 0 && (
           <MultiSelectToolbar
             onSelectAll={handleSelectAll}

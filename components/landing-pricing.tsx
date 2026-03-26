@@ -182,7 +182,7 @@ export function LandingPricing() {
       <BillingToggle value={billingCycle} onChange={setBillingCycle} />
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1 rounded-lg border border-border bg-background px-4 py-5">
+        <div className="relative flex-1 rounded-lg bg-background px-4 py-5 shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06),0_3px_6px_rgba(0,0,0,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.3)]">
           <button
             type="button"
             onClick={handleFreeAction}
@@ -199,7 +199,7 @@ export function LandingPricing() {
           </div>
         </div>
 
-        <div className="relative flex-1 rounded-lg border border-border bg-background px-4 py-5">
+        <div className="relative flex-1 rounded-lg bg-background px-4 py-5 shadow-[0_0_0_1px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.06),0_3px_6px_rgba(0,0,0,0.04)] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_1px_2px_rgba(0,0,0,0.3)]">
           <button
             type="button"
             onClick={handleProAction}

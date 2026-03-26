@@ -41,8 +41,15 @@ export function LoginForm({
         const { data, error } = await signIn.email({
           email: value.email,
           password: value.password,
+          callbackURL: "/dashboard",
         });
         if (error) {
+          if (error.code === "EMAIL_NOT_VERIFIED") {
+            router.push(
+              `/signup/verify-email?email=${encodeURIComponent(value.email)}`
+            );
+            return { form: "", fields: {} };
+          }
           return { form: error.message ?? "An error occurred", fields: {} };
         }
         authRef.current = data;

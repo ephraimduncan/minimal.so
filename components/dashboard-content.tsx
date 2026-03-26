@@ -46,6 +46,7 @@ import { hasActiveProAccess } from "@/lib/plan-limits";
 import { PastDueBanner } from "@/components/past-due-banner";
 import type { BookmarkType, GroupItem, BookmarkItem } from "@/lib/schema";
 import type { Session } from "@/lib/auth";
+import { AnimatePresence } from "motion/react";
 
 export interface ProfileData {
   image: string | null;
@@ -1339,6 +1340,7 @@ export function DashboardContent({
             onToggleVisibility={handleToggleBookmarkVisibility}
           />
         )}
+        <AnimatePresence initial={false}>
         {selectionMode && selectedIds.size > 0 && (
           <MultiSelectToolbar
             onSelectAll={handleSelectAll}
@@ -1360,6 +1362,7 @@ export function DashboardContent({
             }
           />
         )}
+        </AnimatePresence>
         <BulkMoveDialog
           open={moveDialogOpen}
           onOpenChange={setMoveDialogOpen}

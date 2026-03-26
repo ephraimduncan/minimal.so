@@ -24,26 +24,27 @@ export function Landing() {
         aria-labelledby="landing-title"
       >
         <header className="mx-auto mb-8 mt-12 flex max-w-[400px] flex-col items-center justify-center text-center sm:mb-12 sm:mt-24">
-          {LOGO_SVG}
+          <div className="animate-stagger-in">{LOGO_SVG}</div>
           <h1
             id="landing-title"
-            className="mb-1.5 text-2xl font-semibold text-foreground"
+            className="animate-stagger-in mb-1.5 text-2xl font-semibold text-foreground text-balance"
+            style={{ animationDelay: "100ms" }}
           >
             minimal
           </h1>
-          <p className="text-muted-foreground">
+          <p className="animate-stagger-in text-muted-foreground text-pretty" style={{ animationDelay: "200ms" }}>
             simple, fast, and minimal bookmark manager.
           </p>
-          <nav className="mt-5 flex flex-wrap items-center justify-center gap-2" aria-label="Primary">
+          <nav className="animate-stagger-in mt-5 flex flex-wrap items-center justify-center gap-2" aria-label="Primary" style={{ animationDelay: "300ms" }}>
             <Link
               href="/login"
-              className="rounded-full bg-primary px-6 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-8"
+              className="rounded-full bg-primary px-6 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-8"
             >
               Login
             </Link>
             <Link
               href="/signup"
-              className="cursor-pointer rounded-full bg-primary px-6 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-8"
+              className="cursor-pointer rounded-full bg-primary px-6 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-8"
             >
               Sign Up
             </Link>
@@ -51,7 +52,7 @@ export function Landing() {
               href="/chrome"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full border border-border p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="relative rounded-full border border-border p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground before:absolute before:-inset-1 before:content-['']"
               title="Chrome Extension"
             >
               {CHROME_ICON}
@@ -78,10 +79,10 @@ export function Landing() {
             <div className="flex items-start">
               {BOOKMARK_ICON}
               <div>
-                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight text-balance">
                   Save in seconds
                 </h3>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-sm text-pretty">
                   Paste any URL, hit enter. Done. No friction, no extra steps.
                 </p>
               </div>
@@ -89,10 +90,10 @@ export function Landing() {
             <div className="flex items-start">
               {AUTO_FETCH_ICON}
               <div>
-                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight text-balance">
                   Auto-fetch metadata
                 </h3>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-sm text-pretty">
                   Titles, descriptions, and favicons are pulled automatically.
                   Your links look great without any effort.
                 </p>
@@ -101,10 +102,10 @@ export function Landing() {
             <div className="flex items-start">
               {ORGANIZE_ICON}
               <div>
-                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight text-balance">
                   Organize with groups
                 </h3>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-sm text-pretty">
                   Create collections to categorize your bookmarks. Keep work,
                   personal, and inspiration separate.
                 </p>
@@ -113,10 +114,10 @@ export function Landing() {
             <div className="flex items-start">
               {SEARCH_ICON}
               <div>
-                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight text-balance">
                   Instant search
                 </h3>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-sm text-pretty">
                   Find any bookmark by title, URL, or group. Results appear as
                   you type.
                 </p>
@@ -125,10 +126,10 @@ export function Landing() {
             <div className="flex items-start">
               {KEYBOARD_ICON}
               <div>
-                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight text-balance">
                   Keyboard shortcuts
                 </h3>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-sm text-pretty">
                   Navigate, search, and manage everything without touching your
                   mouse. Built for speed.
                 </p>
@@ -137,10 +138,10 @@ export function Landing() {
             <div className="flex items-start">
               {PRIVACY_ICON}
               <div>
-                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight text-balance">
                   Private by default
                 </h3>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-sm text-pretty">
                   Your bookmarks are yours alone. No ads, no data selling.
                 </p>
               </div>
@@ -148,10 +149,10 @@ export function Landing() {
             <div className="flex items-start">
               {MINIMAL_ICON}
               <div>
-                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight text-balance">
                   Minimal interface
                 </h3>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-sm text-pretty">
                   No clutter, no distractions. Just your bookmarks in a clean,
                   focused layout.
                 </p>
@@ -160,10 +161,10 @@ export function Landing() {
             <div className="flex items-start">
               {ACCESS_ANYWHERE_ICON}
               <div>
-                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight">
+                <h3 className="font-medium text-foreground text-base sm:text-lg mb-1 leading-tight text-balance">
                   Access anywhere
                 </h3>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-sm text-pretty">
                   Web-only means no apps to install. Works on any device with a
                   browser.
                 </p>
@@ -178,24 +179,24 @@ export function Landing() {
           <div className="mb-4 flex flex-wrap flex-row items-center justify-center">
             <Link
               href="/terms"
-              className="rounded-full px-3 py-1 transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex items-center rounded-full px-3 py-2 transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               Terms of Service
             </Link>
             <Link
               href="/privacy"
-              className="rounded-full px-3 py-1 transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex items-center rounded-full px-3 py-2 transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               Privacy Policy
             </Link>
             <Link
               href="/changelog"
-              className="rounded-full px-3 py-1 transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex items-center rounded-full px-3 py-2 transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               Changelog
             </Link>
           </div>
-          <p>
+          <p className="text-pretty">
             © {CURRENT_YEAR} minimal.so - Save and organize your bookmarks
             beautifully
           </p>

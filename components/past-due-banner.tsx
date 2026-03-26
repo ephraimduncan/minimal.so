@@ -24,7 +24,7 @@ export function PastDueBanner() {
   return (
     <div className="mb-4 flex items-center gap-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
       <IconAlertTriangle className="h-4 w-4 shrink-0 text-warning-foreground" />
-      <p className="flex-1 text-sm text-warning-foreground">
+      <p className="flex-1 text-sm text-pretty text-warning-foreground">
         Your last payment failed. Please update your payment method to keep your
         Pro subscription.
       </p>
@@ -43,7 +43,7 @@ export function PastDueBanner() {
         type="button"
         aria-label="Dismiss"
         onClick={() => setDismissed(true)}
-        className="shrink-0 rounded-md p-0.5 text-warning-foreground/60 transition-colors hover:text-warning-foreground"
+        className="relative shrink-0 rounded-md p-0.5 text-warning-foreground/60 transition-colors hover:text-warning-foreground before:absolute before:-inset-2.5 before:content-['']"
       >
         <IconX className="h-3.5 w-3.5" />
       </button>

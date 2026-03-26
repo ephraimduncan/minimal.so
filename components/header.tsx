@@ -270,7 +270,7 @@ export function Header({
                 {group.id === selectedGroup.id ? (
                   <IconCheck className="mt-0.5 h-4 w-4 shrink-0" />
                 ) : (
-                  <span className="mt-0.5 shrink-0 text-xs text-muted-foreground">
+                  <span className="mt-0.5 shrink-0 text-xs tabular-nums text-muted-foreground">
                     {group.bookmarkCount ?? 0}
                   </span>
                 )}

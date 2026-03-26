@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, startTransition, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -289,7 +290,7 @@ export function BookmarkList({
                     {hasUsername && !renamingId && bookmark.isPublic === true && (
                       <IconWorld className="h-2.5 w-2.5 shrink-0 text-muted-foreground" />
                     )}
-                    <span className="text-[13px] text-muted-foreground whitespace-nowrap">
+                    <span className="text-[13px] tabular-nums text-muted-foreground whitespace-nowrap">
                       {formatDate(bookmark.createdAt)}
                     </span>
                   </>
@@ -426,14 +427,6 @@ const BookmarkIcon = memo(function BookmarkIcon({
   bookmark: BookmarkItem;
   isCopied?: boolean;
 }) {
-  if (isCopied) {
-    return (
-      <div className="flex h-5 w-5 items-center justify-center">
-        <IconCheck className="h-4 w-4 text-foreground" />
-      </div>
-    );
-  }
-
   if (bookmark.type === "color" && bookmark.color) {
     return (
       <div
@@ -455,5 +448,32 @@ const BookmarkIcon = memo(function BookmarkIcon({
     }
   }
 
-  return <FaviconImage url={bookmark.url} />;
+  return (
+    <div className="relative flex h-5 w-5 items-center justify-center">
+      <AnimatePresence initial={false} mode="popLayout">
+        {isCopied ? (
+          <motion.div
+            key="check"
+            initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
+            transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+            className="flex items-center justify-center"
+          >
+            <IconCheck className="h-4 w-4 text-foreground" />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="favicon"
+            initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
+            transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+          >
+            <FaviconImage url={bookmark.url} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 });

@@ -48,8 +48,8 @@ export function MultiSelectToolbar({
     <motion.div
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      exit={{ y: 100, opacity: 0 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
+      exit={{ y: 20, opacity: 0 }}
+      transition={{ type: "spring", duration: 0.3, bounce: 0 }}
       className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 motion-reduce:transition-none motion-reduce:animate-none"
     >
       <div className="flex items-center rounded-lg bg-popover text-popover-foreground p-1 shadow-md ring-1 ring-foreground/10">

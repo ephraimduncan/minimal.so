@@ -51,8 +51,8 @@ export function ResetPasswordForm({
     return (
       <div className={cn("flex flex-col gap-2", className)} {...props}>
         <div className="flex flex-col gap-1 text-center">
-          <h1 className="text-xl font-semibold">Invalid reset link</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl font-semibold text-balance">Invalid reset link</h1>
+          <p className="text-sm text-muted-foreground text-pretty">
             This password reset link is invalid or has expired
           </p>
         </div>
@@ -71,8 +71,8 @@ export function ResetPasswordForm({
   return (
     <div className={cn("flex flex-col gap-2", className)} {...props}>
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">Set new password</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-xl font-semibold text-balance">Set new password</h1>
+        <p className="text-sm text-muted-foreground text-pretty">
           Enter your new password below
         </p>
       </div>

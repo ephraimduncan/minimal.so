@@ -208,3 +208,21 @@ input:not(:-webkit-autofill) {
 @utility bg-link-podcast {
   background-color: #a855f7;
 }
+
+@keyframes stagger-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+}
+
+@utility animate-stagger-in {
+  opacity: 0;
+  animation: stagger-fade-in 0.5s ease-out forwards;
+}

@@ -46,8 +46,8 @@ export function ForgotPasswordForm({
     return (
       <div className={cn("flex flex-col gap-2", className)} {...props}>
         <div className="flex flex-col gap-1 text-center">
-          <h1 className="text-xl font-semibold">Check your email</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl font-semibold text-balance">Check your email</h1>
+          <p className="text-sm text-muted-foreground text-pretty">
             We sent a password reset link to your email
           </p>
         </div>
@@ -63,8 +63,8 @@ export function ForgotPasswordForm({
   return (
     <div className={cn("flex flex-col gap-2", className)} {...props}>
       <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">Reset your password</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-xl font-semibold text-balance">Reset your password</h1>
+        <p className="text-sm text-muted-foreground text-pretty">
           Enter your email and we&apos;ll send you a reset link
         </p>
       </div>

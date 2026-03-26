@@ -124,28 +124,28 @@ function AdminSkeleton() {
         {Array.from({ length: 8 }).map((_, i) => (
           <Card key={i} size="sm">
             <CardHeader>
-              <div className="h-4 w-24 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
-              <div className="h-7 w-12 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+              <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+              <div className="h-7 w-12 animate-pulse rounded bg-muted" />
             </CardHeader>
           </Card>
         ))}
       </div>
       <Card size="sm">
         <CardHeader>
-          <div className="h-4 w-36 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
-          <div className="h-7 w-12 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+          <div className="h-4 w-36 animate-pulse rounded bg-muted" />
+          <div className="h-7 w-12 animate-pulse rounded bg-muted" />
         </CardHeader>
       </Card>
       <Card size="sm">
         <CardHeader>
-          <div className="h-5 w-32 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+          <div className="h-5 w-32 animate-pulse rounded bg-muted" />
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="flex justify-between">
-                <div className="h-4 w-16 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
-                <div className="h-4 w-8 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+                <div className="h-4 w-16 animate-pulse rounded bg-muted" />
+                <div className="h-4 w-8 animate-pulse rounded bg-muted" />
               </div>
             ))}
           </div>
@@ -153,10 +153,10 @@ function AdminSkeleton() {
       </Card>
       <Card size="sm">
         <CardHeader>
-          <div className="h-5 w-32 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+          <div className="h-5 w-32 animate-pulse rounded bg-muted" />
         </CardHeader>
         <CardContent>
-          <div className="h-48 w-full animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+          <div className="h-48 w-full animate-pulse rounded bg-muted" />
         </CardContent>
       </Card>
     </div>
@@ -188,7 +188,7 @@ async function AdminData() {
           <Card key={stat.label} size="sm">
             <CardHeader>
               <CardDescription>{stat.label}</CardDescription>
-              <CardTitle className="text-2xl">{stat.value}</CardTitle>
+              <CardTitle className="text-2xl tabular-nums">{stat.value}</CardTitle>
             </CardHeader>
           </Card>
         ))}
@@ -197,7 +197,7 @@ async function AdminData() {
       <Card size="sm">
         <CardHeader>
           <CardDescription>Avg Bookmarks per User</CardDescription>
-          <CardTitle className="text-2xl">{avgBookmarks}</CardTitle>
+          <CardTitle className="text-2xl tabular-nums">{avgBookmarks}</CardTitle>
         </CardHeader>
       </Card>
 
@@ -206,11 +206,11 @@ async function AdminData() {
           <CardTitle>Bookmark Types</CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <ul className="space-y-1 text-sm text-muted-foreground">
             {bookmarksByType.map((entry) => (
               <li key={entry.type} className="flex justify-between">
                 <span className="capitalize">{entry.type}</span>
-                <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                <span className="font-medium tabular-nums text-foreground">
                   {entry._count}
                 </span>
               </li>
@@ -249,7 +249,7 @@ async function AdminData() {
                   <TableCell className="text-muted-foreground">
                     {user.email}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right tabular-nums">
                     {user.bookmarks}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground">
@@ -270,7 +270,7 @@ export default function AdminPage() {
     <div className="mx-auto max-w-2xl px-5 py-12">
       <Link
         href="/dashboard"
-        className="mb-8 inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:hover:text-zinc-300"
+        className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -289,10 +289,10 @@ export default function AdminPage() {
         Back to dashboard
       </Link>
 
-      <h1 className="mb-2 text-3xl font-semibold text-zinc-900 dark:text-zinc-100">
+      <h1 className="mb-2 text-3xl font-semibold text-balance text-foreground">
         Admin
       </h1>
-      <p className="mb-8 text-sm text-zinc-500">Usage statistics</p>
+      <p className="mb-8 text-sm text-pretty text-muted-foreground">Usage statistics</p>
 
       <Suspense fallback={<AdminSkeleton />}>
         <AdminData />

@@ -87,10 +87,14 @@ export const bookmarkItemSchema = z.object({
   createdAt: z.union([z.date(), z.string()]),
 });
 
+// D1 caps a row at 2 MB, and a bookmark can hold its URL three times (url,
+// normalizedUrl, and title when the page has no title).
+export const MAX_URL_LENGTH = 65_536;
+
 export const createBookmarkSchema = z.object({
   id: z.string().optional(),
   title: z.string(),
-  url: z.string().optional(),
+  url: z.string().max(MAX_URL_LENGTH).optional(),
   type: bookmarkTypeSchema.default("link"),
   color: z.string().optional(),
   groupId: z.string(),
@@ -99,7 +103,7 @@ export const createBookmarkSchema = z.object({
 export const updateBookmarkSchema = z.object({
   id: z.string(),
   title: z.string().optional(),
-  url: z.string().optional(),
+  url: z.string().max(MAX_URL_LENGTH).optional(),
   type: bookmarkTypeSchema.optional(),
   color: z.string().optional(),
   groupId: z.string().optional(),

@@ -20,7 +20,7 @@ bun install
 
 ### 3. Configure the server
 
-Add the extension ID to your `.env` file:
+Add the extension ID to your `.dev.vars` file:
 
 ```bash
 CHROME_EXTENSION_ID=your-extension-id-here

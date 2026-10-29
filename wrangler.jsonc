@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "minimal-so",
+  "account_id": "8e642ff58d22bbbe4eda926dda88649e",
   "compatibility_date": "2025-11-01",
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/react-start/server-entry",
@@ -19,6 +20,14 @@
       "head_sampling_rate": 1
     }
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "minimal-so",
+      "database_id": "89f75118-1f88-4758-b257-39c21b7212e1",
+      "migrations_dir": "drizzle"
+    }
+  ],
   "r2_buckets": [{ "binding": "AVATARS", "bucket_name": "minimal-so-avatars" }],
   "send_email": [{ "name": "EMAIL" }],
   "ratelimits": [

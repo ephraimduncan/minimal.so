@@ -13,10 +13,6 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
-
 # production
 /build
 
@@ -32,9 +28,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-
-# vercel
-.vercel
+!.env.production
 
 # cloudflare / vite build output
 /dist
@@ -42,16 +36,16 @@ yarn-error.log*
 .wrangler/
 .dev.vars
 .dev.vars.*
+!.dev.vars.example
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
-
-# prisma
-prisma/generated
 
 # sqlite
 *.db*
+
+# database dumps (drizzle/*.sql migrations stay tracked)
+/*.sql
 
 .vscode
 
@@ -70,8 +64,6 @@ prisma/generated
 
 .ami/
 
-# local avatar uploads
-/public/uploads/avatars/
 # Nightshift plan artifacts (keep out of version control)
 .nightshift-plan
 CLAUDE.md

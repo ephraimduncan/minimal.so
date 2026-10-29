@@ -1,0 +1,20 @@
+# Server values for the Worker. Copy to .dev.vars for local dev, and set
+# them on the deployed Worker with `bunx wrangler secret put <NAME>`.
+# `bun run cf-typegen` reads this file to type `env` and `process.env`.
+BETTER_AUTH_SECRET=
+
+# Optional: Google sign-in
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# Optional: Polar billing
+POLAR_ACCESS_TOKEN=
+POLAR_WEBHOOK_SECRET=
+POLAR_SERVER=production
+POLAR_CREATE_CUSTOMER_ON_SIGN_UP=false
+POLAR_PRO_MONTHLY_PRODUCT_ID=
+POLAR_PRO_YEARLY_PRODUCT_ID=
+
+# Optional
+ADMIN_EMAIL=
+CHROME_EXTENSION_ID=

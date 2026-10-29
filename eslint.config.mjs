@@ -22,8 +22,6 @@ export default tseslint.config(
     ".wrangler/**",
     "src/routeTree.gen.ts",
     "worker-configuration.d.ts",
-    "app/**",
-    "prisma/**",
     "extension/**",
     "extension-dist/**",
   ]),

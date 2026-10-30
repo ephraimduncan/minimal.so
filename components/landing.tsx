@@ -4,6 +4,7 @@ import { IconMenu2 } from "@tabler/icons-react";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { DashboardDemoLazy as DashboardDemo } from "@/components/dashboard-demo-lazy";
 import { LandingPricing } from "@/components/landing-pricing";
+import { LaunchBanner } from "@/components/launch-banner";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -16,11 +17,12 @@ const FEATURES = [
   { name: "Private by default", description: "No ads, no tracking. Export your data anytime." },
 ];
 
-export function Landing() {
+export function Landing({ renderedAt }: { renderedAt: number }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <main className="min-h-dvh bg-white text-black dark:bg-zinc-950 dark:text-white">
+      <LaunchBanner renderedAt={renderedAt} />
       <nav
         className="mx-auto flex max-w-3xl items-center justify-between px-6 py-6"
         aria-label="Primary"

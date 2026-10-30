@@ -153,6 +153,9 @@ export function createAuth(db: DB) {
       window: 60,
       max: 10,
     },
+    // A Worker gets the client IP in CF-Connecting-IP, not X-Forwarded-For.
+    // Without this header, better-auth skips rate limits.
+    advanced: { ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] } },
     plugins: [
       ...(polarEnabled
         ? [

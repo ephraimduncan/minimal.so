@@ -39,14 +39,14 @@ export const generateApiKey = authed.handler(async ({ context }) => {
   const keyHash = hashApiKey(rawKey);
   const keyPrefix = rawKey.slice(0, 8); // "mnk_xxxx"
 
-  await db.transaction(async (tx) => {
-    await tx.delete(apiKey).where(eq(apiKey.userId, context.user.id));
-    await tx.insert(apiKey).values({
+  await db.batch([
+    db.delete(apiKey).where(eq(apiKey.userId, context.user.id)),
+    db.insert(apiKey).values({
       keyHash,
       keyPrefix,
       userId: context.user.id,
-    });
-  });
+    }),
+  ]);
 
   return { key: rawKey };
 });

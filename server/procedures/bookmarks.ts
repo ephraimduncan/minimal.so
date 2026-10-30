@@ -13,8 +13,8 @@ import { getUrlMetadata } from "@/lib/url-metadata";
 import { normalizeUrl, canonicalizeUrl } from "@/lib/utils";
 import { z } from "zod";
 import { ORPCError } from "@orpc/server";
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
-import type { DB } from "@/lib/db";
+import { and, asc, count, desc, eq } from "drizzle-orm";
+import { inList, type DB } from "@/lib/db";
 import { bookmark, group } from "@/lib/db/schema";
 
 async function assertGroupOwnership(db: DB, groupId: string, userId: string) {
@@ -228,7 +228,7 @@ export const bulkDeleteBookmarks = authed
     const deleted = await context.db
       .delete(bookmark)
       .where(
-        and(inArray(bookmark.id, input.ids), eq(bookmark.userId, context.user.id)),
+        and(inList(bookmark.id, input.ids), eq(bookmark.userId, context.user.id)),
       )
       .returning({ id: bookmark.id });
     return { success: true, count: deleted.length };
@@ -246,7 +246,7 @@ export const bulkMoveBookmarks = authed
         updatedAt: new Date(),
       })
       .where(
-        and(inArray(bookmark.id, input.ids), eq(bookmark.userId, context.user.id)),
+        and(inList(bookmark.id, input.ids), eq(bookmark.userId, context.user.id)),
       )
       .returning({ id: bookmark.id });
     return { success: true, count: moved.length };
@@ -275,7 +275,7 @@ export const bulkSetVisibility = authed
       .update(bookmark)
       .set({ isPublic: input.isPublic })
       .where(
-        and(inArray(bookmark.id, input.ids), eq(bookmark.userId, context.user.id)),
+        and(inList(bookmark.id, input.ids), eq(bookmark.userId, context.user.id)),
       )
       .returning({ id: bookmark.id });
     return { success: true, count: updated.length };

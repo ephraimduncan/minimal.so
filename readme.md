@@ -19,11 +19,11 @@ The landing page includes a dashboard demo (no login required).
 
 ## tech stack
 
-- next.js
+- tanstack start
 - typescript
 - tailwind
-- redis
-- sqlite
+- drizzle
+- cloudflare workers, d1, r2
 
 ## api
 
@@ -59,7 +59,7 @@ For full request/response schemas, see the OpenAPI spec at `GET /api/openapi.jso
 - **60 requests/min** for all endpoints
 - **30 requests/min** for write operations (POST, PATCH, DELETE)
 
-Rate limit info is returned in `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
+If you go over a limit, the API returns `429` with a `Retry-After` header.
 
 ### examples
 

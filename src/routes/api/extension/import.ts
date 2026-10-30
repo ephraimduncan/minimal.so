@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth-server";
 import { createDb } from "@/lib/db";
 import { bookmark, group, user } from "@/lib/db/schema";
+import { MAX_URL_LENGTH } from "@/lib/schema";
 import { normalizeUrl } from "@/lib/utils";
 import { hasActiveProAccess } from "@/lib/plan-limits";
 import {
@@ -14,7 +15,8 @@ import {
 } from "@/lib/extension-cors";
 
 const IMPORT_LIMIT = 2000;
-const CHUNK_SIZE = 500;
+// Each row binds 8 values, and D1 allows 100 per query.
+const CHUNK_SIZE = 12;
 const IMPORTED_GROUP_NAME = "Imported - Browser";
 const IMPORTED_GROUP_COLOR = "#6366f1";
 
@@ -105,7 +107,10 @@ async function handlePost(request: Request): Promise<Response> {
       try {
         normalized = normalizeUrl(entry.url);
         const parsedUrl = new URL(normalized);
-        if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        if (
+          (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") ||
+          normalized.length > MAX_URL_LENGTH
+        ) {
           errorSummary.invalidUrl = (errorSummary.invalidUrl ?? 0) + 1;
           continue;
         }
@@ -157,23 +162,29 @@ async function handlePost(request: Request): Promise<Response> {
 
     let importedCount = 0;
 
+    const inserts = [];
     for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
-      const chunk = toInsert.slice(i, i + CHUNK_SIZE);
-      try {
-        await db.insert(bookmark).values(
-          chunk.map((entry) => ({
+      inserts.push(
+        db.insert(bookmark).values(
+          toInsert.slice(i, i + CHUNK_SIZE).map((entry) => ({
             title: entry.title,
             url: entry.url,
             type: "link",
             groupId: importGroup.id,
             userId,
           })),
-        );
-        importedCount += chunk.length;
+        ),
+      );
+    }
+
+    const [first, ...rest] = inserts;
+    if (first) {
+      try {
+        await db.batch([first, ...rest]);
+        importedCount = toInsert.length;
       } catch (error) {
-        console.error("[Import API] Chunk insert failed:", error);
-        errorSummary.chunkInsertFailed =
-          (errorSummary.chunkInsertFailed ?? 0) + chunk.length;
+        console.error("[Import API] Insert failed:", error);
+        errorSummary.chunkInsertFailed = toInsert.length;
       }
     }
 

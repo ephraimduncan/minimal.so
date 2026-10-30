@@ -21,13 +21,9 @@
   "include": ["**/*.ts", "**/*.tsx", "**/*.mts"],
   "exclude": [
     "node_modules",
+    "scripts",
     "dist",
     ".output",
-    ".wrangler",
-    "app",
-    "next.config.ts",
-    "instrumentation-client.ts",
-    "prisma",
-    "next-env.d.ts"
+    ".wrangler"
   ]
 }

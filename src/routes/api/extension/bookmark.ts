@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth-server";
 import { createDb, type DB } from "@/lib/db";
 import { bookmark, group } from "@/lib/db/schema";
 import { getUrlMetadata, isArxivHost } from "@/lib/url-metadata";
+import { MAX_URL_LENGTH } from "@/lib/schema";
 import { canonicalizeUrl, normalizeUrl } from "@/lib/utils";
 import {
   getAllowedOrigins,
@@ -37,7 +38,7 @@ const IMPORT_GROUP_MAP: Record<string, string> = {
 const IMPORT_GROUP_COLOR = "#6b7280";
 
 const createBookmarkSchema = z.object({
-  url: z.url(),
+  url: z.url().max(MAX_URL_LENGTH),
   title: z.string().optional(),
   source: sourceEnum.optional(),
   destinationGroup: z.string().optional(),

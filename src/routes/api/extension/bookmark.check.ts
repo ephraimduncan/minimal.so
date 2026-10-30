@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getSession } from "@/lib/auth-server";
-import { createDb } from "@/lib/db";
+import { createDb, inList } from "@/lib/db";
 import { bookmark } from "@/lib/db/schema";
 import { canonicalizeUrl } from "@/lib/utils";
 import {
@@ -51,7 +51,7 @@ async function handlePost(request: Request): Promise<Response> {
       .where(
         and(
           eq(bookmark.userId, session.user.id),
-          inArray(bookmark.normalizedUrl, normalizedUrls),
+          inList(bookmark.normalizedUrl, normalizedUrls),
         ),
       );
 

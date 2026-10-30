@@ -1,8 +1,9 @@
 import { os, ORPCError } from "@orpc/server";
 import * as z from "zod";
-import { and, asc, count, desc, eq, like, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, or, sql } from "drizzle-orm";
 import { apiAuthed } from "./api-context";
 import { bookmark, group } from "@/lib/db/schema";
+import { MAX_URL_LENGTH } from "@/lib/schema";
 import { normalizeUrl, canonicalizeUrl } from "@/lib/utils";
 import { getUrlMetadata } from "@/lib/url-metadata";
 
@@ -52,10 +53,11 @@ const listBookmarks = apiAuthed
     const conditions = and(
       eq(bookmark.userId, context.user.id),
       input.groupId ? eq(bookmark.groupId, input.groupId) : undefined,
+      // D1 rejects LIKE patterns longer than 50 bytes, so search with instr.
       input.search
         ? or(
-            like(bookmark.title, `%${input.search}%`),
-            like(bookmark.url, `%${input.search}%`),
+            sql`instr(lower(${bookmark.title}), lower(${input.search})) > 0`,
+            sql`instr(lower(${bookmark.url}), lower(${input.search})) > 0`,
           )
         : undefined,
     );
@@ -96,7 +98,7 @@ const createBookmark = apiAuthed
   .route({ method: "POST", path: "/bookmarks" })
   .input(
     z.object({
-      url: z.string().min(1, "url is required"),
+      url: z.string().min(1, "url is required").max(MAX_URL_LENGTH),
       title: z.string().optional(),
       groupId: z.string().optional(),
     }),
@@ -151,44 +153,36 @@ const createBookmark = apiAuthed
     const canonical = canonicalizeUrl(normalized);
 
     const metadata = await getUrlMetadata(normalized);
+    const sameUrl = and(
+      eq(bookmark.userId, context.user.id),
+      eq(bookmark.normalizedUrl, canonical),
+    );
 
-    const result = await db.transaction(async (tx) => {
-      const [existing] = await tx
-        .select({ id: bookmark.id })
-        .from(bookmark)
-        .where(
-          and(
-            eq(bookmark.userId, context.user.id),
-            eq(bookmark.normalizedUrl, canonical),
-          ),
-        )
-        .limit(1);
+    // D1 has no interactive transactions. One INSERT ... WHERE NOT EXISTS
+    // keeps two concurrent requests from saving the same URL twice.
+    const now = sql.param(new Date(), bookmark.createdAt);
+    const [created] = await db.all<{ id: string }>(sql`
+      insert into ${bookmark} ("id", "title", "url", "normalizedUrl", "favicon", "type", "groupId", "userId", "createdAt", "updatedAt")
+      select ${crypto.randomUUID()}, ${input.title || metadata.title || normalized}, ${normalized}, ${canonical}, ${metadata.favicon}, 'link', ${resolvedGroupId}, ${context.user.id}, ${now}, ${now}
+      where not exists (select 1 from ${bookmark} where ${sameUrl})
+      returning "id"`);
 
-      if (existing) {
-        return { bookmarkId: existing.id, duplicate: true as const };
-      }
+    if (created) {
+      return { success: true, bookmarkId: created.id };
+    }
 
-      const [created] = await tx
-        .insert(bookmark)
-        .values({
-          title: input.title || metadata.title || normalized,
-          url: normalized,
-          normalizedUrl: canonical,
-          favicon: metadata.favicon,
-          type: "link",
-          groupId: resolvedGroupId,
-          userId: context.user.id,
-        })
-        .returning({ id: bookmark.id });
+    const [existing] = await db
+      .select({ id: bookmark.id })
+      .from(bookmark)
+      .where(sameUrl)
+      .limit(1);
 
-      return { bookmarkId: created.id, duplicate: false as const };
-    });
+    // The matching bookmark was deleted between the two queries.
+    if (!existing) {
+      throw new ORPCError("CONFLICT", { message: "Bookmark changed, try again" });
+    }
 
-    return {
-      success: true,
-      bookmarkId: result.bookmarkId,
-      ...(result.duplicate ? { duplicate: true } : {}),
-    };
+    return { success: true, bookmarkId: existing.id, duplicate: true };
   });
 
 const updateBookmark = apiAuthed
@@ -197,7 +191,7 @@ const updateBookmark = apiAuthed
     z.object({
       id: z.string(),
       title: z.string().optional(),
-      url: z.string().min(1).optional(),
+      url: z.string().min(1).max(MAX_URL_LENGTH).optional(),
       groupId: z.string().optional(),
       isPublic: z.boolean().nullable().optional(),
     }),

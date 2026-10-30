@@ -28,6 +28,5 @@ export default defineConfig({
   ],
   resolve: {
     tsconfigPaths: true,
-    alias: [{ find: /^@libsql\/client$/, replacement: "@libsql/client/web" }],
   },
 });
